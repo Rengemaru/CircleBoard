@@ -1,0 +1,23 @@
+# 開発用イメージ。本番用は Phase 5 (D-3) で別途マルチステージで作る。
+FROM ruby:3.3-slim
+
+# build-essential/libpq-dev: pg gem のネイティブ拡張ビルドに必要
+# postgresql-client: rails db:* と psql での確認に必要
+# git: bundler が git 参照の gem を解決するときに必要
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+      build-essential \
+      libpq-dev \
+      postgresql-client \
+      git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# gem はバインドマウント外の名前付きボリュームに置く(Windows/macOS でのI/O劣化を避けるため)
+ENV BUNDLE_PATH=/usr/local/bundle
+
+EXPOSE 3000
+
+# T1-1 時点では backend/ が空のため、Rails 生成前でもコンテナが落ちないようにする。
+# T1-2 で rails new を実行すると bin/rails が現れ、以降は自動的にサーバが起動する。
+CMD ["bash", "-c", "if [ -f bin/rails ]; then bin/rails server -b 0.0.0.0 -p 3000; else echo '[T1-1] Rails app not generated yet. Waiting.'; sleep infinity; fi"]
