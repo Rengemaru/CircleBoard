@@ -1,0 +1,32 @@
+# === 秘密情報（最優先） ===
+.env
+.env.*
+!.env.example
+backend/config/master.key
+backend/config/credentials/*.key
+*.pem
+*_rsa
+*_ed25519
+
+# === Rails (backend/) ===
+backend/log/*
+backend/tmp/*
+!backend/log/.keep
+!backend/tmp/.keep
+backend/storage/*
+backend/public/assets
+backend/coverage/
+backend/.byebug_history
+
+# === Node (frontend/) ===
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+
+# === OS / エディタ ===
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
