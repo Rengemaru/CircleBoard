@@ -7,8 +7,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ホストへのポート公開はしない。backend はコンピュータ内のネットワークで db に
+    # 到達でき、手元から見るときは docker compose exec db psql で足りるため。
+    # 公開しないことで、他プロジェクトの PostgreSQL とポートが衝突しない。
     healthcheck:
       # backend は db が「起動した」だけでは接続できない。接続を受け付ける状態に
       # なったことを pg_isready で確認し、それを depends_on の条件にする。
@@ -29,7 +30,9 @@ services:
       - ./backend:/app
       - bundle_data:/usr/local/bundle
     ports:
-      - "3000:3000"
+      # ホスト側ポートは環境変数で変えられる。同じPCで別プロジェクトが同じポートを
+      # 使っている場合に .env だけで回避するため。コンテナ側は常に 3000。
+      - "${BACKEND_HOST_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -48,7 +51,7 @@ services:
       # node_modules はバインドマウントで上書きされないよう、専用ボリュームに逃がす
       - node_modules_data:/app/node_modules
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
     tty: true
     stdin_open: true
 

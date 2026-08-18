@@ -14,7 +14,7 @@
 |---|---|---|
 | `backend/` | Rails 7 (APIモード) | 3000 |
 | `frontend/` | React + Vite + TypeScript | 5173 |
-| — | PostgreSQL 16 | 5432 |
+| — | PostgreSQL 16 | （ホストに公開しない） |
 
 ## 必要なもの
 
@@ -38,6 +38,10 @@ docker compose ps
 ```
 
 `db` の STATUS が `healthy` になれば成功です。
+
+同じPCで別プロジェクトが 3000 / 5173 を使っていてポート衝突する場合は、
+`.env` の `BACKEND_HOST_PORT` / `FRONTEND_HOST_PORT` を変更してください。
+コンテナ内のポートは変わりません。
 `backend` / `frontend` は Rails・Vite を生成するまで待機状態で起動します（T1-2 / T1-3 で実体が入ります）。
 
 ### Windows (PowerShell) の場合
@@ -57,7 +61,7 @@ docker compose up -d          # 起動
 docker compose down           # 停止
 docker compose ps             # 状態確認
 docker compose logs -f backend
-docker compose exec db psql -U circleboard -d circleboard_development
+docker compose exec db psql -U circleboard -d circleboard_development  # DBに入る
 ```
 
 ## 開発用アカウント
