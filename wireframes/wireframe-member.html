@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircleBoard ワイヤーフレーム — メンバー画面 (v2.2 / MVPスコープ)</title>
+<style>
+  :root{
+    --ink:#1b1d21; --ink-2:#5a5f68; --ink-3:#8b9098;
+    --line:#d5d8dd; --line-2:#e8eaee;
+    --paper:#fbfbfc; --surface:#ffffff; --fill:#f2f3f5;
+    --spec:#0a6cba;            /* 仕様注記だけに使う色 */
+    --spec-bg:#eaf3fb;
+    --warn:#a8560c;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 24px 120px;}
+
+  /* --- doc header --- */
+  .doc{border-bottom:2px solid var(--ink);padding-bottom:24px;margin-bottom:8px;}
+  .doc .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--spec);}
+  .doc h1{font-size:26px;font-weight:700;margin:8px 0 6px;letter-spacing:-.01em;}
+  .doc p{margin:0;color:var(--ink-2);font-size:13px;}
+  .doc .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:24px 0 40px;padding:14px 16px;background:var(--spec-bg);border-left:3px solid var(--spec);font-size:12px;}
+  .legend b{font-family:var(--mono);font-weight:600;color:var(--spec);}
+
+  /* --- screen frame --- */
+  .screen{margin:0 0 64px;}
+  .screen-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--ink);margin-bottom:0;}
+  .screen-no{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 7px;}
+  .screen-nm{font-size:16px;font-weight:700;}
+  .screen-url{font-family:var(--mono);font-size:12px;color:var(--spec);}
+  .screen-auth{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--line);padding:1px 7px;}
+  .frame{border:1px solid var(--line);border-top:none;background:var(--surface);padding:20px;}
+
+  /* --- annotation --- */
+  .note{font-family:var(--mono);font-size:11.5px;color:var(--spec);background:var(--spec-bg);border-left:2px solid var(--spec);padding:7px 10px;margin:10px 0;}
+  .note.warn{color:var(--warn);background:#fdf4e9;border-color:var(--warn);}
+  .note b{font-weight:700;}
+
+  /* --- app chrome --- */
+  .hdr{display:flex;align-items:center;gap:22px;border:1px dashed var(--line);padding:12px 16px;background:var(--fill);}
+  .logo{font-weight:700;letter-spacing:-.01em;}
+  .nav{display:flex;gap:16px;font-size:13px;color:var(--ink-2);}
+  .nav .on{color:var(--ink);font-weight:600;border-bottom:2px solid var(--ink);}
+  .hdr-r{margin-left:auto;display:flex;gap:8px;align-items:center;}
+
+  .btn{border:1px solid var(--ink);background:var(--surface);padding:5px 13px;font-size:12.5px;font-family:var(--sans);cursor:default;}
+  .btn.pri{background:var(--ink);color:#fff;}
+  .btn.sm{padding:3px 9px;font-size:11.5px;}
+  .btn.off{border-color:var(--line);color:var(--ink-3);}
+
+  .sec{margin-top:22px;}
+  .sec-hd{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line-2);padding-bottom:6px;margin-bottom:14px;}
+  .sec-t{font-size:14px;font-weight:700;}
+  .sec-l{font-size:12px;color:var(--spec);font-family:var(--mono);}
+
+  .grid{display:grid;gap:12px;}
+  .g2{grid-template-columns:repeat(2,1fr);}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g4{grid-template-columns:repeat(4,1fr);}
+
+  .card{border:1px solid var(--line);padding:12px;background:var(--surface);}
+  .card .t{font-weight:600;font-size:13.5px;margin:6px 0 4px;line-height:1.45;}
+  .card .d{font-size:12px;color:var(--ink-2);line-height:1.6;}
+  .card .f{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:10px;padding-top:8px;border-top:1px solid var(--line-2);font-family:var(--mono);}
+
+  .cd{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:-.02em;}
+  .cd-s{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .bd{display:inline-block;font-size:10.5px;font-family:var(--mono);padding:1px 6px;border:1px solid var(--ink-3);color:var(--ink-2);}
+  .bd.rec{border-color:#1a7f4b;color:#1a7f4b;}
+  .bd.prg{border-color:#0a6cba;color:#0a6cba;}
+  .bd.end{border-color:var(--ink-3);color:var(--ink-3);}
+  .bd.pin{border-color:var(--warn);color:var(--warn);}
+  .tag{display:inline-block;font-size:10.5px;background:var(--fill);border:1px solid var(--line);padding:1px 6px;margin:0 3px 3px 0;color:var(--ink-2);}
+
+  .filter{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1px dashed var(--line);padding:9px 12px;margin-bottom:14px;}
+  .filter .lb{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-right:4px;}
+
+  .two{display:grid;grid-template-columns:1fr 260px;gap:20px;}
+  .side{border:1px solid var(--line);padding:14px;align-self:start;background:var(--fill);}
+
+  .field{margin-bottom:14px;}
+  .lab{display:block;font-size:12px;font-weight:600;margin-bottom:5px;}
+  .lab .req{font-family:var(--mono);font-size:10px;color:#b3261e;margin-left:5px;}
+  .lab .opt{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-left:5px;}
+  .in{border:1px solid var(--line);background:var(--fill);padding:8px 10px;font-size:12.5px;color:var(--ink-3);}
+  .in.ta{min-height:96px;white-space:pre-line;line-height:1.9;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  .plist{border:1px solid var(--line);}
+  .plist div{padding:7px 12px;font-size:12.5px;border-bottom:1px solid var(--line-2);}
+  .plist div:last-child{border-bottom:none;}
+
+  .lock{border:1px dashed var(--line);background:var(--fill);padding:22px;text-align:center;color:var(--ink-3);font-size:12.5px;}
+
+  .mob{max-width:390px;border:1px solid var(--line);padding:14px;background:var(--surface);}
+  .mob .grid{grid-template-columns:1fr;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Wireframe · Member</div>
+  <h1>CircleBoard — メンバー画面</h1>
+  <p>v2.2 MVPスコープに合わせて再構成。スコープ外の画面（プロフィール・過去の企画・企画別FAQ）は削除済み。</p>
+  <div class="meta">
+    <span>VERSION v2.2</span><span>2026-08-19</span><span>8 SCREENS</span><span>基準幅 1180px</span>
+  </div>
+</header>
+
+<div class="legend">
+  <span><b>🔓 ゲスト可</b> 未ログインで閲覧できる</span>
+  <span><b>🔒 要ログイン</b> 未ログインは /login へ</span>
+  <span><b>青い注記</b> 実装仕様。API仕様書と対応</span>
+  <span><b>橙の注記</b> 事故りやすい箇所</span>
+</div>
+
+<!-- ============ ① TOP ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">01</span><span class="screen-nm">トップ</span>
+    <span class="screen-url">/</span><span class="screen-auth">🔓 ゲスト可</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span class="on">ホーム</span><span>プロジェクト</span><span>イベント</span></nav>
+      <div class="hdr-r"><span class="btn sm">ログイン</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd"><span class="sec-t">注目イベント</span><span class="sec-l">最大4枠 / ピン留めが先頭</span></div>
+      <div class="grid g4">
+        <div class="card">
+          <span class="bd pin">📌 ピン留め</span>
+          <div class="cd" style="margin-top:6px;">あと 3日</div>
+          <div class="cd-s">9/28（月）10:00 ・ 部室A</div>
+          <div class="t">新歓ハッカソン2026</div>
+          <div><span class="tag">ハッカソン</span><span class="tag">初心者歓迎</span></div>
+        </div>
+        <div class="card">
+          <div class="cd">あと 8日</div>
+          <div class="cd-s">10/3（土）・ オンライン</div>
+          <div class="t">LT大会 vol.13</div>
+          <div><span class="tag">LT</span></div>
+        </div>
+        <div class="card">
+          <div class="cd">あと 12日</div>
+          <div class="cd-s">10/7（水）・ 情報棟202</div>
+          <div class="t">競技プログラミング練習会</div>
+          <div><span class="tag">競プロ</span></div>
+        </div>
+        <div class="card">
+          <div class="cd">あと 20日</div>
+          <div class="cd-s">10/15（木）・ 大学グラウンド</div>
+          <div class="t">秋のBBQ交流会</div>
+          <div><span class="tag">交流</span></div>
+        </div>
+      </div>
+      <div class="note">
+        並び順 = ピン留め1件を先頭に固定 → 残りを <b>spotlight_score</b> 降順。<br>
+        score = 開催間近ボーナス × 15 + 直近3日の参加増加数 × 10（開催間近ボーナス = max(0, 14 − 開催までの日数)）<br>
+        除外条件: starts_at が過去 / status:completed / visibility:trashed
+      </div>
+      <div class="note warn">
+        <b>表示件数は可変。</b>対象が1件ならヒーロー1枠、2件なら2枠、3〜4件で2×2。<b>空枠を描かないこと。</b>
+        閑散期に空箱が並ぶのがサイネージ・トップともに最も見苦しい状態になる。
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd"><span class="sec-t">プロジェクト</span><span class="sec-l">すべて見る → /projects</span></div>
+      <div class="grid g3">
+        <div class="card">
+          <span class="bd rec">募集中</span>
+          <div class="t">Webアプリ開発チーム</div>
+          <div class="d">ReactとRailsでSNSアプリを開発します。</div>
+          <div class="f"><span>毎週土曜</span><span>2 / 6名</span></div>
+        </div>
+        <div class="card">
+          <span class="bd prg">進行中</span>
+          <div class="t">機械学習勉強会</div>
+          <div class="d">Pythonで基礎から応用まで。輪読形式。</div>
+          <div class="f"><span>毎週水 19:00</span><span>8 / 10名</span></div>
+        </div>
+        <div class="card">
+          <span class="bd rec">募集中</span>
+          <div class="t">ゲーム開発部</div>
+          <div class="d">Unityで2Dゲーム。春のコンテスト応募が目標。</div>
+          <div class="f"><span>不定期</span><span>3 / 8名</span></div>
+        </div>
+      </div>
+      <div class="note">未ログインの場合、このセクションは「ログインすると閲覧できます」の1枠に置き換える（プロジェクトはログイン必須）。</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd"><span class="sec-t">イベント</span><span class="sec-l">すべて見る → /events</span></div>
+      <div class="grid g3">
+        <div class="card"><div class="cd-s">9/28（月）</div><div class="t">新歓ハッカソン2026</div><div class="f"><span>部室A</span><span>8 / 20名</span></div></div>
+        <div class="card"><div class="cd-s">10/3（土）</div><div class="t">LT大会 vol.13</div><div class="f"><span>オンライン</span><span>5 / 30名</span></div></div>
+        <div class="card"><div class="cd-s">10/7（水）</div><div class="t">競プロ練習会</div><div class="f"><span>情報棟202</span><span>4 / 15名</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ② EVENTS ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">02</span><span class="screen-nm">イベント一覧</span>
+    <span class="screen-url">/events</span><span class="screen-auth">🔓 ゲスト可</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span>ホーム</span><span>プロジェクト</span><span class="on">イベント</span></nav>
+      <div class="hdr-r"><span class="btn sm">ログイン</span></div>
+    </div>
+    <div class="sec">
+      <div class="sec-hd"><span class="sec-t">イベント</span><span class="btn pri sm">＋ イベントを作成</span></div>
+      <div class="filter">
+        <span class="lb">TAG</span>
+        <span class="btn sm">すべて</span><span class="btn sm off">ハッカソン</span><span class="btn sm off">LT</span>
+        <span class="btn sm off">競プロ</span><span class="btn sm off">交流</span><span class="btn sm off">初心者歓迎</span>
+      </div>
+      <div class="grid g3">
+        <div class="card">
+          <div class="cd">あと 3日</div><div class="cd-s">9/28（月）10:00 ・ 部室A</div>
+          <div class="t">新歓ハッカソン2026</div>
+          <div><span class="tag">ハッカソン</span><span class="tag">初心者歓迎</span></div>
+          <div class="d">初心者大歓迎。1日でプロダクトを作り上げます。</div>
+          <div class="f"><span>8 / 20名</span><span class="bd rec">募集中</span></div>
+        </div>
+        <div class="card">
+          <div class="cd">あと 8日</div><div class="cd-s">10/3（土）・ オンライン</div>
+          <div class="t">LT大会 vol.13</div><div><span class="tag">LT</span></div>
+          <div class="d">5分間のLT。テーマ自由、発表者募集中。</div>
+          <div class="f"><span>5 / 30名</span><span class="bd rec">募集中</span></div>
+        </div>
+        <div class="card">
+          <div class="cd">あと 12日</div><div class="cd-s">10/7（水）・ 情報棟202</div>
+          <div class="t">競技プログラミング練習会</div><div><span class="tag">競プロ</span></div>
+          <div class="d">AtCoder ABC の過去問を解きます。</div>
+          <div class="f"><span>4 / 15名</span><span class="bd rec">募集中</span></div>
+        </div>
+      </div>
+      <div class="note">
+        既定は <b>status=recruiting</b> のみ表示。終了イベントは表示しない（「過去の企画」セクションはMVP対象外）。<br>
+        絞り込みはクエリパラメータ <b>?tag_id=</b> で行い、URLで共有できる状態にする。
+      </div>
+      <div class="note warn">
+        <b>作成ボタンは未ログインでも表示してよいが、押下時は /login へ遷移させる。</b>
+        ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない。ただしAPI側は必ず401を返すこと。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ③ EVENT DETAIL ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">03</span><span class="screen-nm">イベント詳細</span>
+    <span class="screen-url">/events/:id</span><span class="screen-auth">🔓 ゲスト可（表示内容が変わる）</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span>ホーム</span><span>プロジェクト</span><span class="on">イベント</span></nav>
+      <div class="hdr-r"><span style="font-size:12.5px;color:var(--ink-2);">山田太郎</span><span class="btn sm">ログアウト</span></div>
+    </div>
+    <div class="sec two">
+      <div>
+        <div><span class="bd rec">募集中</span><span class="tag" style="margin-left:6px;">ハッカソン</span><span class="tag">初心者歓迎</span></div>
+        <h2 style="font-size:22px;margin:10px 0 4px;">新歓ハッカソン2026</h2>
+        <div class="cd" style="margin-bottom:16px;">あと 3日</div>
+
+        <div class="grid g2" style="margin-bottom:18px;">
+          <div class="card"><div class="cd-s">開催日時</div><div class="t" style="font-size:13px;">2026/9/28（月）10:00〜18:00</div></div>
+          <div class="card"><div class="cd-s">開催場所</div><div class="t" style="font-size:13px;">部室A（情報棟3F）</div></div>
+        </div>
+
+        <div class="sec-hd"><span class="sec-t">概要</span></div>
+        <div class="in ta">【このイベントについて】
+初心者大歓迎のハッカソンです。当日チームを組んで1日でプロダクトを作ります。
+
+【参加対象】
+サークル員・見学者どなたでも
+
+【当日の流れ】
+10:00 集合／チーム分け　12:00 昼食　17:00 発表　18:00 解散
+
+【持ち物・事前準備】
+ノートPC、電源アダプタ</div>
+
+        <div class="sec">
+          <div class="sec-hd"><span class="sec-t">参加者</span><span class="sec-l">8 / 20名</span></div>
+          <div class="plist">
+            <div>山田太郎</div><div>佐藤花子</div><div>鈴木一郎</div><div>… 他5名</div>
+          </div>
+          <div class="note">
+            <b>ログイン時のみ表示。</b>未ログインでは下のロック表示に差し替える。
+            APIレスポンス自体から participants キーを落とすこと（CSSで隠すのは不可）。
+          </div>
+          <div class="lock">参加者一覧はログインすると表示されます</div>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="cd-s">主催</div>
+        <div style="font-weight:600;margin-bottom:4px;">佐藤花子</div>
+        <div class="note" style="margin:6px 0 14px;">
+          <b>未ログイン時は非表示。</b>実名がインターネットに公開されるのを避けるため、
+          EventSerializer で owner キーごと落とす。
+        </div>
+        <div class="cd-s">残り枠</div>
+        <div style="font-family:var(--mono);font-size:19px;font-weight:700;margin-bottom:12px;">12</div>
+        <div class="btn pri" style="display:block;text-align:center;">参加する</div>
+        <div class="note warn" style="margin-top:12px;">
+          満員時はボタンを消す。<b>ただしAPI側でも必ず定員を検証し422を返すこと。</b>
+          ボタンの非表示は表示の話であって制限ではない。<br><br>
+          未ログイン時のラベルは「ログインして参加」→ /login へ。
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ④ PROJECTS ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">04</span><span class="screen-nm">プロジェクト一覧</span>
+    <span class="screen-url">/projects</span><span class="screen-auth">🔒 要ログイン</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span>ホーム</span><span class="on">プロジェクト</span><span>イベント</span></nav>
+      <div class="hdr-r"><span style="font-size:12.5px;color:var(--ink-2);">山田太郎</span><span class="btn sm">ログアウト</span></div>
+    </div>
+    <div class="sec">
+      <div class="sec-hd"><span class="sec-t">プロジェクト</span><span class="btn pri sm">＋ プロジェクトを作成</span></div>
+      <div class="filter">
+        <span class="lb">STATUS</span><span class="btn sm">すべて</span><span class="btn sm off">募集中</span><span class="btn sm off">進行中</span>
+        <span class="lb" style="margin-left:14px;">TAG</span><span class="btn sm off">Web開発</span><span class="btn sm off">ゲーム制作</span><span class="btn sm off">機械学習</span>
+      </div>
+      <div class="grid g3">
+        <div class="card">
+          <span class="bd rec">募集中</span>
+          <div class="t">Webアプリ開発チーム</div>
+          <div><span class="tag">Web開発</span></div>
+          <div class="d">ReactとRailsでSNSアプリを開発。設計から一緒にやります。</div>
+          <div class="f"><span>MTG 毎週水 19:00</span><span>2 / 6名</span></div>
+        </div>
+        <div class="card">
+          <span class="bd prg">進行中</span>
+          <div class="t">機械学習勉強会</div>
+          <div><span class="tag">機械学習</span></div>
+          <div class="d">Pythonで基礎から応用まで。輪読形式で進めています。</div>
+          <div class="f"><span>MTG 毎週水 19:00</span><span>8 / 10名</span></div>
+        </div>
+        <div class="card">
+          <span class="bd rec">募集中</span>
+          <div class="t">ゲーム開発部</div>
+          <div><span class="tag">ゲーム制作</span></div>
+          <div class="d">Unityで2Dゲーム制作。春のコンテスト応募が目標。</div>
+          <div class="f"><span>活動日 不定期</span><span>3 / 8名</span></div>
+        </div>
+      </div>
+      <div class="note">
+        <b>進行中も一覧に表示する。</b>途中参加できる設計のため。並び順は 募集中 → 進行中。終了は非表示。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ⑤ PROJECT DETAIL ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">05</span><span class="screen-nm">プロジェクト詳細</span>
+    <span class="screen-url">/projects/:id</span><span class="screen-auth">🔒 要ログイン</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span>ホーム</span><span class="on">プロジェクト</span><span>イベント</span></nav>
+      <div class="hdr-r"><span style="font-size:12.5px;color:var(--ink-2);">山田太郎</span><span class="btn sm">ログアウト</span></div>
+    </div>
+    <div class="sec two">
+      <div>
+        <div><span class="bd rec">募集中</span><span class="tag" style="margin-left:6px;">Web開発</span></div>
+        <h2 style="font-size:22px;margin:10px 0 14px;">Webアプリ開発チーム</h2>
+        <div class="grid g2" style="margin-bottom:18px;">
+          <div class="card"><div class="cd-s">活動日</div><div class="t" style="font-size:13px;">毎週土曜 13:00〜</div></div>
+          <div class="card"><div class="cd-s">MTG</div><div class="t" style="font-size:13px;">毎週水曜 19:00〜（オンライン）</div></div>
+        </div>
+        <div class="sec-hd"><span class="sec-t">概要</span></div>
+        <div class="in ta">【このプロジェクトでやること】
+ReactとRailsでSNSアプリを開発します。
+
+【求めるメンバー像】
+週に数時間コミットできる方。技術レベルは問いません。
+
+【活動の進め方】
+週1のMTGでタスクを決め、各自の時間で進めます。
+
+【参加前に知っておいてほしいこと】
+途中参加も歓迎です。まずMTGの見学からでも構いません。</div>
+        <div class="sec">
+          <div class="sec-hd"><span class="sec-t">参加メンバー</span><span class="sec-l">2 / 6名</span></div>
+          <div class="plist"><div>佐藤花子（主催）</div><div>鈴木一郎</div></div>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="cd-s">主催</div>
+        <div style="font-weight:600;margin-bottom:12px;">佐藤花子</div>
+        <div class="cd-s">残り枠</div>
+        <div style="font-family:var(--mono);font-size:19px;font-weight:700;margin-bottom:12px;">4</div>
+        <div class="btn pri" style="display:block;text-align:center;">参加を申請する</div>
+        <div class="note" style="margin-top:12px;">
+          MVPでは即時承認（status: approved / approved_at = 現在時刻）。<br>
+          承認フローはDBカラムのみ用意し、UIには出さない。<br><br>
+          <b>脱退機能はMVP対象外。</b>部長に相談 → rails console で対応する運用。
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ⑥ CREATE ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">06</span><span class="screen-nm">企画作成</span>
+    <span class="screen-url">/create</span><span class="screen-auth">🔒 要ログイン</span>
+  </div>
+  <div class="frame">
+    <div class="hdr">
+      <span class="logo">CircleBoard</span>
+      <nav class="nav"><span>ホーム</span><span>プロジェクト</span><span>イベント</span></nav>
+      <div class="hdr-r"><span style="font-size:12.5px;color:var(--ink-2);">山田太郎</span></div>
+    </div>
+    <div class="sec" style="max-width:720px;">
+      <div class="sec-hd"><span class="sec-t">企画を作成する</span></div>
+
+      <div class="field">
+        <span class="lab">種別 <span class="req">必須</span></span>
+        <div style="display:flex;gap:8px;"><span class="btn pri sm">イベント</span><span class="btn sm off">プロジェクト</span></div>
+        <div class="note">
+          選択で入力欄が切り替わる。<b>種別の違いを説明する文をこの直下に常時表示する。</b><br>
+          イベント = 単発・楽しむ／学ぶ・外部の人も参加可能<br>
+          プロジェクト = 継続的にコミットして成果物を作る・メンバー限定
+        </div>
+      </div>
+
+      <div class="field"><span class="lab">タイトル <span class="req">必須</span></span><div class="in">新歓ハッカソン2026</div></div>
+
+      <div class="field">
+        <span class="lab">タグ <span class="opt">任意</span></span>
+        <div class="filter" style="margin:0;">
+          <span class="btn sm">ハッカソン</span><span class="btn sm off">LT</span><span class="btn sm off">競プロ</span>
+          <span class="btn sm off">交流</span><span class="btn sm">初心者歓迎</span>
+        </div>
+        <div class="note">管理者が登録した固定リストから選択のみ。<b>自由入力は不可</b>（表記揺れを防ぐため）。</div>
+      </div>
+
+      <div class="field">
+        <span class="lab">概要 <span class="req">必須</span></span>
+        <div class="in ta">【このイベントについて】
+
+【参加対象】
+
+【当日の流れ】
+
+【持ち物・事前準備】</div>
+        <div class="note">テンプレートは <b>placeholder として表示</b>する。初期値として入れると、消さずに送信されてしまう。</div>
+      </div>
+
+      <div class="row2">
+        <div class="field"><span class="lab">開催場所 <span class="req">必須</span></span><div class="in">例：部室A / オンライン（Zoom）</div></div>
+        <div class="field"><span class="lab">開催日時 <span class="req">必須</span></span><div class="in">2026-09-28 10:00</div></div>
+      </div>
+      <div class="row2">
+        <div class="field"><span class="lab">定員 <span class="opt">任意</span></span><div class="in">20（空欄なら無制限）</div></div>
+        <div class="field"><span class="lab">外部リンク <span class="opt">任意</span></span><div class="in">https://connpass.com/event/xxxxx</div></div>
+      </div>
+
+      <div class="note warn">
+        <b>「定期／単発」の選択UIは作らない。</b>recurrence_type カラムは用意するが、MVPは単発固定で運用する。<br>
+        <b>企画別FAQの入力欄も作らない。</b>MVP対象外。
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <span class="btn pri">作成する</span><span class="btn">キャンセル</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ⑦ LOGIN ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">07</span><span class="screen-nm">ログイン</span>
+    <span class="screen-url">/login</span><span class="screen-auth">🔓 ゲスト可</span>
+  </div>
+  <div class="frame">
+    <div style="max-width:380px;margin:24px auto;">
+      <div class="logo" style="text-align:center;font-size:19px;margin-bottom:6px;">CircleBoard</div>
+      <div style="text-align:center;font-size:12px;color:var(--ink-3);margin-bottom:22px;">情報系学生サークル</div>
+      <div class="field"><span class="lab">メールアドレス</span><div class="in">taro@example.ac.jp</div></div>
+      <div class="field"><span class="lab">パスワード</span><div class="in">••••••••</div></div>
+      <div class="btn pri" style="display:block;text-align:center;">ログイン</div>
+      <div class="note" style="margin-top:16px;">
+        認証失敗は一律「メールアドレスまたはパスワードが正しくありません」。<br>
+        <b>どちらが誤りかを区別しない</b>（アカウントの存在有無を推測させないため）。<br><br>
+        アカウントは管理者が発行する。<b>新規登録リンクもパスワード再発行リンクも置かない。</b>
+        代わりに「アカウントについては部長にお問い合わせください」と表示する。
+      </div>
+      <div class="note">
+        将来: 「デモアカウントでログイン（閲覧のみ）」ボタンをここに追加する。
+        users.role に demo を確保済み。MVPでは実装しない。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ⑧ LEGAL ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">08</span><span class="screen-nm">利用規約・FAQ</span>
+    <span class="screen-url">/legal</span><span class="screen-auth">🔓 ゲスト可</span>
+  </div>
+  <div class="frame">
+    <div class="sec" style="max-width:720px;">
+      <div class="sec-hd"><span class="sec-t">よくある質問・利用規約</span></div>
+      <div class="in ta" style="min-height:140px;">Q. アカウントはどうやって作りますか？
+A. 部長に連絡してください。管理者が発行します。
+
+Q. イベントは誰でも参加できますか？
+A. 閲覧は誰でも可能です。参加表明にはログインが必要です。
+
+── 利用規約 ──
+（本文）</div>
+      <div class="note">
+        <b>静的ページとして実装する。</b>DBもCMSも作らない。内容の更新はコード変更 + デプロイで行う。<br>
+        同意フローはMVP対象外（表示のみ）。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESPONSIVE ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">R</span><span class="screen-nm">レスポンシブ方針</span>
+    <span class="screen-url">≤ 768px</span>
+  </div>
+  <div class="frame">
+    <div class="note warn" style="margin-top:0;">
+      <b>スマホ専用UIは作らない。</b>ボトムナビ・FAB・スティッキーアクションバーはすべてMVP対象外。
+      Tailwind のレスポンシブクラスで「読める」状態にするところまで。
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;">
+      <div class="mob">
+        <div class="hdr" style="padding:9px 11px;">
+          <span class="logo" style="font-size:13px;">CircleBoard</span>
+          <div class="hdr-r"><span class="btn sm">☰</span></div>
+        </div>
+        <div class="sec">
+          <div class="sec-hd"><span class="sec-t" style="font-size:13px;">注目イベント</span></div>
+          <div class="grid">
+            <div class="card">
+              <span class="bd pin">📌 ピン留め</span>
+              <div class="cd" style="margin-top:6px;">あと 3日</div>
+              <div class="cd-s">9/28（月）・ 部室A</div>
+              <div class="t">新歓ハッカソン2026</div>
+            </div>
+            <div class="card">
+              <div class="cd">あと 8日</div><div class="cd-s">10/3（土）・ オンライン</div>
+              <div class="t">LT大会 vol.13</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:280px;">
+        <div class="note" style="margin-top:0;">
+          <b>グリッドの段組みだけを切り替える。</b><br>
+          4カラム → 1カラム（注目イベント）<br>
+          3カラム → 1カラム（一覧）<br>
+          2カラム（詳細 + サイド）→ 縦積み。サイドバーは本文の下へ<br><br>
+          ヘッダーナビはハンバーガーで開閉するだけ。<b>専用のナビ構造は作らない。</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="border-top:1px solid var(--line);padding-top:16px;font-family:var(--mono);font-size:11px;color:var(--ink-3);">
+  CircleBoard Wireframe — Member / v2.2 / 2026-08-19 ／ 関連: spec-v2.2.md, api-spec.md, wireframe-admin.html, wireframe-signage.html
+</footer>
+
+</div>
+</body>
+</html>

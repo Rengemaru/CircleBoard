@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircleBoard ワイヤーフレーム — サイネージ (v2.2 / 1920×1080)</title>
+<style>
+  :root{
+    --ink:#1b1d21; --ink-2:#5a5f68; --ink-3:#8b9098;
+    --line:#d5d8dd; --line-2:#e8eaee;
+    --paper:#fbfbfc; --surface:#ffffff;
+    --spec:#0a6cba; --spec-bg:#eaf3fb;
+    --warn:#a8560c; --warn-bg:#fdf4e9;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+
+    /* signage palette — spec §5.3 */
+    --sg-bg1:#0f0f15; --sg-bg2:#1a1a24;
+    --sg-fg:#f2f3f7; --sg-fg2:#9aa0ae; --sg-fg3:#5d6474;
+    --sg-line:#2b2e3c;
+    --sg-ev:#fcd34d;      /* イベント = 黄 */
+    --sg-pj:#5eb3f5;      /* プロジェクト = 青 */
+    --sg-rec:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 24px 120px;}
+
+  .doc{border-bottom:2px solid var(--ink);padding-bottom:24px;}
+  .doc .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--spec);}
+  .doc h1{font-size:26px;font-weight:700;margin:8px 0 6px;letter-spacing:-.01em;}
+  .doc p{margin:0;color:var(--ink-2);font-size:13px;}
+  .doc .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .callout{margin:24px 0 40px;padding:16px 18px;background:var(--spec-bg);border-left:3px solid var(--spec);font-size:13px;}
+  .callout b{color:var(--spec);}
+
+  .screen{margin:0 0 56px;}
+  .screen-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--ink);}
+  .screen-no{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 7px;}
+  .screen-nm{font-size:16px;font-weight:700;}
+  .screen-url{font-family:var(--mono);font-size:12px;color:var(--spec);}
+  .screen-cond{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--line);padding:1px 8px;}
+
+  .note{font-family:var(--mono);font-size:11.5px;color:var(--spec);background:var(--spec-bg);border-left:2px solid var(--spec);padding:7px 10px;margin:10px 0;}
+  .note.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn);}
+  .note b{font-weight:700;}
+
+  /* ---------- signage canvas (16:9 scaled) ---------- */
+  .canvas{
+    aspect-ratio:16/9; width:100%;
+    background:linear-gradient(135deg,var(--sg-bg1) 0%,var(--sg-bg2) 100%);
+    color:var(--sg-fg); padding:2.2% 2.6%;
+    display:flex; flex-direction:column; gap:1.6%;
+    font-feature-settings:"palt";
+    border:1px solid var(--line);
+  }
+  .cv-hd{display:flex;align-items:flex-end;justify-content:space-between;
+         border-bottom:1px solid var(--sg-line);padding-bottom:1.1%;}
+  .cv-logo{font-size:2.1cqw;font-weight:700;letter-spacing:-.01em;}
+  .cv-sub{font-size:1.05cqw;color:var(--sg-fg3);margin-top:.2em;}
+  .cv-clock{font-family:var(--mono);font-size:3.1cqw;font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .cv-date{font-size:1.05cqw;color:var(--sg-fg3);text-align:right;margin-top:.35em;}
+
+  .cv-sec-t{font-size:1.25cqw;font-weight:700;letter-spacing:.08em;color:var(--sg-fg2);
+            display:flex;align-items:center;gap:.7em;margin-bottom:.9%;}
+  .cv-sec-t .bar{width:.35em;height:1.15em;background:var(--sg-ev);}
+  .cv-sec-t.pj .bar{background:var(--sg-pj);}
+  .cv-sec-t .cnt{margin-left:auto;font-family:var(--mono);font-weight:400;color:var(--sg-fg3);font-size:.85em;}
+
+  .ev-zone{flex:1.35;display:flex;flex-direction:column;min-height:0;}
+  .pj-zone{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .cv-grid{display:grid;gap:1.1%;flex:1;min-height:0;}
+  .n1{grid-template-columns:1fr;}
+  .n2{grid-template-columns:1fr 1fr;}
+  .n4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+  .p3{grid-template-columns:repeat(3,1fr);}
+  .p6{grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;}
+
+  .ec{border:1px solid var(--sg-line);background:rgba(255,255,255,.025);
+      padding:1.5% 1.6%;display:flex;justify-content:space-between;gap:1.2%;min-height:0;}
+  .ec.pinned{border-color:var(--sg-ev);background:rgba(252,211,77,.06);}
+  .ec-body{min-width:0;display:flex;flex-direction:column;}
+  .ec-pin{font-size:1.0cqw;color:var(--sg-ev);font-weight:700;letter-spacing:.06em;margin-bottom:.35em;}
+  .ec-cd{font-family:var(--mono);font-size:2.7cqw;font-weight:700;color:var(--sg-ev);line-height:1;letter-spacing:-.03em;}
+  .ec-when{font-size:1.05cqw;color:var(--sg-fg2);margin:.5em 0 .55em;}
+  .ec-t{font-size:1.75cqw;font-weight:700;line-height:1.3;}
+  .ec-tags{margin-top:.5em;}
+  .ec-d{font-size:1.0cqw;color:var(--sg-fg3);line-height:1.6;margin-top:auto;padding-top:.5em;}
+  .sg-tag{display:inline-block;font-size:.92cqw;border:1px solid var(--sg-line);color:var(--sg-fg2);
+          padding:.12em .55em;margin:0 .3em .3em 0;}
+  .qr{width:5.4cqw;height:5.4cqw;flex-shrink:0;background:
+      repeating-conic-gradient(var(--sg-fg) 0% 25%, var(--sg-bg1) 0% 50%) 0 0/22% 22%;
+      border:2px solid var(--sg-fg);}
+  .qr.sm{width:4.1cqw;height:4.1cqw;}
+
+  /* hero variant */
+  .ec.hero .ec-cd{font-size:5.6cqw;}
+  .ec.hero .ec-t{font-size:3.2cqw;}
+  .ec.hero .ec-when{font-size:1.5cqw;}
+  .ec.hero .ec-d{font-size:1.25cqw;}
+  .ec.hero .qr{width:9cqw;height:9cqw;}
+
+  .pc{border:1px solid var(--sg-line);background:rgba(255,255,255,.025);
+      padding:1.3% 1.4%;display:flex;justify-content:space-between;gap:1%;min-height:0;}
+  .pc-st{font-size:.92cqw;font-family:var(--mono);border:1px solid var(--sg-rec);color:var(--sg-rec);padding:.1em .5em;display:inline-block;}
+  .pc-st.prg{border-color:var(--sg-pj);color:var(--sg-pj);}
+  .pc-t{font-size:1.35cqw;font-weight:700;margin:.45em 0 .3em;line-height:1.35;}
+  .pc-m{font-size:.95cqw;color:var(--sg-fg3);margin-top:auto;}
+  .pc-n{font-family:var(--mono);font-size:1.1cqw;color:var(--sg-fg2);}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4%;}
+  .empty .lg{font-size:4cqw;font-weight:700;letter-spacing:-.02em;}
+  .empty .ms{font-size:1.5cqw;color:var(--sg-fg2);}
+  .empty .qr{width:9cqw;height:9cqw;}
+  .empty .url{font-family:var(--mono);font-size:1.1cqw;color:var(--sg-fg3);}
+
+  .cqw{container-type:inline-size;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0;}
+  th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);
+     text-transform:uppercase;border-bottom:1px solid var(--ink);padding:6px 8px;}
+  td{border-bottom:1px solid var(--line-2);padding:8px;vertical-align:top;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Wireframe · Signage — 就活アピールの柱</div>
+  <h1>CircleBoard — サイネージ</h1>
+  <p>当初ワイヤーフレーム ⑧番をベースに、v2.2 で確定した「可変レイアウト」「QRコード」「0件時の表示」を反映。4案（A〜D）の検討は破棄。</p>
+  <div class="meta"><span>VERSION v2.2</span><span>2026-08-19</span><span>1920×1080 / 16:9</span><span>1台運用</span><span>60秒リロード</span></div>
+</header>
+
+<div class="callout">
+  <b>この画面がプロダクトの柱です。</b>面接で最も深く質問される想定で作ります。語る内容は3つ。<br>
+  ① 注目スコアの設計思想（なぜ参加者数の絶対値を使わないか）<br>
+  ② トークン認証の運用設計（漏洩時に該当端末だけ止められる）<br>
+  ③ ピン留めを1枠に限定した理由（恣意的な占有を構造的に防ぐ）
+</div>
+
+<!-- ============ S1: 4件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S1</span><span class="screen-nm">標準表示</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント3〜4件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div>
+        <div class="cv-logo">CircleBoard</div>
+        <div class="cv-sub">情報系学生サークル</div>
+      </div>
+      <div>
+        <div class="cv-clock">19:42</div>
+        <div class="cv-date">2026年9月25日（木）</div>
+      </div>
+    </div>
+
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">4 / 4</span></div>
+      <div class="cv-grid n4">
+        <div class="ec pinned">
+          <div class="ec-body">
+            <div class="ec-pin">📌 PICK UP</div>
+            <div class="ec-cd">あと3日</div>
+            <div class="ec-when">9/28（月）10:00 ・ 部室A</div>
+            <div class="ec-t">新歓ハッカソン2026</div>
+            <div class="ec-tags"><span class="sg-tag">ハッカソン</span><span class="sg-tag">初心者歓迎</span></div>
+            <div class="ec-d">初心者大歓迎。当日チームを組んで1日でプロダクトを作ります。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec">
+          <div class="ec-body">
+            <div class="ec-cd">あと8日</div>
+            <div class="ec-when">10/3（土）14:00 ・ オンライン</div>
+            <div class="ec-t">LT大会 vol.13</div>
+            <div class="ec-tags"><span class="sg-tag">LT</span></div>
+            <div class="ec-d">5分間のLT。テーマ自由、発表者募集中。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec">
+          <div class="ec-body">
+            <div class="ec-cd">あと12日</div>
+            <div class="ec-when">10/7（水）18:30 ・ 情報棟202</div>
+            <div class="ec-t">競技プログラミング練習会</div>
+            <div class="ec-tags"><span class="sg-tag">競プロ</span></div>
+            <div class="ec-d">AtCoder ABC の過去問を解きます。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec">
+          <div class="ec-body">
+            <div class="ec-cd">あと20日</div>
+            <div class="ec-when">10/15（木）12:00 ・ 大学グラウンド</div>
+            <div class="ec-t">秋のBBQ交流会</div>
+            <div class="ec-tags"><span class="sg-tag">交流</span></div>
+            <div class="ec-d">学年をまたいで交流しましょう。food代のみ実費。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>募集中・進行中のプロジェクト<span class="cnt">募集中を優先</span></div>
+      <div class="cv-grid p3">
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st">募集中</span>
+            <div class="pc-t">Webアプリ開発チーム</div>
+            <div><span class="sg-tag">Web開発</span></div>
+            <div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">2 / 6名</span></div>
+          </div>
+          <div class="qr sm"></div>
+        </div>
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st">募集中</span>
+            <div class="pc-t">ゲーム開発部</div>
+            <div><span class="sg-tag">ゲーム制作</span></div>
+            <div class="pc-m">活動日 不定期 ・ <span class="pc-n">3 / 8名</span></div>
+          </div>
+          <div class="qr sm"></div>
+        </div>
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st prg">進行中</span>
+            <div class="pc-t">機械学習勉強会</div>
+            <div><span class="sg-tag">機械学習</span></div>
+            <div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">8 / 10名</span></div>
+          </div>
+          <div class="qr sm"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="note">
+    <b>データ取得は1リクエストのみ。</b><code>GET /api/signage?token=xxx</code> で spotlight_events と projects を同時に返す。
+    60秒ごとに叩かれるため、リクエスト数を最小化する。
+  </div>
+  <div class="note">
+    <b>イベント = 黄（#fcd34d）／プロジェクト = 青（#5eb3f5）。</b>
+    2つのカテゴリの違いを、遠くからでも色だけで判別できるようにする。カウントダウンは黄のみに使い、
+    プロジェクト側には使わない（プロジェクトに締切の概念がないため）。
+  </div>
+  <div class="note warn">
+    <b>owner（企画者名）と participants（参加者一覧）は表示しない。</b>
+    サイネージは current_user が nil の状態なので、EventSerializer に <code>current_user: nil</code> を渡せば自動的に落ちる。
+    <b>サイネージ専用のシリアライザを新設しないこと</b>（出し分けが二重管理になり、片方だけ塞ぎ忘れる事故につながる）。
+  </div>
+</section>
+
+<!-- ============ S2: 2件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S2</span><span class="screen-nm">中規模</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント2件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div><div class="cv-clock">19:42</div><div class="cv-date">2026年9月25日（木）</div></div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">2 / 4</span></div>
+      <div class="cv-grid n2">
+        <div class="ec pinned">
+          <div class="ec-body">
+            <div class="ec-pin">📌 PICK UP</div>
+            <div class="ec-cd">あと3日</div>
+            <div class="ec-when">9/28（月）10:00 ・ 部室A</div>
+            <div class="ec-t">新歓ハッカソン2026</div>
+            <div class="ec-tags"><span class="sg-tag">ハッカソン</span><span class="sg-tag">初心者歓迎</span></div>
+            <div class="ec-d">初心者大歓迎。当日チームを組んで1日でプロダクトを作ります。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec">
+          <div class="ec-body">
+            <div class="ec-cd">あと8日</div>
+            <div class="ec-when">10/3（土）14:00 ・ オンライン</div>
+            <div class="ec-t">LT大会 vol.13</div>
+            <div class="ec-tags"><span class="sg-tag">LT</span></div>
+            <div class="ec-d">5分間のLT。テーマ自由、発表者募集中。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>募集中・進行中のプロジェクト<span class="cnt">募集中を優先</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">Webアプリ開発チーム</div><div><span class="sg-tag">Web開発</span></div><div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">2 / 6名</span></div></div><div class="qr sm"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">ゲーム開発部</div><div><span class="sg-tag">ゲーム制作</span></div><div class="pc-m">活動日 不定期 ・ <span class="pc-n">3 / 8名</span></div></div><div class="qr sm"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">機械学習勉強会</div><div><span class="sg-tag">機械学習</span></div><div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">8 / 10名</span></div></div><div class="qr sm"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    2件のときは <code>grid-template-columns: 1fr 1fr</code> の1行にし、<b>カードを縦いっぱいに引き伸ばす。</b>
+    4枠のレイアウトのまま下2枠を空けない。
+  </div>
+</section>
+
+<!-- ============ S3: 1件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S3</span><span class="screen-nm">ヒーロー表示</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント1件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div><div class="cv-clock">19:42</div><div class="cv-date">2026年9月25日（木）</div></div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">1 / 4</span></div>
+      <div class="cv-grid n1">
+        <div class="ec pinned hero">
+          <div class="ec-body">
+            <div class="ec-pin">📌 PICK UP</div>
+            <div class="ec-cd">あと3日</div>
+            <div class="ec-when">9/28（月）10:00〜18:00 ・ 部室A（情報棟3F）</div>
+            <div class="ec-t">新歓ハッカソン2026</div>
+            <div class="ec-tags"><span class="sg-tag">ハッカソン</span><span class="sg-tag">初心者歓迎</span></div>
+            <div class="ec-d">初心者大歓迎。当日チームを組んで、1日でプロダクトを作り上げます。ノートPCだけ持ってきてください。</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>募集中・進行中のプロジェクト<span class="cnt">募集中を優先</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">Webアプリ開発チーム</div><div><span class="sg-tag">Web開発</span></div><div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">2 / 6名</span></div></div><div class="qr sm"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">ゲーム開発部</div><div><span class="sg-tag">ゲーム制作</span></div><div class="pc-m">活動日 不定期 ・ <span class="pc-n">3 / 8名</span></div></div><div class="qr sm"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">機械学習勉強会</div><div><span class="sg-tag">機械学習</span></div><div class="pc-m">MTG 毎週水 19:00 ・ <span class="pc-n">8 / 10名</span></div></div><div class="qr sm"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    1件のときは<b>フォントサイズを段階的に拡大する</b>（カウントダウンは2.7cqw → 5.6cqw）。
+    枠だけ広げて文字が小さいままだと、間の抜けた画面になる。
+  </div>
+</section>
+
+<!-- ============ S4: 0件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S4</span><span class="screen-nm">企画が0件のとき</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント0件 / プロジェクト0件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div><div class="cv-clock">19:42</div><div class="cv-date">2026年9月25日（木）</div></div>
+    </div>
+    <div class="empty">
+      <div class="lg">CircleBoard</div>
+      <div class="ms">いま募集中の企画はありません</div>
+      <div class="qr"></div>
+      <div class="url">circleboard.example.jp</div>
+      <div style="font-size:1.05cqw;color:var(--sg-fg3);">企画の投稿はこちらから</div>
+    </div>
+  </div>
+  </div>
+  <div class="note warn">
+    <b>この画面が無いと運用初日に必ず事故ります。</b>
+    データを1件も入れずにディスプレイを繋いだ瞬間、部室に真っ黒な画面が映ります。実装コストは1時間程度です。<br><br>
+    文言は「エラー」でも「準備中」でもなく、<b>次の行動を促す言い方</b>にします。
+    空の画面は、告知ではなく誘いの場として扱ってください。
+  </div>
+  <div class="note">
+    イベントのみ0件でプロジェクトがある場合は、プロジェクト欄を上に繰り上げて全画面で表示する
+    （空セクションの見出しだけを残さない）。逆も同様。
+  </div>
+</section>
+
+<!-- ============ SPEC ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">SP</span><span class="screen-nm">実装仕様まとめ</span>
+  </div>
+  <div style="border:1px solid var(--line);border-top:none;background:var(--surface);padding:20px;">
+
+    <h3 style="font-size:14px;margin:0 0 6px;">レイアウトの分岐</h3>
+    <table>
+      <thead><tr><th>対象イベント数</th><th>グリッド</th><th>カウントダウン</th><th>タイトル</th></tr></thead>
+      <tbody>
+        <tr><td>0件</td><td>空状態レイアウト（S4）</td><td>—</td><td>—</td></tr>
+        <tr><td>1件</td><td><code>1fr</code>（ヒーロー）</td><td>5.6cqw</td><td>3.2cqw</td></tr>
+        <tr><td>2件</td><td><code>1fr 1fr</code></td><td>2.7cqw</td><td>1.75cqw</td></tr>
+        <tr><td>3〜4件</td><td><code>1fr 1fr / 1fr 1fr</code></td><td>2.7cqw</td><td>1.75cqw</td></tr>
+        <tr><td>5件以上</td><td>上位4件のみ表示</td><td>2.7cqw</td><td>1.75cqw</td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:4px;">
+      プロジェクトも同様に可変（最大6枠 / 3列）。<b>いずれの場合も空枠を描画しない。</b>
+    </div>
+
+    <h3 style="font-size:14px;margin:22px 0 6px;">共通仕様</h3>
+    <table>
+      <tbody>
+        <tr><td style="width:180px;">解像度</td><td>1920×1080（16:9）</td></tr>
+        <tr><td>背景</td><td><code>linear-gradient(135deg, #0f0f15, #1a1a24)</code></td></tr>
+        <tr><td>最小フォント</td><td>24px 相当（視認距離2〜3m）</td></tr>
+        <tr><td>リロード</td><td>60秒ごとに <code>window.location.reload()</code>。WebSocketは不採用</td></tr>
+        <tr><td>時計</td><td>クライアント側 <code>setInterval</code> で毎秒更新（リロードとは独立）</td></tr>
+        <tr><td>ナビゲーション</td><td>なし。ヘッダー・フッター・リンクを一切表示しない</td></tr>
+        <tr><td>認証</td><td><code>?token=</code>。無効・失効は <b>404</b>（401ではない）</td></tr>
+        <tr><td>レート制限</td><td>同一IPから30回/分（rack-attack）</td></tr>
+        <tr><td>端末設定</td><td>Chrome キオスクモード <code>chrome --kiosk "https://…/signage?token=…"</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-size:14px;margin:22px 0 6px;">QRコード</h3>
+    <table>
+      <tbody>
+        <tr><td style="width:180px;">生成場所</td><td>フロントエンド（<code>qrcode.react</code>）。サーバー生成だと60秒ごとに無駄な処理が走る</td></tr>
+        <tr><td>中身</td><td>各企画の詳細ページURL</td></tr>
+        <tr><td>URLの組み立て</td><td><b>サーバー側</b>で <code>ENV['PUBLIC_BASE_URL']</code> から作り、<code>detail_url</code> として返す</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      URLをフロントで組み立てないのは、<b>サイネージ端末側の設定に依存させないため。</b>
+      端末はURLを開くだけの存在にしておくと、ドメイン変更時にサーバーの環境変数1つで済む。
+    </div>
+
+    <h3 style="font-size:14px;margin:22px 0 6px;">表示対象の抽出ルール</h3>
+    <table>
+      <thead><tr><th></th><th>並び順</th><th>除外</th></tr></thead>
+      <tbody>
+        <tr>
+          <td style="width:120px;"><b>イベント</b></td>
+          <td>ピン留め1件を先頭固定 → 残りを <code>spotlight_score</code> 降順</td>
+          <td><code>starts_at</code> が過去 / <code>completed</code> / <code>trashed</code></td>
+        </tr>
+        <tr>
+          <td><b>プロジェクト</b></td>
+          <td><code>recruiting</code> → <code>in_progress</code></td>
+          <td><code>completed</code> / <code>trashed</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <b>プロジェクトに注目スコアは使わない。</b>プロジェクトには「開催日」がなく締切感が存在しないため、
+      スコアの主成分（開催間近ボーナス）が機能しない。ステータス順が設計として正しい。
+    </div>
+
+  </div>
+</section>
+
+<footer style="border-top:1px solid var(--line);padding-top:16px;font-family:var(--mono);font-size:11px;color:var(--ink-3);">
+  CircleBoard Wireframe — Signage / v2.2 / 2026-08-19 ／ 関連: spec-v2.2.md, api-spec.md, wireframe-member.html, wireframe-admin.html
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircleBoard ワイヤーフレーム — 管理者画面 (v2.2 / MVPスコープ)</title>
+<style>
+  :root{
+    --ink:#1b1d21; --ink-2:#5a5f68; --ink-3:#8b9098;
+    --line:#d5d8dd; --line-2:#e8eaee;
+    --paper:#fbfbfc; --surface:#ffffff; --fill:#f2f3f5;
+    --spec:#0a6cba; --spec-bg:#eaf3fb;
+    --warn:#a8560c; --warn-bg:#fdf4e9;
+    --danger:#b3261e;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 24px 120px;}
+
+  .doc{border-bottom:2px solid var(--ink);padding-bottom:24px;}
+  .doc .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--spec);}
+  .doc h1{font-size:26px;font-weight:700;margin:8px 0 6px;letter-spacing:-.01em;}
+  .doc p{margin:0;color:var(--ink-2);font-size:13px;}
+  .doc .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .scope{margin:24px 0 40px;padding:16px 18px;background:var(--warn-bg);border-left:3px solid var(--warn);font-size:13px;}
+  .scope b{color:var(--warn);}
+  .scope ul{margin:8px 0 0;padding-left:18px;}
+  .scope li{margin:2px 0;}
+
+  .screen{margin:0 0 64px;}
+  .screen-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--ink);}
+  .screen-no{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 7px;}
+  .screen-nm{font-size:16px;font-weight:700;}
+  .screen-url{font-family:var(--mono);font-size:12px;color:var(--spec);}
+  .screen-auth{margin-left:auto;font-family:var(--mono);font-size:11px;color:#fff;background:var(--danger);padding:1px 8px;}
+  .frame{border:1px solid var(--line);border-top:none;background:var(--surface);padding:20px;}
+
+  .note{font-family:var(--mono);font-size:11.5px;color:var(--spec);background:var(--spec-bg);border-left:2px solid var(--spec);padding:7px 10px;margin:10px 0;}
+  .note.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn);}
+  .note b{font-weight:700;}
+
+  /* admin chrome */
+  .ash{display:grid;grid-template-columns:200px 1fr;gap:0;border:1px dashed var(--line);}
+  .aside{background:var(--fill);border-right:1px dashed var(--line);padding:14px 12px;}
+  .aside .brand{font-weight:700;font-size:13.5px;}
+  .aside .sub{font-family:var(--mono);font-size:10px;color:var(--danger);letter-spacing:.08em;margin-bottom:14px;}
+  .aside a{display:block;font-size:12.5px;color:var(--ink-2);padding:5px 8px;text-decoration:none;border-left:2px solid transparent;}
+  .aside a.on{color:var(--ink);font-weight:600;background:var(--surface);border-left-color:var(--ink);}
+  .aside .back{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3);}
+  .amain{padding:18px 20px;}
+
+  .sec-hd{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line-2);padding-bottom:6px;margin-bottom:14px;}
+  .sec-t{font-size:15px;font-weight:700;}
+  .sec-l{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);}
+
+  .btn{border:1px solid var(--ink);background:var(--surface);padding:5px 13px;font-size:12.5px;cursor:default;display:inline-block;}
+  .btn.pri{background:var(--ink);color:#fff;}
+  .btn.sm{padding:3px 9px;font-size:11.5px;}
+  .btn.off{border-color:var(--line);color:var(--ink-3);}
+  .btn.dgr{border-color:var(--danger);color:var(--danger);}
+
+  .field{margin-bottom:14px;}
+  .lab{display:block;font-size:12px;font-weight:600;margin-bottom:5px;}
+  .lab .req{font-family:var(--mono);font-size:10px;color:var(--danger);margin-left:5px;}
+  .in{border:1px solid var(--line);background:var(--fill);padding:8px 10px;font-size:12.5px;color:var(--ink-3);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;
+     border-bottom:1px solid var(--ink);padding:6px 8px;font-weight:600;}
+  td{border-bottom:1px solid var(--line-2);padding:9px 8px;vertical-align:top;}
+  td.mono{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);word-break:break-all;}
+
+  .bd{display:inline-block;font-size:10.5px;font-family:var(--mono);padding:1px 6px;border:1px solid var(--ink-3);color:var(--ink-2);}
+  .bd.live{border-color:#1a7f4b;color:#1a7f4b;}
+  .bd.dead{border-color:var(--ink-3);color:var(--ink-3);background:var(--fill);}
+  .bd.pin{border-color:var(--warn);color:var(--warn);}
+
+  .pinrow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);padding:10px 12px;margin-bottom:8px;}
+  .pinrow.cur{border-color:var(--warn);background:var(--warn-bg);}
+  .pinrow .t{font-weight:600;font-size:13.5px;}
+  .pinrow .m{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .slot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;}
+  .slot div{border:1px solid var(--line);padding:9px;font-size:11.5px;text-align:center;}
+  .slot div.p{border-color:var(--warn);background:var(--warn-bg);color:var(--warn);font-weight:600;}
+  .slot div.a{color:var(--ink-3);font-family:var(--mono);}
+
+  .modal{border:2px solid var(--ink);padding:16px;max-width:520px;background:var(--surface);box-shadow:6px 6px 0 var(--line-2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Wireframe · Admin</div>
+  <h1>CircleBoard — 管理者画面</h1>
+  <p>v2.0で7画面から3画面に削減したMVPスコープ版。部長1人が触る前提で設計する。</p>
+  <div class="meta"><span>VERSION v2.2</span><span>2026-08-19</span><span>3 SCREENS</span><span>role: admin のみ</span></div>
+</header>
+
+<div class="scope">
+  <b>この3画面しか作りません。</b>削除した機能は <code>rails console</code> で対応します（部長1人が触る前提のため、UIを作る費用対効果が合わない）。
+  <ul>
+    <li>ユーザー一覧・検索・編集・停止・削除 → <code>rails console</code></li>
+    <li>パスワード再発行 → <code>rails console</code></li>
+    <li>統計ダッシュボード → 作らない（トップページで代替）</li>
+    <li>管理者向け企画一覧 → 作らない（一般の一覧画面で代替。管理者は全企画を編集・削除できる）</li>
+    <li>FAQ・利用規約の編集 → 静的ファイルを直接編集</li>
+  </ul>
+  <div style="margin-top:10px;">
+    <b>共通の必須要件:</b> すべての管理APIで <code>role: admin</code> をサーバー側で検証すること。
+    未ログインは401、admin以外のログインユーザーは403。<b>フロントでメニューを隠すだけにしない。</b>
+  </div>
+</div>
+
+<!-- ============ A1 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">A1</span><span class="screen-nm">アカウント発行</span>
+    <span class="screen-url">/admin/users</span><span class="screen-auth">🛡 ADMIN ONLY</span>
+  </div>
+  <div class="frame">
+    <div class="ash">
+      <nav class="aside">
+        <div class="brand">CircleBoard</div>
+        <div class="sub">ADMIN</div>
+        <a href="#" class="on">アカウント発行</a>
+        <a href="#">注目イベントのピン留め</a>
+        <a href="#">サイネージ端末</a>
+        <div class="back">← サイトに戻る</div>
+      </nav>
+      <div class="amain">
+        <div class="sec-hd"><span class="sec-t">アカウントを発行する</span><span class="sec-l">POST /api/admin/users</span></div>
+
+        <div style="max-width:520px;">
+          <div class="row2">
+            <div class="field"><span class="lab">氏名 <span class="req">必須</span></span><div class="in">鈴木一郎</div></div>
+            <div class="field"><span class="lab">権限 <span class="req">必須</span></span><div class="in">メンバー ▾</div></div>
+          </div>
+          <div class="field"><span class="lab">メールアドレス <span class="req">必須</span></span><div class="in">ichiro@example.ac.jp</div></div>
+          <div class="row2">
+            <div class="field"><span class="lab">入学年度 <span class="req">必須</span></span><div class="in">2026</div></div>
+            <div class="field"><span class="lab">卒業予定年度 <span class="req">必須</span></span><div class="in">2030</div></div>
+          </div>
+          <div class="field"><span class="lab">初期パスワード <span class="req">必須</span></span><div class="in">8文字以上</div></div>
+          <div style="display:flex;gap:10px;margin-top:18px;"><span class="btn pri">発行する</span><span class="btn">クリア</span></div>
+        </div>
+
+        <div class="note">
+          権限の選択肢は <b>管理者 / メンバー</b> の2つのみ。demo は users.role に確保済みだがUIには出さない。<br>
+          卒業年度は必須。<b>後から一括入力するとコストが高いため、発行時に必ず取る。</b>
+          （判定ロジック自体はMVP未実装。全員「現役」扱いで運用する）
+        </div>
+
+        <div class="note warn">
+          <b>発行後の初期パスワードは、この画面で一度だけ表示して終わり。</b>
+          メール送信機能は無いので、部長が口頭かDiscordのDMで本人に伝える運用。
+          画面に「本人に伝えてください。この画面を閉じると再表示できません」と明示すること。
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="sec-l" style="margin-bottom:6px;">発行完了時の表示</div>
+          <div class="modal">
+            <div style="font-weight:700;margin-bottom:8px;">アカウントを発行しました</div>
+            <table>
+              <tr><td style="width:110px;color:var(--ink-3);">氏名</td><td>鈴木一郎</td></tr>
+              <tr><td style="color:var(--ink-3);">メール</td><td class="mono">ichiro@example.ac.jp</td></tr>
+              <tr><td style="color:var(--ink-3);">初期パスワード</td><td class="mono">Kx7m2Qp9</td></tr>
+            </table>
+            <div style="font-size:11.5px;color:var(--warn);margin-top:10px;">
+              本人に伝えてください。この画面を閉じると再表示できません。
+            </div>
+            <div style="margin-top:12px;"><span class="btn sm">コピー</span> <span class="btn sm pri">閉じる</span></div>
+          </div>
+        </div>
+
+        <div class="note">
+          発行済みユーザーの一覧はこの画面に置かない（ユーザー管理UIはMVP対象外）。
+          誰が登録済みかの確認は <code>rails console</code> で行う。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A2 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">A2</span><span class="screen-nm">注目イベントのピン留め</span>
+    <span class="screen-url">/admin/pins</span><span class="screen-auth">🛡 ADMIN ONLY</span>
+  </div>
+  <div class="frame">
+    <div class="ash">
+      <nav class="aside">
+        <div class="brand">CircleBoard</div><div class="sub">ADMIN</div>
+        <a href="#">アカウント発行</a>
+        <a href="#" class="on">注目イベントのピン留め</a>
+        <a href="#">サイネージ端末</a>
+        <div class="back">← サイトに戻る</div>
+      </nav>
+      <div class="amain">
+        <div class="sec-hd"><span class="sec-t">注目イベントのピン留め</span><span class="sec-l">PUT /api/admin/events/:id/pin</span></div>
+
+        <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:6px;">現在のトップ／サイネージの表示順</div>
+        <div class="slot">
+          <div class="p">枠1<br>📌 新歓ハッカソン2026</div>
+          <div class="a">枠2<br>自動 · score 165</div>
+          <div class="a">枠3<br>自動 · score 90</div>
+          <div class="a">枠4<br>自動 · score 30</div>
+        </div>
+        <div class="note">
+          <b>ピン留めは全体で常に1件のみ。</b>DBの部分ユニークインデックスで保証している
+          （<code>UNIQUE (pinned) WHERE pinned = true</code>）。残り3枠は spotlight_score 降順で自動選出。<br>
+          この「1枠だけ手動」という制約が、特定メンバーによる注目枠の占有を構造的に防ぐ設計。
+        </div>
+        <div class="note warn">
+          <b>切り替え処理は同一トランザクション内で行うこと。</b>
+          「既存の pinned:true を false にする」→「新しい行を true にする」を分けて実行すると、
+          一意制約に衝突して失敗する。
+        </div>
+
+        <div class="sec-hd" style="margin-top:24px;"><span class="sec-t" style="font-size:13.5px;">対象イベント</span><span class="sec-l">開催前のみ表示</span></div>
+
+        <div class="pinrow cur">
+          <div>
+            <span class="bd pin">📌 ピン留め中</span>
+            <div class="t">新歓ハッカソン2026</div>
+            <div class="m">9/28（月）10:00 ・ 部室A ・ 参加 8名 ・ score 210</div>
+          </div>
+          <span class="btn sm dgr">ピン留めを解除</span>
+        </div>
+        <div class="pinrow">
+          <div>
+            <div class="t">LT大会 vol.13</div>
+            <div class="m">10/3（土）・ オンライン ・ 参加 5名 ・ score 165</div>
+          </div>
+          <span class="btn sm">ここにピン留め</span>
+        </div>
+        <div class="pinrow">
+          <div>
+            <div class="t">競技プログラミング練習会</div>
+            <div class="m">10/7（水）・ 情報棟202 ・ 参加 4名 ・ score 90</div>
+          </div>
+          <span class="btn sm">ここにピン留め</span>
+        </div>
+        <div class="pinrow">
+          <div>
+            <div class="t">秋のBBQ交流会</div>
+            <div class="m">10/15（木）・ 大学グラウンド ・ 参加 2名 ・ score 30</div>
+          </div>
+          <span class="btn sm">ここにピン留め</span>
+        </div>
+
+        <div class="note">
+          別のイベントに「ここにピン留め」を押すと、現在のピンは自動で外れる。
+          確認ダイアログを1枚挟むこと（誤操作でサイネージの表示が変わるため）。<br><br>
+          <b>score はこの画面にだけ表示する。</b>一般ユーザーには見せない
+          （数値が見えると、順位を上げるための操作を誘発するため）。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A3 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">A3</span><span class="screen-nm">サイネージ端末</span>
+    <span class="screen-url">/admin/signage-tokens</span><span class="screen-auth">🛡 ADMIN ONLY</span>
+  </div>
+  <div class="frame">
+    <div class="ash">
+      <nav class="aside">
+        <div class="brand">CircleBoard</div><div class="sub">ADMIN</div>
+        <a href="#">アカウント発行</a>
+        <a href="#">注目イベントのピン留め</a>
+        <a href="#" class="on">サイネージ端末</a>
+        <div class="back">← サイトに戻る</div>
+      </nav>
+      <div class="amain">
+        <div class="sec-hd">
+          <span class="sec-t">サイネージ端末</span>
+          <span class="btn pri sm">＋ 端末を追加</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>状態</th><th>端末名</th><th>URL</th><th>発行日</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bd live">有効</span></td>
+              <td>部室メインディスプレイ</td>
+              <td class="mono">https://…/signage?token=a1b2c3d4e5f6…</td>
+              <td class="mono">2026-09-01</td>
+              <td style="text-align:right;white-space:nowrap;">
+                <span class="btn sm">URLをコピー</span> <span class="btn sm dgr">無効化</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="bd dead">無効</span></td>
+              <td>旧・入口ディスプレイ</td>
+              <td class="mono" style="text-decoration:line-through;color:var(--ink-3);">https://…/signage?token=9f8e7d…</td>
+              <td class="mono">2026-08-20</td>
+              <td style="text-align:right;color:var(--ink-3);font-size:11.5px;">2026-09-01 に無効化</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          トークンは <code>SecureRandom.hex(16)</code>（32文字）。URLに埋め込む。<br>
+          <b>無効化は行を削除せず revoked_at に時刻を入れる。</b>
+          「どの端末をいつ止めたか」の記録が残り、漏洩時の追跡ができる。
+        </div>
+
+        <div class="note">
+          <b>この設計の意図（面接で語る部分）:</b> 端末ごとに別トークンを発行しているため、
+          1つが漏洩しても<b>その端末だけを無効化</b>すれば済み、他の端末は動き続ける。
+          共通のパスワード1つで運用すると、漏洩時に全端末を止めて再設定する必要がある。
+        </div>
+
+        <div class="note warn">
+          <b>URLは全世界から到達可能。</b>VPS公開により、ローカルLAN時代の暗黙の防御が無くなった。
+          <code>/signage</code> には rack-attack でレート制限（同一IPから30回/分）をかけること。<br>
+          無効・失効トークンは <b>401ではなく404</b> を返す（トークンの存在有無を推測させないため）。
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="sec-l" style="margin-bottom:6px;">端末を追加するときの表示</div>
+          <div class="modal">
+            <div style="font-weight:700;margin-bottom:10px;">サイネージ端末を追加</div>
+            <div class="field"><span class="lab">端末名 <span class="req">必須</span></span><div class="in">例：部室メインディスプレイ</div></div>
+            <div style="font-size:11.5px;color:var(--ink-3);">
+              管理用のラベルです。どのディスプレイのURLか後から分かる名前を付けてください。
+            </div>
+            <div style="margin-top:12px;"><span class="btn sm pri">発行する</span> <span class="btn sm">キャンセル</span></div>
+          </div>
+        </div>
+
+        <div class="note">
+          端末側の設定手順は README に書く: Chrome をキオスクモードで起動し、このURLを開くだけ。
+          <code>chrome --kiosk "https://…/signage?token=…"</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="border-top:1px solid var(--line);padding-top:16px;font-family:var(--mono);font-size:11px;color:var(--ink-3);">
+  CircleBoard Wireframe — Admin / v2.2 / 2026-08-19 ／ 関連: spec-v2.2.md, api-spec.md, wireframe-member.html, wireframe-signage.html
+</footer>
+
+</div>
+</body>
+</html>
