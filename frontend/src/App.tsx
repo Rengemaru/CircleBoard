@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { EventsPage } from "./pages/EventsPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 // 画面構成は wireframes/ の3ファイルに対応する。
@@ -8,7 +9,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PlaceholderPage name="トップ" />} />
-        <Route path="/events" element={<PlaceholderPage name="イベント一覧" />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:id" element={<PlaceholderPage name="イベント詳細" />} />
         <Route path="/projects" element={<PlaceholderPage name="プロジェクト一覧" />} />
         <Route path="/projects/:id" element={<PlaceholderPage name="プロジェクト詳細" />} />
