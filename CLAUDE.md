@@ -53,7 +53,7 @@ CircleBoard は大学サークルの部室サイネージ兼企画掲示板で�
 
 ```
 circleboard/
-├── api/                    # Rails APIモード
+├── backend/                # Rails APIモード
 │   ├── app/
 │   │   ├── controllers/api/
 │   │   ├── models/
@@ -61,7 +61,7 @@ circleboard/
 │   ├── config/
 │   ├── db/migrate/
 │   └── spec/
-├── web/                    # React + Vite
+├── frontend/               # React + Vite
 │   └── src/
 │       ├── api/            # fetchラッパー
 │       ├── components/
@@ -89,6 +89,25 @@ circleboard/
 2. 何がどう矛盾しているかを説明する
 3. 選択肢を2つ以上出す
 4. **人間の判断を待つ**
+
+#### どこで止まり、どこで止まらないか（オーナー決定）
+
+上記の「止まる」を全ての矛盾に適用すると作業が進まないため、対象を線引きします。
+
+**必ず止まる（実装せず、提案として提示して人間の判断を待つ）**
+
+- `docs/spec-v2.2.md` **§2（テーブル定義）/ §3（注目スコアの計算式）/ §4.1（アクセス制御表）**
+  — 仕様書が「確定済み」と明記した部分
+- APIの**観測可能な契約**が変わるもの（JSONのキー名・キーの有無・値の意味・HTTPステータス）
+- 仕様書間で記述が食い違っていて、どちらを採るかで**成果物が変わる**もの
+
+**止まらず進めてよい（ただし完了報告の §7-3 に必ず書く）**
+
+- 仕様書のサンプルコードの**実装詳細**。ただし出力されるJSONの形と値が変わらないこと
+- 性能上の対処（N+1の回避など）で、振る舞いが変わらないもの
+- 開発環境の設定（Docker / Vite / lint など、本番の挙動に影響しないもの）
+
+判断に迷ったら止まる側に倒します。
 
 ### 3-2. 認可はAPIレスポンスで行う
 
@@ -214,26 +233,28 @@ chore: RuboCopの設定を追加
 
 ---
 
-## 8. よく使うコマンド（macOS）
+## 8. よく使うコマンド
+
+開発機は Windows / Docker Desktop でも macOS でも同じコマンドで動きます。
 
 ```bash
 # 起動
 docker compose up -d
 
 # Rails
-docker compose exec api rails db:migrate
-docker compose exec api rails db:seed
-docker compose exec api rails console
-docker compose exec api bundle exec rspec
-docker compose exec api bundle exec rubocop -a
+docker compose exec backend bin/rails db:migrate
+docker compose exec backend bin/rails db:seed
+docker compose exec backend bin/rails console
+docker compose exec backend bundle exec rspec
+docker compose exec backend bundle exec rubocop -a
 
 # React
-docker compose exec web npm run dev
-docker compose exec web npm run lint
-docker compose exec web npm run typecheck
+docker compose exec frontend npm run dev
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run typecheck
 
 # ログ
-docker compose logs -f api
+docker compose logs -f backend
 ```
 
 ---

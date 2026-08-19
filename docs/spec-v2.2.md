@@ -562,11 +562,13 @@ end
 9. signage_tokens      （参照なし）
 ```
 
+> **注記（実装時に追加）:** ディレクトリ名とComposeのサービス名は `api` / `web` ではなく **`backend` / `frontend`** です（オーナー判断）。以下のコマンドと設定を使うときは読み替えてください。
+
 ```bash
-# macOS / Docker Compose 環境での実行例
-docker compose run --rm api rails db:create
-docker compose run --rm api rails db:migrate
-docker compose run --rm api rails db:seed
+# Docker Compose 環境での実行例
+docker compose exec backend bin/rails db:create
+docker compose exec backend bin/rails db:migrate
+docker compose exec backend bin/rails db:seed
 ```
 
 ---
@@ -612,6 +614,8 @@ docker compose run --rm api rails db:seed
 
 ### 7.3 HTTPS：Caddy を採用
 
+> **注記:** サービス名・ディレクトリ名は `api` / `web` ではなく **`backend` / `frontend`** です。読み替えてください。
+
 | | nginx + certbot | **Caddy（採用）** |
 |---|---|---|
 | 証明書 | 手動設定 + 更新cron | **自動取得・自動更新** |
@@ -640,6 +644,8 @@ circleboard.example.jp {
 `try_files {path} /index.html` は React Router（SPA）のための設定。`/events/12` に直接アクセスされてもindex.htmlを返し、ルーティングをReactに任せる。
 
 ### 7.4 本番用Dockerfile（マルチステージビルド）
+
+> **注記:** サービス名・ディレクトリ名は `api` / `web` ではなく **`backend` / `frontend`** です。読み替えてください。
 
 > **マルチステージビルド** = ビルドに必要なツール（コンパイラ等）を最終イメージに含めない仕組み。イメージサイズが数分の1になり、攻撃対象も減る。
 
@@ -716,6 +722,8 @@ find /opt/circleboard/backups -name 'db_*.sql.gz' -mtime +14 -delete
 ConoHaの自動バックアップは有料オプション（月額363円〜）だが、上記で十分かつ実装内容を面接で説明できる。
 
 ### 7.7 CD（GitHub Actions）
+
+> **注記:** サービス名・ディレクトリ名は `api` / `web` ではなく **`backend` / `frontend`** です。読み替えてください。
 
 ```yaml
 # .github/workflows/deploy.yml（概略）
