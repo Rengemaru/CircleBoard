@@ -8,5 +8,8 @@ class Event < ApplicationRecord
 
   has_many :event_tags, dependent: :destroy
   has_many :tags, through: :event_tags
+  # DB側の ON DELETE CASCADE と二重になるが、Rails 経由の削除でも
+  # モデルのコールバックが走るよう明示しておく。
+  # Project 側は逆に DB 任せにしている(理由は project.rb のコメント)
   has_many :event_participations, dependent: :destroy
 end
