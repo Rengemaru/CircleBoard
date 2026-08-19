@@ -1,0 +1,2 @@
+class SignageToken < ApplicationRecord
+end
