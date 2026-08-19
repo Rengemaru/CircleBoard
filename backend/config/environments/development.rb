@@ -50,6 +50,12 @@ Rails.application.configure do
   config.active_support.disallowed_deprecation_warnings = []
 
   # Raise an error on page load if there are pending migrations.
+  # この設定により ActiveRecord::Migration::CheckPending ミドルウェアが挿入され、
+  # プロセス起動後の最初のリクエストで schema_migrations を1回だけ問い合わせる。
+  # そのため development の /healthz は「DBに触らない」(docs/api-spec.md §7)を
+  # 厳密には満たさない。production ではこの設定が無く CheckPending も入らないため、
+  # 監視対象である本番の /healthz はDBから独立している(bin/rails middleware で確認済み)。
+  # 開発中はマイグレーション漏れを検知できる利点の方が大きいため、dev では残す。
   config.active_record.migration_error = :page_load
 
   # Highlight code that triggered database queries in logs.
