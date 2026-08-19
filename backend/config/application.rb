@@ -40,5 +40,12 @@ module App
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # コンテナのログを docker compose logs で読めるようにする。
+    # development の既定は log/development.log への出力で、コンテナ外から見えない。
+    if ENV["RAILS_LOG_TO_STDOUT"].present?
+      config.logger = ActiveSupport::Logger.new($stdout)
+      config.logger.formatter = config.log_formatter
+    end
   end
 end
