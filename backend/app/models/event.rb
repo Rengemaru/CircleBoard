@@ -6,6 +6,15 @@ class Event < ApplicationRecord
 
   belongs_to :owner, class_name: "User", optional: true
 
+  # DB の NOT NULL 制約に対応する presence のみ(仕様書 §2.2)。
+  # 一意性や数値範囲など、仕様書に無い検証は足さない。
+  # DB制約だけだと保存時に例外が飛び、フォームにエラーを返せないため
+  # アプリ層にも同じ制約を置いている。
+  validates :title, presence: true
+  validates :description, presence: true
+  validates :location, presence: true
+  validates :starts_at, presence: true
+
   has_many :event_tags, dependent: :destroy
   has_many :tags, through: :event_tags
   # DB側の ON DELETE CASCADE と二重になるが、Rails 経由の削除でも

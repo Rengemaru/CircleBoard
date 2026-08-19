@@ -61,6 +61,26 @@ Docker のバインドマウント越しではホスト側のファイル変更�
 伝わらず、Vite が古いコードを配信し続けるためです。
 それでも反映されない場合は `docker compose restart frontend` を実行してください。
 
+## テスト・Lint
+
+```bash
+# Rails
+docker compose exec backend bundle exec rspec      # テスト
+docker compose exec backend bundle exec rubocop    # 静的解析
+docker compose exec backend bundle exec rubocop -a # 自動修正
+
+# React
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run typecheck
+docker compose exec frontend npm run format        # Prettier
+```
+
+テストカバレッジは `rspec` 実行時に SimpleCov が計測し、`backend/coverage/index.html` に出ます。
+**現時点では計測するだけで、閾値でCIを落とす設定にはしていません。**
+
+テストは網羅的には書きません。優先順位は `CLAUDE.md` §6 のとおりで、
+`Event#calculate_spotlight_score`（Phase 3 / T3-1）を最も厚く書きます。
+
 ## よく使うコマンド
 
 ```bash

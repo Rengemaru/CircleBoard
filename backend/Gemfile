@@ -28,6 +28,10 @@ gem "bootsnap", require: false
 gem "rack-cors"
 
 group :development, :test do
+  # テストは RSpec を使う(CLAUDE.md §1)。rails new は --skip-test で生成済み
+  gem "rspec-rails", "~> 7.1"
+  gem "factory_bot_rails", "~> 6.4"
+
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
@@ -36,4 +40,9 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+end
+
+group :test do
+  # カバレッジは計測するだけ。この段階では閾値でCIを落とさない
+  gem "simplecov", require: false
 end
