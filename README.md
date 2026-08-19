@@ -54,6 +54,13 @@ Copy-Item .env.example .env
 
 `docker compose` 以降のコマンドは macOS と同じです。
 
+### ソースを直しても画面が変わらないとき
+
+`frontend/vite.config.ts` で `server.watch.usePolling` を有効にしてあります。
+Docker のバインドマウント越しではホスト側のファイル変更イベントがコンテナ内に
+伝わらず、Vite が古いコードを配信し続けるためです。
+それでも反映されない場合は `docker compose restart frontend` を実行してください。
+
 ## よく使うコマンド
 
 ```bash
