@@ -20,7 +20,7 @@ EXPOSE 3000
 
 # T1-1 時点では backend/ が空のため、Rails 生成前でもコンテナが落ちないようにする。
 # T1-2 で rails new を実行すると bin/rails が現れ、以降は自動的にサーバが起動する。
-# 起動前に server.pid を消す。コンテナを restart するとプロセスは消えるが
-# バインドマウント上の pid ファイルは残り、Puma が "A server is already running"
-# として起動を拒否するため(実際に再現した)。
-CMD ["bash", "-c", "rm -f tmp/pids/server.pid; if [ -f bin/rails ]; then bin/rails server -b 0.0.0.0 -p 3000; else echo '[T1-1] Rails app not generated yet. Waiting.'; sleep infinity; fi"]
+
+# 起動手順は docker-entrypoint.dev.sh に置く。CMD に長い1行を書くより読める。
+# バインドマウント越しでも実行できるよう bash に渡す(実行ビットに依存しない)。
+CMD ["bash", "docker-entrypoint.dev.sh"]

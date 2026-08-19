@@ -29,6 +29,18 @@ cp .env.example .env
 docker compose up -d
 ```
 
+**これだけで動きます。** 初回は依存のインストールに数分かかります。
+各コンテナの起動スクリプト（`backend/docker-entrypoint.dev.sh` / `frontend/docker-entrypoint.dev.sh`）が
+次を自動で行うためです。
+
+| | 内容 |
+|---|---|
+| backend | 足りない gem があれば `bundle install` → `db:prepare`（DB作成・マイグレーション・seed）→ Puma 起動 |
+| frontend | `node_modules` が空なら `npm install` → Vite 起動 |
+
+いずれも**足りないときだけ**実行するので、2回目以降の起動は待たされません。
+進み具合は `docker compose logs -f backend` の `[dev]` 行で追えます。
+
 `.env` は `.gitignore` 済みです。実値をコミットしないでください。
 
 ### 起動確認
@@ -37,13 +49,11 @@ docker compose up -d
 docker compose ps
 ```
 
-`db` の STATUS が `healthy` になれば成功です。
+3サービスとも `Up` で `db` が `healthy`、`http://localhost:5173` にイベントが4件並べば成功です。
 
 同じPCで別プロジェクトが 3000 / 5173 を使っていてポート衝突する場合は、
 `.env` の `BACKEND_HOST_PORT` / `FRONTEND_HOST_PORT` を変更してください。
 コンテナ内のポートは変わりません。
-`backend` / `frontend` は Rails・Vite を生成するまで待機状態で起動します（T1-2 / T1-3 で実体が入ります）。
-
 ### Windows (PowerShell) の場合
 
 `cp` の代わりに:
