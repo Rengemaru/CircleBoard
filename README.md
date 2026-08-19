@@ -64,6 +64,27 @@ docker compose logs -f backend
 docker compose exec db psql -U circleboard -d circleboard_development  # DBに入る
 ```
 
-## 開発用アカウント
+## 開発用データ
 
-Phase 1 の T1-5（seeds）で作成します。パスワードは全員 `password123`（**開発環境専用**）。
+```bash
+docker compose exec backend bin/rails db:seed
+```
+
+何度実行してもデータは増えません（`find_or_create_by` を使っています）。
+
+### 開発用アカウント
+
+パスワードは全員 `password123`（**開発環境専用**。本番では使わないこと）。
+
+| メールアドレス | 名前 | role |
+|---|---|---|
+| `admin@example.ac.jp` | 部長 管理 | admin |
+| `taro@example.ac.jp` | 山田太郎 | member |
+| `hanako@example.ac.jp` | 佐藤花子 | member |
+| `ichiro@example.ac.jp` | 鈴木一郎 | member |
+
+### 投入されるデータ
+
+タグ9件 / イベント4件 / プロジェクト3件（募集中2・進行中1）/ イベント参加7件（うちキャンセル済み2）/ サイネージトークン1件。
+
+イベントの開催日は **3日後 / 8日後 / 20日後 / 10日前** に散らしてあります。注目スコア（`docs/spec-v2.2.md` §3）は「開催の近さ」で大きく変わるため、動作確認にはこのばらつきが要ります。
