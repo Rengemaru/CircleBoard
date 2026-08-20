@@ -5,7 +5,6 @@
 # current_user を受け取る形にしてあるのは、出し分けが必要になったときに
 # ここ1箇所だけを見ればよい状態を保つため(CLAUDE.md §3-2)。
 #
-# participants と current_user_joined は T2-7(参加申請・参加者一覧)の担当。
 class ProjectSerializer
   def initialize(project, current_user: nil)
     @project = project
@@ -25,7 +24,25 @@ class ProjectSerializer
       participants_count: @project.project_participations.size,
       status: @project.status,
       owner: @project.owner && { id: @project.owner.id, name: @project.owner.name },
-      tags: @project.tags.map { TagSerializer.new(_1).as_json }
+      tags: @project.tags.map { TagSerializer.new(_1).as_json },
+      participants: participants,
+      current_user_joined: current_user_joined?
     }
+  end
+
+  private
+
+  # user は退会で nil になりうる(ON DELETE SET NULL)
+  def participants
+    @project.project_participations.filter_map do |participation|
+      participation.user && { id: participation.user.id, name: participation.user.name }
+    end
+  end
+
+  # 読み込み済みの配列から数えるので追加SQLが飛ばない
+  def current_user_joined?
+    return false if @current_user.nil?
+
+    @project.project_participations.any? { |p| p.user_id == @current_user.id }
   end
 end

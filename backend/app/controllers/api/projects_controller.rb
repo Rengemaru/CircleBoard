@@ -8,7 +8,7 @@ module Api
     before_action :require_owner_or_admin, only: [ :update, :destroy ]
 
     def index
-      projects = Project.active.includes(:tags, :owner, :project_participations)
+      projects = Project.active.includes(:tags, :owner, project_participations: :user)
       render json: { projects: projects.map { ProjectSerializer.new(_1, current_user: current_user).as_json } }
     end
 
@@ -60,7 +60,7 @@ module Api
 
     def set_project
       @project = Project.active
-                        .includes(:tags, :owner, :project_participations)
+                        .includes(:tags, :owner, project_participations: :user)
                         .find_by(id: params[:id])
       return if @project
 

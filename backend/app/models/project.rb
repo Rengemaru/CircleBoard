@@ -6,7 +6,13 @@ class Project < ApplicationRecord
 
   belongs_to :owner, class_name: "User", optional: true
 
-  # DB の NOT NULL 制約に対応する presence のみ(仕様書 §2.3)。
+  # 定員判定。capacity が nil のときは無制限(spec-v2.2.md §2.3)。
+  # イベントと違いキャンセルの概念が無いので、参加レコードをそのまま数える
+  def full?
+    capacity.present? && project_participations.size >= capacity
+  end
+
+  # DB の NOT NULL 制約に対応する presence のみ(spec-v2.2.md §2.3)。
   # activity_schedule / meeting_schedule / capacity は NULL可なので付けない
   validates :title, presence: true
   validates :description, presence: true
