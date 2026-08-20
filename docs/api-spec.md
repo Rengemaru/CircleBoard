@@ -176,6 +176,22 @@
 未ログインは一覧・詳細ともに **401**。
 
 ### `GET /api/projects` — 一覧
+
+| クエリ | 既定 | 意味 |
+|---|---|---|
+| `status` | **終了以外** | `recruiting` / `in_progress` / `completed`。未知の値は既定に戻す |
+| `tag_id` | なし | 1つのタグに絞る |
+
+並び順は **募集中 → 進行中**（`wireframes/wireframe-member.html` 画面④）。
+enum の整数（0:recruiting 1:in_progress 2:completed）がそのままこの順序なので、
+`status` で並べるだけでよい。
+
+**進行中も既定で返す。** 途中参加できる設計のため。終了は返さない
+（「過去の企画」セクションは MVP 対象外。`CLAUDE.md` §10）。
+
+イベントと違い注目スコアは使わない。プロジェクトには開催日が無く、
+締切感が存在しないため（`wireframe-signage.html`）。
+
 ### `GET /api/projects/:id` — 詳細
 
 ```json

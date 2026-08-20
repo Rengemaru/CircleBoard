@@ -8,7 +8,12 @@ module Api
     before_action :require_owner_or_admin, only: [ :update, :destroy ]
 
     def index
+      # includes はN+1対策。1件ずつ関連を引きに行かせない(CLAUDE.md §3-3)
       projects = Project.active.includes(:tags, :owner, project_participations: :user)
+      projects = filter_by_status(projects)
+      projects = filter_by_tag(projects)
+      projects = sort_projects(projects)
+
       render json: { projects: projects.map { ProjectSerializer.new(_1, current_user: current_user).as_json } }
     end
 
@@ -57,6 +62,34 @@ module Api
     end
 
     private
+
+    # 既定は終了以外。進行中も一覧に出すのは、途中参加できる設計のため
+    # (wireframes/wireframe-member.html 画面④)。
+    # 未知の値を渡されたら既定に戻す。エラーにしないのは、URLを手で編集された
+    # だけで画面が壊れるのを避けるため(イベント側と同じ扱い)
+    def filter_by_status(scope)
+      status = params[:status]
+      return scope.where.not(status: :completed) unless Project.statuses.key?(status)
+
+      scope.where(status: status)
+    end
+
+    # 絞り込みは ?tag_id= で行い、URLで共有できる状態にする
+    # (wireframes/wireframe-member.html 画面④)
+    def filter_by_tag(scope)
+      tag_id = params[:tag_id]
+      return scope if tag_id.blank?
+
+      scope.joins(:project_tags).where(project_tags: { tag_id: tag_id })
+    end
+
+    # 募集中 → 進行中 の順(画面④)。enum の整数(0:recruiting 1:in_progress
+    # 2:completed)がそのままこの順序なので、status で並べるだけでよい。
+    # イベントと違い注目スコアは使わない。プロジェクトには開催日が無く、
+    # 締切感が存在しないため(wireframe-signage.html)
+    def sort_projects(scope)
+      scope.order(status: :asc, id: :asc)
+    end
 
     def set_project
       @project = Project.active

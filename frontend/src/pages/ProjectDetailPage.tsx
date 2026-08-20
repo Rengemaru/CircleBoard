@@ -90,6 +90,9 @@ export function ProjectDetailPage() {
           {project.meeting_schedule !== null && (
             <Row label="MTG" value={project.meeting_schedule} />
           )}
+          {/* 残り枠(ワイヤーフレーム⑤のサイド)。定員なしのときに
+              「残り null枠」と出さない */}
+          <Row label="残り枠" value={formatRemaining(project)} />
         </dl>
 
         <section>
@@ -106,6 +109,11 @@ export function ProjectDetailPage() {
             {(project.participants ?? []).map((p) => (
               <li key={p.id} className="rounded bg-gray-100 px-2 py-0.5">
                 {p.name}
+                {/* 誰が主催かを一覧の中でも分かるようにする(ワイヤーフレーム⑤)。
+                    下の「主催」欄と照らし合わせずに済む */}
+                {p.id === project.owner?.id && (
+                  <span className="ml-1 text-gray-500">（主催）</span>
+                )}
               </li>
             ))}
           </ul>
@@ -152,6 +160,13 @@ function Frame({
       <main className="mx-auto max-w-3xl p-6">{children}</main>
     </>
   );
+}
+
+// 定員が null のときは無制限(spec-v2.2.md §2.3)。
+// 満員を超えて参加できることは無いが、負の数は 0 に丸める
+function formatRemaining(project: ProjectSummary): string {
+  if (project.capacity === null) return "制限なし";
+  return `${Math.max(0, project.capacity - project.participants_count)}名`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
