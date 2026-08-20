@@ -1,26 +1,30 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { TopPage } from "./pages/TopPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { LoginPage } from "./pages/LoginPage";
+import { LegalPage } from "./pages/LegalPage";
+import { CreatePage } from "./pages/CreatePage";
+import { EventDetailPage } from "./pages/EventDetailPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { SignagePage } from "./pages/SignagePage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 
 // 画面構成は wireframes/ の3ファイルに対応する。
-// T1-3 ではルーティングの器だけを作り、中身は各タスクで差し替える。
 export function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<TopPage />} />
         <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:id" element={<PlaceholderPage name="イベント詳細" />} />
-        <Route path="/projects" element={<PlaceholderPage name="プロジェクト一覧" />} />
-        <Route path="/projects/:id" element={<PlaceholderPage name="プロジェクト詳細" />} />
-        <Route path="/create" element={<PlaceholderPage name="企画作成" />} />
-        <Route path="/login" element={<PlaceholderPage name="ログイン" />} />
-        <Route path="/legal" element={<PlaceholderPage name="利用規約" />} />
+        <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/:id" element={<ProjectDetailPage />} />
+        <Route path="/create" element={<CreatePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/legal" element={<LegalPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/pins" element={<AdminPinsPage />} />
         <Route path="/admin/signage-tokens" element={<AdminSignageTokensPage />} />

@@ -25,3 +25,10 @@ export type EventSummary = {
   // (docs/spec-v2.2.md §4.2)。省略可能であることを型でも表す
   owner?: { id: number; name: string };
 };
+
+// 詳細API。一覧と同じ EventSerializer が detail: true で返す形。
+// ログイン時のみ participants と current_user_joined が**キーごと**増える。
+export type EventDetail = EventSummary & {
+  participants?: { id: number; name: string }[];
+  current_user_joined?: boolean;
+};
