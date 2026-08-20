@@ -23,6 +23,17 @@ RSpec.describe "Api::Sessions", type: :request do
       expect(unknown_email).to eq(wrong_password)
     end
 
+    # エラーの外側の形そのものを固定する。
+    # 「2つの失敗レスポンスが互いに一致する」だけの検証では、両方が同時に
+    # 壊れたときに気づけない(実際に error → err に変えても全specが通った)。
+    it "エラーの形が api-spec §0 の { error: { code, message } } である" do
+      post "/api/session", params: { email: "nobody@example.ac.jp", password: "x" }, as: :json
+
+      expect(response.parsed_body.keys).to eq([ "error" ])
+      expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
+      expect(response.parsed_body["error"]["code"]).to eq("unauthorized")
+    end
+
     # 認証情報をレスポンスに載せない(仕様書 §4.1 の表にない情報は出さない)
     it "email と password_digest を返さない" do
       post "/api/session", params: { email: user.email, password: "password123" }, as: :json
