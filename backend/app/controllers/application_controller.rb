@@ -17,6 +17,12 @@ class ApplicationController < ActionController::API
     current_user.present?
   end
 
+  # ログイン必須のエンドポイントで使う。
+  # フロントでボタンを隠すのは表示の話であって制限ではないので、API側で弾く
+  def require_login
+    render_error(:unauthorized, "ログインしてください") unless signed_in?
+  end
+
   # エラーレスポンスの形は docs/api-spec.md §0 の
   # { "error": { "code": ..., "message": ... } } に統一する。
   # 各コントローラでハッシュを組み立てると、形がずれても気づけない。

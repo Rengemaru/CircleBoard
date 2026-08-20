@@ -6,5 +6,8 @@
 module AuthenticationHelpers
   def sign_in(user, password: "password123")
     post "/api/session", params: { email: user.email, password: password }, as: :json
+    # ログイン自体が失敗していると、呼び出し元のテストが別の理由で落ちて
+    # 原因の切り分けを誤らせる。ここで先に気づけるようにしておく
+    raise "sign_in に失敗しました: #{response.status} #{response.body}" unless response.successful?
   end
 end
