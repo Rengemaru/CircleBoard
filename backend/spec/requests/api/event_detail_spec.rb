@@ -52,6 +52,7 @@ RSpec.describe "GET /api/events/:id", type: :request do
 
     expect(response).to have_http_status(:not_found)
     expect(response.parsed_body.keys).to eq([ "error" ])
+    expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
     expect(response.parsed_body["error"]["code"]).to eq("not_found")
   end
 end

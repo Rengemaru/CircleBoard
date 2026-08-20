@@ -83,6 +83,7 @@ RSpec.describe "イベントの作成・編集・論理削除", type: :request d
 
       expect(response).to have_http_status(:forbidden)
       expect(response.parsed_body.keys).to eq([ "error" ])
+      expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
       expect(response.parsed_body["error"]["code"]).to eq("forbidden")
       expect(event.reload.title).not_to eq("乗っ取り")
     end

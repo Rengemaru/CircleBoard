@@ -104,6 +104,8 @@ RSpec.describe "Api::Projects", type: :request do
       patch "/api/projects/#{project.id}", params: { project: { title: "乗っ取り" } }, as: :json
 
       expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body.keys).to eq([ "error" ])
+      expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
       expect(response.parsed_body["error"]["code"]).to eq("forbidden")
       expect(project.reload.title).not_to eq("乗っ取り")
     end
@@ -125,6 +127,8 @@ RSpec.describe "Api::Projects", type: :request do
       get "/api/projects/#{project.id}"
 
       expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body.keys).to eq([ "error" ])
+      expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
       expect(response.parsed_body["error"]["code"]).to eq("not_found")
     end
   end
