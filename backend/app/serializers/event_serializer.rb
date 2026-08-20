@@ -28,7 +28,7 @@ class EventSerializer
       participants_count: @event.active_event_participations.size,
       status: @event.status,
       external_url: @event.external_url,
-      tags: @event.tags.map { |t| { id: t.id, name: t.name } }
+      tags: @event.tags.map { TagSerializer.new(_1).as_json }
     }
 
     # 未ログインならここで返す。owner キーごと存在しない

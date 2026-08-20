@@ -18,7 +18,11 @@ module Api
 
     def create
       # owner は current_user から設定する。リクエストの owner_id を信用しない
+      tags = resolve_tags(tag_ids_param)
+      return render_error(:unprocessable_entity, "存在しないタグが指定されています") if tags.nil?
+
       project = current_user.owned_projects.new(project_params)
+      project.tags = tags
 
       if project.save
         render json: ProjectSerializer.new(project, current_user: current_user).as_json, status: :created
@@ -28,7 +32,19 @@ module Api
     end
 
     def update
-      if @project.update(project_params)
+      tags = resolve_tags(tag_ids_param)
+      return render_error(:unprocessable_entity, "存在しないタグが指定されています") if tags.nil?
+
+      # タグの割り当ては保存済みレコードに対して即座に中間テーブルへ書き込まれる。
+      # 本体の更新が失敗したときにタグだけ変わった状態が残らないよう、まとめて巻き戻す
+      updated = false
+      ActiveRecord::Base.transaction do
+        @project.tags = tags if tag_ids_param
+        updated = @project.update(project_params)
+        raise ActiveRecord::Rollback unless updated
+      end
+
+      if updated
         render json: ProjectSerializer.new(@project, current_user: current_user).as_json
       else
         render_error(:unprocessable_entity, @project.errors.full_messages.join("、"))
@@ -60,6 +76,10 @@ module Api
     # status を許可しているのは、募集中 → 進行中 → 完了 の遷移が
     # 編集以外に手段が無いため(docs/api-spec.md §3 は3値と定めている)。
     # tag_ids は T2-5(タグ付け)の担当。owner_id は許可しない
+    def tag_ids_param
+      params.dig(:project, :tag_ids)
+    end
+
     def project_params
       params.require(:project).permit(
         :title, :description, :activity_schedule, :meeting_schedule, :capacity, :status

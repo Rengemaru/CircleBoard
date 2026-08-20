@@ -29,6 +29,20 @@ class ApplicationController < ActionController::API
     current_user.admin? || resource.owner_id == current_user.id
   end
 
+  # tag_ids で指定されたタグを引く。イベントとプロジェクトで同じ処理になるためここに置く。
+  #
+  # 存在しないIDや category: skill が混ざっていたら nil を返す(呼び出し側で422にする)。
+  # 黙って無視すると、タグを付けたつもりが付いていない状態に気づけないため。
+  # 重複は取り除く。UNIQUE(event_id, tag_id) があるので同じIDを2回渡されても
+  # DBは壊れないが、その手前で整えておく
+  def resolve_tags(raw_ids)
+    ids = Array(raw_ids).map(&:to_i).uniq
+    return [] if ids.empty?
+
+    tags = Tag.project_event.where(id: ids).to_a
+    tags.size == ids.size ? tags : nil
+  end
+
   # エラーレスポンスの形は docs/api-spec.md §0 の
   # { "error": { "code": ..., "message": ... } } に統一する。
   # 各コントローラでハッシュを組み立てると、形がずれても気づけない。

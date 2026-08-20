@@ -25,7 +25,7 @@ class ProjectSerializer
       participants_count: @project.project_participations.size,
       status: @project.status,
       owner: @project.owner && { id: @project.owner.id, name: @project.owner.name },
-      tags: @project.tags.map { |t| { id: t.id, name: t.name } }
+      tags: @project.tags.map { TagSerializer.new(_1).as_json }
     }
   end
 end

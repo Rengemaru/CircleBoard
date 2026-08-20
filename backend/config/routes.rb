@@ -7,5 +7,6 @@ Rails.application.routes.draw do
     resource :session, only: [ :show, :create, :destroy ]
     resources :events, only: [ :index, :show, :create, :update, :destroy ]
     resources :projects, only: [ :index, :show, :create, :update, :destroy ]
+    resources :tags, only: [ :index ]
   end
 end
