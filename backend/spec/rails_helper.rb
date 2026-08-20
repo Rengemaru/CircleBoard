@@ -46,6 +46,9 @@ RSpec.configure do |config|
   # create(:event) のように前置き無しで書けるようにする
   config.include FactoryBot::Syntax::Methods
   config.include AuthenticationHelpers, type: :request
+  # travel_to で時刻を固定する。注目スコアは日単位の境界を持つため、
+  # 実行した瞬間の時刻に結果が左右されないようにする必要がある
+  config.include ActiveSupport::Testing::TimeHelpers
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
