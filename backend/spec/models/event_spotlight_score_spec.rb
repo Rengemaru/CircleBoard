@@ -64,10 +64,19 @@ RSpec.describe Event, "#calculate_spotlight_score" do
       expect(event.calculate_spotlight_score).to eq(0)
     end
 
+    # travel_to で時刻を固定しているので、境界そのものを突ける。
+    # 安全マージンを取った値で「境界」と名乗ると、窓が少しズレて実装されても
+    # 検知できないテストになる
     it "3日前ちょうどの参加は含まれる（境界）" do
-      create(:event_participation, event: event, created_at: 3.days.ago + 1.minute)
+      create(:event_participation, event: event, created_at: 3.days.ago)
 
       expect(event.calculate_spotlight_score).to eq(10)
+    end
+
+    it "3日前の1秒前の参加は含まれない（境界の外側）" do
+      create(:event_participation, event: event, created_at: 3.days.ago - 1.second)
+
+      expect(event.calculate_spotlight_score).to eq(0)
     end
 
     # キャンセルは物理削除しないので、集計時に除外する必要がある(spec-v2.2.md §2.5)
@@ -148,6 +157,39 @@ RSpec.describe Event, ".spotlight_targets" do
     upcoming = event_starting_in(3)
 
     expect(Event.spotlight_targets).to include(upcoming)
+  end
+
+  # spec-v2.2.md §3.5 は「starts_at が過去（開催当日23時以降は自動的に外す）」と
+  # 明記している。日付が変わるまで載せ続けるのではなく、23時で落とす
+  describe "開催当日の23時カットオフ" do
+    def event_today_at(hour)
+      create(:event, starts_at: Date.current.in_time_zone.change(hour: hour))
+    end
+
+    # travel_to は入れ子にできないため、外側の固定を一度解いてから指定し直す
+    def at_time(hour, minute)
+      travel_back
+      travel_to(Time.zone.local(2026, 6, 15, hour, minute, 0))
+    end
+
+    it "22:59 時点では開催当日のイベントを含める" do
+      at_time(22, 59)
+
+      expect(Event.spotlight_targets).to include(event_today_at(19))
+    end
+
+    it "23:00 になったら開催当日のイベントを外す（境界）" do
+      at_time(23, 0)
+
+      expect(Event.spotlight_targets).not_to include(event_today_at(19))
+    end
+
+    it "23時を過ぎても翌日以降のイベントは対象に含める" do
+      at_time(23, 30)
+      tomorrow = create(:event, starts_at: Date.current.tomorrow.in_time_zone.change(hour: 10))
+
+      expect(Event.spotlight_targets).to include(tomorrow)
+    end
   end
 
   it "開催当日はまだ対象に含める" do

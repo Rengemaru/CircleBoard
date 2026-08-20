@@ -29,9 +29,18 @@ class Event < ApplicationRecord
   # 例: 昨日開催 → 14 - (-1) = 15 → 225。開催当日の 210 より高い。
   # 計算式だけに任せると、終わったイベントがサイネージの先頭に居座る。
   #
-  # 開催当日はまだ載せる。「今日ここでやります」が最も伝えたい状態のため
+  # 開催当日は23時まで載せ、23時を過ぎたら落とす(§3.5 の括弧書き)。
+  # 日付が変わるまで載せ続けると、深夜に「今日開催」と出続けてしまう
+  SPOTLIGHT_SAME_DAY_CUTOFF_HOUR = 23
+
   scope :spotlight_targets, lambda {
-    active.recruiting.where(starts_at: Time.current.beginning_of_day..)
+    from = if Time.current.hour >= SPOTLIGHT_SAME_DAY_CUTOFF_HOUR
+             Date.current.tomorrow.in_time_zone
+    else
+             Time.current.beginning_of_day
+    end
+
+    active.recruiting.where(starts_at: from..)
   }
 
   # 参加者数の絶対値は使わない。すでに人気の企画がさらに有利になるだけで、
