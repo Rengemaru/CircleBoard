@@ -14,6 +14,8 @@ Rails.application.routes.draw do
       resource :participation, only: [ :create ], controller: "project_participations"
     end
     resources :tags, only: [ :index ]
+    # サイネージが必要とするデータを1リクエストで返す。単数形リソース
+    resource :signage, only: [ :show ]
 
     namespace :admin do
       resources :events, only: [] do

@@ -9,13 +9,20 @@
 #   participants               … ログイン時 かつ detail: true のときのみ
 #   current_user_joined
 class EventSerializer
-  def initialize(event, current_user: nil, detail: false)
+  def initialize(event, current_user: nil, detail: false, signage: false)
     @event = event
     @current_user = current_user
     @detail = detail
+    @signage = signage
   end
 
   def as_json
+    # サイネージは返すキーの集合が違う(docs/api-spec.md §5)。
+    # days_until / pinned / detail_url を足し、capacity や status は載せない。
+    # 別クラスにせずここに置いているのは、owner の出し分けを2箇所で
+    # 管理しないため(CLAUDE.md §3-2、instructions.md T3-4)
+    return signage_json if @signage
+
     base = {
       id: @event.id,
       title: @event.title,
@@ -46,6 +53,22 @@ class EventSerializer
   end
 
   private
+
+  # サイネージは「トークン認証は通っているが current_user は nil」の状態で呼ばれる。
+  # owner も participants もそもそも組み立てないので、漏れようがない
+  def signage_json
+    {
+      id: @event.id,
+      title: @event.title,
+      starts_at: @event.starts_at.iso8601,
+      days_until: (@event.starts_at.to_date - Date.current).to_i,
+      location: @event.location,
+      description: @event.description,
+      tags: @event.tags.map { TagSerializer.new(_1).as_json },
+      pinned: @event.pinned,
+      detail_url: SignageUrl.for("events", @event.id)
+    }
+  end
 
   def signed_in? = @current_user.present?
 

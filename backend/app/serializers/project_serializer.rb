@@ -6,13 +6,16 @@
 # ここ1箇所だけを見ればよい状態を保つため(CLAUDE.md §3-2)。
 #
 class ProjectSerializer
-  def initialize(project, current_user: nil)
+  def initialize(project, current_user: nil, signage: false)
     @project = project
     @current_user = current_user
+    @signage = signage
   end
 
   def as_json
-    {
+    return signage_json if @signage
+
+    base = {
       id: @project.id,
       title: @project.title,
       description: @project.description,
@@ -23,14 +26,41 @@ class ProjectSerializer
       # 絞らずに数える(仕様書 §2.6)
       participants_count: @project.project_participations.size,
       status: @project.status,
+      tags: @project.tags.map { TagSerializer.new(_1).as_json }
+    }
+
+    # current_user が nil なら owner と参加者一覧を落とす。
+    # 通常のAPIはログイン必須なので nil にならないが、サイネージが
+    # current_user: nil で通る(docs/api-spec.md §5)。
+    # EventSerializer と同じ形にしておくことで、サイネージ専用の
+    # シリアライザを作らずに済む(CLAUDE.md §3-2)
+    return base unless signed_in?
+
+    base.merge(
       owner: @project.owner && { id: @project.owner.id, name: @project.owner.name },
-      tags: @project.tags.map { TagSerializer.new(_1).as_json },
       participants: participants,
       current_user_joined: current_user_joined?
-    }
+    )
   end
 
   private
+
+  # 返すキーの集合は docs/api-spec.md §5 に合わせる。
+  # description や activity_schedule は載せない（サイネージの枠に入らない）
+  def signage_json
+    {
+      id: @project.id,
+      title: @project.title,
+      status: @project.status,
+      participants_count: @project.project_participations.size,
+      capacity: @project.capacity,
+      meeting_schedule: @project.meeting_schedule,
+      tags: @project.tags.map { TagSerializer.new(_1).as_json },
+      detail_url: SignageUrl.for("projects", @project.id)
+    }
+  end
+
+  def signed_in? = @current_user.present?
 
   # user は退会で nil になりうる(ON DELETE SET NULL)
   def participants
