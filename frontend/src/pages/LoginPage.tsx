@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SiteHeader } from "../components/SiteHeader";
 import { login } from "../api/session";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 // ログイン(wireframes/wireframe-member.html ⑥)。
 //
@@ -10,6 +11,7 @@ import { login } from "../api/session";
 // フロントは資格情報を一切保持しない。
 export function LoginPage() {
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function LoginPage() {
 
   return (
     <>
-      <SiteHeader user={null} />
+      <SiteHeader user={user} />
       <main className="mx-auto max-w-sm p-6">
         <h1 className="mb-6 text-2xl font-bold">ログイン</h1>
 
