@@ -41,6 +41,13 @@ module App
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # 注目スコアは「開催までの日数」を日単位で数える(spec-v2.2.md §3)。
+    # UTC のままだと JST の 00:00〜09:00 に始まるイベントで日数が1日ずれる。
+    # cron(whenever)の起動時刻もサーバーのタイムゾーンに依存するため、
+    # アプリ層の時刻を日本時間に揃える。
+    # DBへの保存は UTC のまま(Rails の既定)。読み書きの境界で変換される
+    config.time_zone = "Tokyo"
+
     # APIモードは session / cookie ミドルウェアを読み込まないので手で戻す。
     # 認証はサーバー側セッション + HttpOnly Cookie で行う(docs/api-spec.md §0)。
     # トークンをJSから触れる場所に置かないため、この方式を選んでいる。
