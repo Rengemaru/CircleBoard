@@ -63,7 +63,10 @@ module Api
           graduation_year: user.graduation_year,
           # 卒業したかどうかは年度の切り替わりを跨ぐ判断なので、
           # 画面ごとに計算させない(User#graduated? 参照)
-          graduated: user.graduated?
+          graduated: user.graduated?,
+          # NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)
+          suspended: user.suspended?,
+          suspended_at: user.suspended_at&.iso8601
         }
       end
 

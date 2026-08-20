@@ -23,9 +23,11 @@ Rails.application.routes.draw do
       resource :dashboard, only: [ :show ]
 
       # ユーザー管理(wireframes/wireframe-admin-ver2.html ②③)。
-      # 編集と停止はまだ持たない。停止は users に suspended_at が無く、
-      # 追加には spec-v2.2.md §2 の変更が要る(docs/instructions.md T7-4)
-      resources :users, only: [ :index, :create, :destroy ]
+      # 編集(氏名・学科)はまだ持たない。学科は users に列が無い
+      resources :users, only: [ :index, :create, :destroy ] do
+        # 1人につき1つの状態なので単数形。停止と解除だけを持つ
+        resource :suspension, only: [ :update, :destroy ], controller: "suspensions"
+      end
       resources :signage_tokens, only: [ :index, :create, :destroy ]
       # ピン留め設定画面用。spotlight_score を公開APIに載せないため専用に持つ
       resources :events, only: [ :index ] do

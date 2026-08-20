@@ -19,6 +19,20 @@ class User < ApplicationRecord
   #
   # 画面側で計算しない。ユーザー管理画面とダッシュボードの両方が必要とするので、
   # RubyとTypeScriptに同じ規則を2本置くことになる
+  # NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)。
+  # 真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れる
+  scope :suspended, -> { where.not(suspended_at: nil) }
+
+  def suspended? = suspended_at.present?
+
+  def suspend!
+    update!(suspended_at: Time.current)
+  end
+
+  def unsuspend!
+    update!(suspended_at: nil)
+  end
+
   def graduated?(today = Date.current)
     academic_year = today.month >= 4 ? today.year : today.year - 1
 

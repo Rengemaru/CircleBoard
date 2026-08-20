@@ -5,21 +5,26 @@ import { Button } from "../../components/ui/Button";
 import { INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
 import { Note } from "../../components/ui/Note";
-import { deleteUser, fetchAdminUsers, type AdminUserRow } from "../../api/admin";
+import {
+  deleteUser,
+  fetchAdminUsers,
+  suspendUser,
+  unsuspendUser,
+  type AdminUserRow,
+} from "../../api/admin";
 import { AdminLayout } from "./AdminLayout";
 
 // ユーザー管理(wireframes/wireframe-admin-ver2.html ②)。
 //
-// ワイヤーフレームにある「学科」列と「停止 / 停止解除」は作っていない。
-// users に department も suspended_at も無く、追加には spec-v2.2.md §2 の
-// 変更が要るため(docs/instructions.md T7-4)。
+// ワイヤーフレームにある「学科」列は作っていない。users に department が無く、
+// 追加には spec-v2.2.md §2 の変更が要る。
 export function AdminUsersPage() {
   const navigate = useNavigate();
 
   return (
     <AdminLayout
       title="ユーザー管理"
-      subtitle="アカウントの発行・削除を行う"
+      subtitle="アカウントの発行・停止・削除を行う"
       action={
         <Button variant="primary" size="sm" onClick={() => navigate("/admin/users/new")}>
           ＋ アカウントを発行
@@ -31,12 +36,13 @@ export function AdminUsersPage() {
   );
 }
 
-type Filter = "all" | "active" | "grad" | "admin";
+type Filter = "all" | "active" | "grad" | "suspended" | "admin";
 
 const FILTER_LABEL: Record<Filter, string> = {
   all: "全て",
   active: "現役メンバー",
   grad: "卒業生",
+  suspended: "停止中",
   admin: "管理者",
 };
 
@@ -45,6 +51,8 @@ function UserList({ currentUserId }: { currentUserId: number }) {
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [deleting, setDeleting] = useState<AdminUserRow | null>(null);
+  // 停止も相手のセッションを即座に切るので、削除と同じく確認を挟む
+  const [suspending, setSuspending] = useState<AdminUserRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -62,12 +70,13 @@ function UserList({ currentUserId }: { currentUserId: number }) {
     load();
   }, []);
 
-  async function confirmDelete(user: AdminUserRow) {
+  async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
     try {
-      await deleteUser(user.id);
+      await action();
       setDeleting(null);
+      setSuspending(null);
       load();
     } catch (e: unknown) {
       setError(toMessage(e));
@@ -140,6 +149,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                   user={user}
                   isSelf={user.id === currentUserId}
                   onDelete={() => setDeleting(user)}
+                  onSuspend={() => setSuspending(user)}
+                  onUnsuspend={() => run(() => unsuspendUser(user.id))}
+                  busy={busy}
                 />
               ))}
             </tbody>
@@ -150,6 +162,12 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           <p className="px-4 py-6 text-[13px] text-gray-500">該当するメンバーがいません。</p>
         )}
       </div>
+
+      <Note>
+        <strong>「停止」は表示上のラベルではありません。</strong>
+        ログインできなくなるだけでなく、すでにログイン中の画面もその場で無効になります。
+        企画と参加記録は残るので、あとから解除すれば元どおり使えます。
+      </Note>
 
       <Note tone="warning">
         「削除」はメンバーの物理削除です。取り消せません。ただし、その人が作った企画と
@@ -168,12 +186,29 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           confirmLabel="削除する"
           busy={busy}
           onCancel={() => setDeleting(null)}
-          onConfirm={() => confirmDelete(deleting)}
+          onConfirm={() => run(() => deleteUser(deleting.id))}
         >
           <p>
             <strong>{deleting.name}</strong>（{deleting.email}）を削除します。
             <br />
             この操作は取り消せません。過去の参加履歴は名前が空欄のまま残ります。
+          </p>
+        </Modal>
+      )}
+
+      {suspending !== null && (
+        <Modal
+          title="⚠️ アカウントを停止しますか？"
+          confirmLabel="停止する"
+          busy={busy}
+          onCancel={() => setSuspending(null)}
+          onConfirm={() => run(() => suspendUser(suspending.id))}
+        >
+          <p>
+            <strong>{suspending.name}</strong>（{suspending.email}）を停止します。
+            <br />
+            ログインできなくなり、<strong>いま開いている画面もその場で無効になります。</strong>
+            企画と参加記録は消えません。あとから解除できます。
           </p>
         </Modal>
       )}
@@ -185,13 +220,23 @@ function UserRow({
   user,
   isSelf,
   onDelete,
+  onSuspend,
+  onUnsuspend,
+  busy,
 }: {
   user: AdminUserRow;
   isSelf: boolean;
   onDelete: () => void;
+  onSuspend: () => void;
+  onUnsuspend: () => void;
+  busy: boolean;
 }) {
   return (
-    <tr className={user.graduated ? "opacity-65" : ""}>
+    <tr
+      className={
+        user.suspended ? "bg-red-50" : user.graduated ? "opacity-65" : ""
+      }
+    >
       <Td>
         <span className={isSelf ? "font-bold" : ""}>{user.name}</span>
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}
@@ -201,7 +246,9 @@ function UserRow({
         {user.enrollment_year} / {user.graduation_year}
       </Td>
       <Td>
-        {user.role === "admin" ? (
+        {user.suspended ? (
+          <Badge tone="suspended">停止中</Badge>
+        ) : user.role === "admin" ? (
           <Badge tone="admin">管理者</Badge>
         ) : user.graduated ? (
           <Badge tone="grad">卒業生</Badge>
@@ -210,14 +257,25 @@ function UserRow({
         )}
       </Td>
       <Td>
-        {/* 自分自身は消せない。APIも 422 で拒否する。
-            これがあれば管理者が0人になることは起こらない */}
+        {/* 自分自身は停止も削除もできない。APIも 422 で拒否する。
+            自分を停止すると、その場でセッションが切れて解除もできなくなる */}
         {isSelf ? (
           <span className="text-gray-400">—</span>
         ) : (
-          <Button variant="danger" size="xs" onClick={onDelete}>
-            削除
-          </Button>
+          <span className="flex gap-1.5">
+            {user.suspended ? (
+              <Button variant="success" size="xs" onClick={onUnsuspend} disabled={busy}>
+                停止解除
+              </Button>
+            ) : (
+              <Button variant="danger" size="xs" onClick={onSuspend} disabled={busy}>
+                停止
+              </Button>
+            )}
+            <Button variant="danger" size="xs" onClick={onDelete} disabled={busy}>
+              削除
+            </Button>
+          </span>
         )}
       </Td>
     </tr>
@@ -255,8 +313,10 @@ function matchesFilter(user: AdminUserRow, filter: Filter): boolean {
       return user.role === "admin";
     case "grad":
       return user.graduated;
+    case "suspended":
+      return user.suspended;
     case "active":
-      return !user.graduated;
+      return !user.graduated && !user.suspended;
   }
 }
 

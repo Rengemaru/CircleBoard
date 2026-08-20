@@ -50,7 +50,7 @@
 | 2 | co_organizer の将来設計 | ポリモーフィック | **`project_organizers` / `event_organizers` の分離テーブル** | ポリモーフィックはDBレベルで外部キー制約を張れない |
 | 3 | `users.role` | 記載なし | **追加**（admin / member / demo） | 全行に値が必要なため後付けコストが高い |
 | 4 | `profile_image` / `profile_text` | 🟡 残す | **作らない** | nullableで後付けコストゼロ。未使用カラムはレビューでマイナス |
-| 5 | `is_active_override` / `suspended_at` | 🟡 残す | **作らない** | 同上 |
+| 5 | `is_active_override` / `suspended_at` | 🟡 残す | **作らない** → **`suspended_at` のみ追加**（2026-08-20 にオーナー判断で撤回。下記 0.4 参照） | 同上 |
 | 6 | タグの中間テーブル | 記載なし | **`event_tags` / `project_tags` を追加** | 設計漏れ |
 | 7 | 注目スコア計算式 | 3種類が併存 | **1本に確定**（§3） | 面接で説明する柱 |
 | 8 | ピン留めの一意性 | アプリ層任せ | **部分ユニークインデックスでDB保証** | |
@@ -64,6 +64,16 @@
 > - No（nullableで空のまま成立する）→ 必要になってから入れる（例：`suspended_at`）
 >
 > 「将来使うかもしれない」は理由になりません。それはYAGNI違反です。
+
+### 0.4 v2.2 運用中に覆した判断
+
+| # | 項目 | 元の判断 | 新しい判断 | 理由 |
+|---|---|---|---|---|
+| 1 | `users.suspended_at` | 0.2-5 で「作らない」 | **追加する**（2026-08-20） | `wireframe-admin-ver2.html` ② がアカウント停止を要求。0.3 の基準どおり「必要になったので今入れる」ケースであり、基準を破ってはいない |
+| 2 | 管理者画面の枚数 | 0.2-10 で「3画面」 | **7画面**（`wireframe-admin-ver2.html`） | オーナーがワイヤーフレームを差し替え。着手順は `docs/instructions.md` Phase 7 |
+
+**`is_active_override` は引き続き作りません。** 停止は `suspended_at` の有無だけで表せます。
+真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れてしまいます。
 
 ---
 
@@ -146,7 +156,8 @@ Rails の `enum` は integer カラムで持つ（PostgreSQLのENUM型は値の�
 | password_digest | string | NOT NULL | `has_secure_password`（bcrypt） |
 | role | integer | NOT NULL, default: 1 | 0:admin / 1:member / 2:demo |
 | enrollment_year | integer | NOT NULL | |
-| graduation_year | integer | NOT NULL | 卒業判定は🟡（ロジック未実装） |
+| graduation_year | integer | NOT NULL | 卒業判定は `User#graduated?`（4月始まりの年度で判定） |
+| suspended_at | datetime | NULL可 | **NULL = 有効。** 時刻が入っていれば停止中（0.4-1 で追加） |
 | created_at / updated_at | datetime | NOT NULL | |
 
 ```ruby
@@ -167,6 +178,22 @@ end
 ```
 
 > **v2.2追加：** パスワード8文字以上を必須化。公開サーバーになったため、v2.0で「デプロイ時に引き締める」としていた項目を最初から適用する。
+
+> **アカウント停止（0.4-1 で追加）**
+>
+> `suspended_at` に時刻を入れると停止。真偽値ではなく時刻にしているのは、
+> `event_participations.cancelled_at` と同じ理由で「いつ止めたか」を残すためです。
+>
+> **停止は表示上のラベルではありません。** サーバー側で次の2つを行います。
+>
+> 1. `POST /api/session` を **403** で拒否する（ログインできない）
+> 2. **すでに発行済みのセッションも無効化する。** `current_user` が `nil` を返すので、
+>    停止した瞬間からその人は未ログイン扱いになる
+>
+> 2番が無いと、停止しても本人がブラウザを開いたままなら操作を続けられます。
+> 「ログインさせない」だけでは停止になりません。
+>
+> 停止しても企画と参加記録は消しません。停止は削除ではなく、一時的に締め出す操作です。
 
 ---
 

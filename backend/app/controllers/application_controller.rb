@@ -10,7 +10,13 @@ class ApplicationController < ActionController::API
   def current_user
     return @current_user if defined?(@current_user)
 
-    @current_user = User.find_by(id: session[:user_id])
+    user = User.find_by(id: session[:user_id])
+
+    # 停止中は、すでに発行済みのセッションでも未ログイン扱いにする
+    # (spec-v2.2.md §2.1)。ログイン時だけ弾くと、停止した瞬間にブラウザを
+    # 開いたままの人は操作を続けられてしまう。「ログインさせない」だけでは
+    # 停止にならない
+    @current_user = user&.suspended? ? nil : user
   end
 
   def signed_in?

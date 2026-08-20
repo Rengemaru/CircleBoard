@@ -9,9 +9,8 @@ import { AdminLayout } from "./AdminLayout";
 
 // 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
 //
-// ワイヤーフレームの4枚目「停止中アカウント」と「要確認」パネルは作っていない。
-// users に suspended_at が無く、追加には spec-v2.2.md §2 の変更が要るため
-// (docs/instructions.md T7-4)。数字の出ない空箱は置かない。
+// 「要確認」パネルは、停止中アカウントがあるときだけ出す。
+// 常に「特になし」と書いてある枠は、見る習慣がつかないぶん有害。
 export function AdminDashboardPage() {
   return (
     <AdminLayout title="ダッシュボード" subtitle="サークル全体の状況を確認する">
@@ -46,7 +45,7 @@ function DashboardBody() {
 
   return (
     <>
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="メンバー数"
           value={stats.member_count}
@@ -66,23 +65,65 @@ function DashboardBody() {
               : `次回：${stats.next_event.title}（${formatDaysUntil(stats.next_event.days_until)}）`
           }
         />
+        <StatCard
+          label="停止中アカウント"
+          value={stats.suspended_count}
+          sub={stats.suspended_count === 0 ? "なし" : "要確認"}
+          alert={stats.suspended_count > 0}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ActivityPanel rows={data.recent_activity} />
-        <QuickActions />
+        <div className="min-w-0">
+          <QuickActions />
+          {stats.suspended_count > 0 && <NeedsAttention count={stats.suspended_count} />}
+        </div>
       </div>
     </>
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: number; sub: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  alert = false,
+}: {
+  label: string;
+  value: number;
+  sub: string;
+  // 0件のときまで赤くしない。常に赤い数字は見なくなる
+  alert?: boolean;
+}) {
   return (
     <div className="rounded border border-gray-200 bg-white p-5">
       <div className="mb-1 text-xs text-gray-500">{label}</div>
-      <div className="mb-1 text-[28px] leading-none font-bold">{value}</div>
+      <div className={`mb-1 text-[28px] leading-none font-bold ${alert ? "text-red-600" : ""}`}>
+        {value}
+      </div>
       <div className="text-[11px] text-gray-400">{sub}</div>
     </div>
+  );
+}
+
+function NeedsAttention({ count }: { count: number }) {
+  const navigate = useNavigate();
+
+  return (
+    <Panel title="要確認">
+      <div className="flex items-center gap-2 text-[13px] text-gray-700">
+        <span className="font-bold text-red-600">●</span>
+        停止中アカウントあり（{count}件）
+        <button
+          type="button"
+          onClick={() => navigate("/admin/users")}
+          className="ml-auto text-xs text-gray-500 underline"
+        >
+          確認 →
+        </button>
+      </div>
+    </Panel>
   );
 }
 

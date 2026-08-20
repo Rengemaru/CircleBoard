@@ -25,6 +25,7 @@ erDiagram
         integer role "0:admin 1:member 2:demo"
         integer enrollment_year
         integer graduation_year
+        datetime suspended_at "null = 有効"
     }
 
     events {
@@ -140,8 +141,12 @@ CREATE UNIQUE INDEX index_event_participations_active
 
 ### 意図的に作っていないもの
 
-`profile_image` / `profile_text` / `suspended_at` / `is_active_override` /
+`profile_image` / `profile_text` / `is_active_override` /
 `organizers` テーブル / `signage_tokens.last_accessed_at`。
+
+（`suspended_at` は 2026-08-20 に追加した。`wireframe-admin-ver2.html` ② が
+アカウント停止を要求したため。「必要になってから入れる」という基準どおりの
+追加であり、基準を破ってはいない。`spec-v2.2.md` §0.4 参照）
 
 判断基準は `spec-v2.2.md` §0.3 —
 「後から追加したとき、既存の全行にデータを入れ直す必要があるか」。

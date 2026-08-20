@@ -15,9 +15,6 @@ module Api
       # ユーザー・イベント・プロジェクトへ3往復させないため。
       # どの数字も「今この瞬間の件数」であり、別々に取ると互いにずれる。
       #
-      # ワイヤーフレームにある「停止中アカウント」は返さない。
-      # users に suspended_at が無く、追加には spec-v2.2.md §2 の変更が要る
-      # (docs/instructions.md T7-4)。
       def show
         render json: { stats: stats, recent_activity: recent_activity }
       end
@@ -33,6 +30,7 @@ module Api
           active_project_count: Project.active.where.not(status: :completed).count,
           recruiting_project_count: Project.active.recruiting.count,
           events_this_month_count: Event.active.where(starts_at: this_month).count,
+          suspended_count: User.suspended.count,
           next_event: next_event
         }
       end

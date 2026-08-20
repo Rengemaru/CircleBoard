@@ -291,6 +291,7 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
     "active_project_count": 6,
     "recruiting_project_count": 3,
     "events_this_month_count": 4,
+    "suspended_count": 1,
     "next_event": { "id": 12, "title": "LT大会 vol.13", "days_until": 3 }
   },
   "recent_activity": [
@@ -311,8 +312,6 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
 - `active_project_count` は「終了していない」件数。募集中も含む
 - `recent_activity` はイベントとプロジェクトを混ぜて新しい順に最大5件
 - `owner_name` は退会で `null` になりうる
-- ワイヤーフレームにある「停止中アカウント」は返さない。`users.suspended_at` が
-  無いため（`spec-v2.2.md` §0.3 で「作らない」）
 
 ### `GET /api/admin/users` — ユーザー一覧（Phase 7 で追加）
 
@@ -328,7 +327,9 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
       "role": "member",
       "enrollment_year": 2024,
       "graduation_year": 2028,
-      "graduated": false
+      "graduated": false,
+      "suspended": false,
+      "suspended_at": null
     }
   ]
 }
@@ -341,6 +342,27 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
   TypeScript に同じ規則が2本並ぶ（`User#graduated?`）
 - 卒業年度の新しい順。検索と絞り込みのクエリは受けない。部員は数十人で、
   1文字打つたびに往復させる意味がないため画面側で絞る
+
+### `PUT /api/admin/users/:user_id/suspension` — 停止（Phase 7 で追加）
+### `DELETE /api/admin/users/:user_id/suspension` — 停止解除
+
+```json
+{ "id": 3, "suspended": true, "suspended_at": "2026-08-20T22:06:23+09:00" }
+```
+
+**停止は表示上のラベルではない。** サーバー側で次の2つを行う（`spec-v2.2.md` §2.1）。
+
+1. `POST /api/session` を **403** で拒否する
+2. **すでに発行済みのセッションも無効化する。** `current_user` が `nil` を返すので、
+   停止した瞬間からその人は未ログイン扱いになる。`GET /api/session` は
+   `{ "user": null }`、ログイン必須のエンドポイントは 401
+
+2番が無いと、停止しても本人がブラウザを開いたままなら操作を続けられる。
+
+- **自分自身は 422。** 停止した瞬間に自分のセッションが切れ、管理画面から
+  締め出されて解除もできなくなる
+- 存在しないIDは 404
+- 停止しても企画と参加記録は消さない。停止は削除ではない
 
 ### `DELETE /api/admin/users/:id` — ユーザー削除（Phase 7 で追加）
 

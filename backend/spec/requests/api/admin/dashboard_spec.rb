@@ -33,6 +33,15 @@ RSpec.describe "GET /api/admin/dashboard", type: :request do
       expect(stats["graduate_count"]).to eq(1)
     end
 
+    it "停止中のアカウントを数える" do
+      create(:user, suspended_at: Time.current)
+      create(:user)
+
+      get "/api/admin/dashboard"
+
+      expect(response.parsed_body["stats"]["suspended_count"]).to eq(1)
+    end
+
     # 「進行中」は終わっていないもの。募集中もこれから活動するので含める
     it "終了していないプロジェクトを数え、うち募集中を内訳に出す" do
       create(:project, status: :recruiting)
