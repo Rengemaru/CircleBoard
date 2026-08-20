@@ -2,11 +2,25 @@
 
 大学サークルの部室サイネージ兼企画掲示板。
 
+部室のディスプレイに「次に何があるか」を常時映し、部員は同じデータを
+スマホやPCから見て参加を表明できる。
+
 - 仕様の正: [`docs/spec-v2.2.md`](docs/spec-v2.2.md)
 - API仕様: [`docs/api-spec.md`](docs/api-spec.md)
+- ER図: [`docs/er.md`](docs/er.md)
 - 作業手順: [`docs/instructions.md`](docs/instructions.md)
 - 開発規約: [`CLAUDE.md`](CLAUDE.md)
 - 画面構造: [`wireframes/`](wireframes/)
+
+## この実装で説明できること
+
+| 論点 | どこを見るか |
+|---|---|
+| **注目スコアの設計** — なぜ参加者数の絶対値を使わないか | `backend/app/models/event.rb`、`spec-v2.2.md` §3 |
+| **認可をAPIレスポンスで行う** — フロントで隠さない | `backend/app/serializers/event_serializer.rb` |
+| **運用ルールをDB制約で表現する** — ピン留めは全体で1件 | `docs/er.md`、`backend/db/migrate/*_create_events.rb` |
+| **N+1を作らない** — includes とスコープ付き関連 | `backend/app/models/event.rb` の `active_event_participations` |
+| **トークン認証の運用設計** — 漏れた端末だけ止められる | `backend/app/controllers/api/signages_controller.rb` |
 
 ## 構成
 
@@ -70,6 +84,36 @@ Copy-Item .env.example .env
 Docker のバインドマウント越しではホスト側のファイル変更イベントがコンテナ内に
 伝わらず、Vite が古いコードを配信し続けるためです。
 それでも反映されない場合は `docker compose restart frontend` を実行してください。
+
+## 画面
+
+| URL | 内容 | 認証 |
+|---|---|---|
+| `/` | トップ。注目イベントとプロジェクト | ゲスト可 |
+| `/events` `/events/:id` | イベント一覧・詳細 | ゲスト可（表示内容が変わる） |
+| `/projects` `/projects/:id` | プロジェクト一覧・詳細 | **要ログイン** |
+| `/create` | 企画作成 | 要ログイン |
+| `/login` `/legal` | ログイン・利用規約 | ゲスト可 |
+| `/admin/users` `/admin/pins` `/admin/signage-tokens` | 管理者3画面 | **admin のみ** |
+| `/signage?token=…` | 部室ディスプレイ用の全画面ビュー | トークン |
+
+イベントはゲストも見られるが、**企画者名と参加者一覧はログインしないと返ってこない**。
+フロントで隠しているのではなく、APIのレスポンスからキーごと落としている。
+
+## サイネージを部室のディスプレイに映す
+
+1. `/admin/signage-tokens` で端末ごとにトークンを発行する
+2. 表示された URL を、その端末の Chrome でキオスクモードで開く
+
+```bash
+chrome --kiosk "https://<ドメイン>/signage?token=<発行したトークン>"
+```
+
+端末ごとに分けるのは、**漏れたときにその端末の分だけ止められる**ようにするため。
+無効にしても行は消さないので、どの端末をいつ止めたかが管理画面から追える。
+
+60秒ごとに自動で再読み込みします。時計はそれとは独立に毎秒動きます
+（止まっている画面か動いている画面かが、遠目に分かるようにするため）。
 
 ## テスト・Lint
 
