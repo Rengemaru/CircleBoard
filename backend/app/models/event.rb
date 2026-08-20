@@ -43,6 +43,25 @@ class Event < ApplicationRecord
     active.recruiting.where(starts_at: from..)
   }
 
+  # cron から毎日1回呼ばれる入口(spec-v2.2.md §3.4)。
+  #
+  # 論理削除済みは除く。サイネージに出ないので計算する意味がない。
+  # 一方、開催日が過去のイベントはスコアを更新する。表示するかどうかは
+  # spotlight_targets の責務で、ここで両方を判断すると除外条件が変わるたびに
+  # このメソッドも直すことになる。
+  #
+  # update_column を使うのは updated_at を動かさないため。集計の書き戻しで
+  # 毎日全件の updated_at が変わると、「いつ編集されたか」が読めなくなる。
+  #
+  # 1件につきCOUNTが1本飛ぶが、日次のバッチであり件数も部内の企画数なので
+  # そのままにしている。まとめて集計する書き方より、計算式が1箇所に
+  # 収まっている方が読んで分かる(CLAUDE.md §0)。
+  def self.recalculate_spotlight_scores
+    active.find_each do |event|
+      event.update_column(:spotlight_score, event.calculate_spotlight_score)
+    end
+  end
+
   # 参加者数の絶対値は使わない。すでに人気の企画がさらに有利になるだけで、
   # 参加促進というサイネージの目的に寄与しないため(§3.2)
   def calculate_spotlight_score

@@ -27,6 +27,10 @@ gem "bootsnap", require: false
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
+# 注目スコアの日次更新に使う(CLAUDE.md §1 の技術スタック表に記載)。
+# crontab を生成するだけで、実行時には読み込まれない
+gem "whenever", require: false
+
 group :development, :test do
   # テストは RSpec を使う(CLAUDE.md §1)。rails new は --skip-test で生成済み
   gem "rspec-rails", "~> 7.1"

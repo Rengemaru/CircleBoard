@@ -91,6 +91,24 @@ docker compose exec frontend npm run format        # Prettier
 テストは網羅的には書きません。優先順位は `CLAUDE.md` §6 のとおりで、
 `Event#calculate_spotlight_score`（Phase 3 / T3-1）を最も厚く書きます。
 
+## 注目スコアの日次更新
+
+イベントの `spotlight_score` は cron で毎日7時に更新します（`backend/config/schedule.rb`）。
+
+```bash
+# 生成される crontab を確認する（書き込みはしない）
+docker compose exec backend bundle exec whenever
+
+# 手で1回実行する（cron を待たずに結果を見たいとき）
+docker compose exec backend bin/rails runner 'Event.recalculate_spotlight_scores'
+```
+
+**開発環境では cron は動きません。** コンテナに cron を常駐させていないためです。
+本番への反映は Phase 5（D-8）で `bundle exec whenever --update-crontab` を実行します。
+
+スコアの計算式は `docs/spec-v2.2.md` §3 にあります。
+「開催の近さ × 直近3日の勢い」で、参加者数の絶対値は使いません。
+
 ## よく使うコマンド
 
 ```bash
