@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
+import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
+import { Field, INPUT_CLASS } from "../../components/ui/Field";
+import { Note } from "../../components/ui/Note";
+import { Panel } from "../../components/ui/Panel";
 import {
   createSignageToken,
   fetchSignageTokens,
@@ -8,17 +12,27 @@ import {
 } from "../../api/admin";
 import { AdminLayout } from "./AdminLayout";
 
-// サイネージトークンの管理(wireframes/wireframe-admin.html ③)。
+// サイネージトークン管理(wireframes/wireframe-admin-ver2.html ⑤)。
 // 端末ごとに発行し、漏れたらその端末の分だけ止められるようにする。
 export function AdminSignageTokensPage() {
+  const [issuing, setIssuing] = useState(false);
+
   return (
-    <AdminLayout title="サイネージ端末">
-      {() => <TokenList />}
+    <AdminLayout
+      title="サイネージトークン管理"
+      subtitle="部室ディスプレイ用のアクセストークンを発行・管理する"
+      action={
+        <Button variant="primary" size="sm" onClick={() => setIssuing(true)}>
+          ＋ トークンを発行
+        </Button>
+      }
+    >
+      {() => <TokenList issuing={issuing} onCloseForm={() => setIssuing(false)} />}
     </AdminLayout>
   );
 }
 
-function TokenList() {
+function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: () => void }) {
   const [tokens, setTokens] = useState<SignageTokenRow[] | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +56,7 @@ function TokenList() {
     try {
       await createSignageToken(name);
       setName("");
+      onCloseForm();
       load();
     } catch (e: unknown) {
       setError(toMessage(e));
@@ -64,86 +79,139 @@ function TokenList() {
   }
 
   if (error !== null && tokens === null) {
-    return <p className="text-red-700">{error}</p>;
+    return <Note tone="danger">{error}</Note>;
   }
   if (tokens === null) {
     return <p className="text-gray-500">読み込み中…</p>;
   }
 
+  const active = tokens.filter((t) => t.revoked_at === null);
+  const revoked = tokens.filter((t) => t.revoked_at !== null);
+
   return (
-    <div className="space-y-6">
-      <form onSubmit={issue} className="flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="端末名（例: 部室メインディスプレイ）"
-          className="flex-1 rounded border border-gray-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={busy || name.trim() === ""}
-          className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-        >
-          発行
-        </button>
-      </form>
+    <>
+      <Note>
+        各ディスプレイに固有のトークン付きURLを設定します。漏洩時は該当トークンのみ無効化してください。
+      </Note>
 
-      {error !== null && <p className="text-red-700">{error}</p>}
-
-      <ul className="space-y-3">
-        {tokens.map((token) => (
-          <li key={token.id} className="rounded border border-gray-200 p-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="font-bold">{token.name}</span>
-              {token.revoked_at === null ? (
-                <span className="text-sm text-green-700">有効</span>
-              ) : (
-                <span className="text-sm text-gray-500">
-                  {formatDate(token.revoked_at)} に無効化
-                </span>
-              )}
+      {issuing && (
+        <Panel title="トークンを発行する">
+          <form onSubmit={issue}>
+            <Field label="ディスプレイ名（管理用）" required>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="例：部室メインディスプレイ"
+                className={INPUT_CLASS}
+              />
+            </Field>
+            <Note>
+              発行するとランダムな32文字のトークンが生成されます。URLをディスプレイのブラウザに設定してください。
+            </Note>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={onCloseForm}>
+                キャンセル
+              </Button>
+              <Button type="submit" variant="primary" size="sm" disabled={busy}>
+                発行する
+              </Button>
             </div>
+          </form>
+        </Panel>
+      )}
 
-            {/* 発行日。同じ端末名で作り直したときに、どちらが新しいかを
-                名前だけでは判断できない */}
-            <div className="mt-1 text-sm text-gray-500">
-              {formatDate(token.created_at)} 発行
-            </div>
+      {error !== null && <Note tone="danger">{error}</Note>}
 
-            {/* 端末に貼り付けるURL。ここだけはトークンの実値を見せる。
-                admin 以外はこのAPIに到達できない(docs/api-spec.md §6) */}
-            <p className="mt-2 break-all font-mono text-xs text-gray-600">{token.url}</p>
+      <SectionHeading>有効なトークン</SectionHeading>
+      {active.length === 0 ? (
+        <p className="mb-5 text-[13px] text-gray-500">有効なトークンがありません。</p>
+      ) : (
+        active.map((token) => (
+          <TokenCard key={token.id} token={token} busy={busy} onRevoke={() => revoke(token.id)} />
+        ))
+      )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              {/* URLは手で打つには長い。端末のブラウザに貼れる形で渡す */}
-              <CopyButton text={token.url} label="URLをコピー" />
-              {token.revoked_at === null && (
-                <button
-                  type="button"
-                  onClick={() => revoke(token.id)}
-                  disabled={busy}
-                  className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-40"
-                >
-                  無効にする
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {revoked.length > 0 && (
+        <>
+          <SectionHeading>無効化済み</SectionHeading>
+          {revoked.map((token) => (
+            <TokenCard key={token.id} token={token} busy={busy} onRevoke={null} />
+          ))}
+          <p className="text-xs text-gray-500">
+            無効にした端末も一覧に残ります。どの端末をいつ止めたかを追えるようにするためです。
+          </p>
+        </>
+      )}
+    </>
+  );
+}
 
-      <p className="text-sm text-gray-500">
-        無効にした端末も一覧に残ります。どの端末をいつ止めたかを追えるようにするためです。
-      </p>
+// wireframe-admin-ver2.html の .token-card。
+// 状態を示す丸 → 端末名 → トークン付きURL → 発行日 → 操作、の順
+function TokenCard({
+  token,
+  busy,
+  onRevoke,
+}: {
+  token: SignageTokenRow;
+  busy: boolean;
+  onRevoke: (() => void) | null;
+}) {
+  const revoked = token.revoked_at !== null;
+
+  return (
+    <div
+      className={`mb-2.5 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white px-4 py-3.5 ${
+        revoked ? "opacity-50" : ""
+      }`}
+    >
+      <span
+        className={`h-2.5 w-2.5 shrink-0 rounded-full ${revoked ? "bg-gray-300" : "bg-green-600"}`}
+      />
+      <span className="flex-1 text-[13px] font-semibold">{token.name}</span>
+
+      {/* 端末に貼り付けるURL。ここだけはトークンの実値を見せる。
+          admin 以外はこのAPIに到達できない(docs/api-spec.md §6) */}
+      <code className="min-w-0 flex-[2] truncate rounded-sm bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-500">
+        {token.url}
+      </code>
+
+      {/* ワイヤーフレーム⑤は「最終アクセス」を出しているが、
+          signage_tokens.last_accessed_at は意図的に作っていない(docs/er.md)。
+          代わりに発行日を出す。同じ端末名で作り直したとき、どちらが新しいかを
+          名前だけでは判断できないため */}
+      <span className="flex-1 text-right text-[11px] text-gray-400">
+        {revoked
+          ? `無効化：${formatDate(token.revoked_at as string)}`
+          : `発行：${formatDate(token.created_at)}`}
+      </span>
+
+      <span className="flex items-center gap-1.5">
+        <CopyButton text={token.url} label="URLをコピー" />
+        {onRevoke !== null && (
+          <Button variant="danger" size="xs" onClick={onRevoke} disabled={busy}>
+            無効化
+          </Button>
+        )}
+      </span>
     </div>
+  );
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 border-b-2 border-gray-200 pb-1.5 text-[13px] font-bold text-gray-700">
+      {children}
+    </h2>
   );
 }
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
     year: "numeric",
-    month: "numeric",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).format(new Date(value));
 }
 

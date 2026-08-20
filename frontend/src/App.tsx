@@ -33,9 +33,12 @@ export function App() {
         </Route>
 
         {/* 管理画面はナビもフッターも AdminLayout が持つ */}
+        {/* URLは wireframe-admin-ver2.html に合わせる。
+            ユーザー一覧(②)を作るまでは /admin/users も発行フォームを出す */}
         <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/pins" element={<AdminPinsPage />} />
-        <Route path="/admin/signage-tokens" element={<AdminSignageTokensPage />} />
+        <Route path="/admin/users/new" element={<AdminUsersPage />} />
+        <Route path="/admin/pin" element={<AdminPinsPage />} />
+        <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
 
         {/* サイネージはナビゲーションを一切出さない(wireframe-signage.html) */}
         <Route path="/signage" element={<SignagePage />} />

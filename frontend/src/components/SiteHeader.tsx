@@ -29,7 +29,7 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
                   出しっぱなしにしないのは、押しても断られるだけのリンクを
                   全員に見せる意味がないため */}
               {user.role === "admin" && (
-                <Link to="/admin/pins" className="underline">
+                <Link to="/admin/pin" className="underline">
                   管理
                 </Link>
               )}

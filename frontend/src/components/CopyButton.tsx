@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "./ui/Button";
 
 // クリップボードにコピーするボタン。管理画面で発行した値を人に渡すために使う。
 //
@@ -20,16 +21,12 @@ export function CopyButton({ text, label = "コピー" }: { text: string; label?
 
   return (
     <span className="inline-flex items-center gap-2">
-      <button
-        type="button"
-        onClick={copy}
-        className="rounded border border-gray-300 px-3 py-1 text-sm"
-      >
+      <Button variant="ghost" size="xs" onClick={copy}>
         {label}
-      </button>
-      {state === "copied" && <span className="text-sm text-green-700">コピーしました</span>}
+      </Button>
+      {state === "copied" && <span className="text-[11px] text-green-700">コピーしました</span>}
       {state === "failed" && (
-        <span className="text-sm text-red-700">コピーできません。手で選択してください</span>
+        <span className="text-[11px] text-red-700">コピーできません。手で選択してください</span>
       )}
     </span>
   );

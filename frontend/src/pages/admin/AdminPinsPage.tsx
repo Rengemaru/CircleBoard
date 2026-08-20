@@ -1,28 +1,43 @@
 import { useEffect, useState } from "react";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Note } from "../../components/ui/Note";
+import { Panel } from "../../components/ui/Panel";
 import { fetchAdminEvents, pinEvent, unpinEvent, type AdminEventRow } from "../../api/admin";
 import { AdminLayout } from "./AdminLayout";
 
-// ピン留め設定(wireframes/wireframe-admin.html A2)。
+// 注目イベント ピン留め設定(wireframes/wireframe-admin-ver2.html ⑥)。
 //
 // ピン留めは全体で常に1件のみ。DBの部分ユニークインデックスで保証している。
 // 残りの枠は spotlight_score 降順で自動選出される。
 // この「1枠だけ手動」という制約が、特定メンバーによる注目枠の占有を
 // 構造的に防ぐ設計。
 export function AdminPinsPage() {
-  return <AdminLayout title="注目イベントのピン留め">{() => <PinPicker />}</AdminLayout>;
+  return (
+    <AdminLayout
+      title="注目イベント ピン留め設定"
+      subtitle="トップページの注目イベント枠のうち1枠を手動で固定する"
+    >
+      {() => <PinPicker />}
+    </AdminLayout>
+  );
 }
 
 function PinPicker() {
   const [events, setEvents] = useState<AdminEventRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // 誤操作でサイネージの表示が変わるため、確認を1枚挟む(ワイヤーフレーム A2)。
-  // window.confirm を使わないのは、画面内で文脈を見せたまま確認したいため
-  const [confirming, setConfirming] = useState<AdminEventRow | null>(null);
+  // ラジオで選んでから「ピン留めを保存」で確定する(ワイヤーフレーム⑥)。
+  // 押した瞬間にサイネージの表示が変わると、誤操作を取り消せない
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   function load() {
     fetchAdminEvents()
-      .then(setEvents)
+      .then((rows) => {
+        setEvents(rows);
+        setSelectedId(rows.find((e) => e.pinned)?.id ?? null);
+        setError(null);
+      })
       .catch((e: unknown) => setError(toMessage(e)));
   }
 
@@ -41,133 +56,145 @@ function PinPicker() {
       setError(toMessage(e));
     } finally {
       setBusy(false);
-      setConfirming(null);
     }
   }
 
   if (error !== null && events === null) {
-    return <p className="text-red-700">{error}</p>;
+    return <Note tone="danger">{error}</Note>;
   }
   if (events === null) {
     return <p className="text-gray-500">読み込み中…</p>;
   }
 
+  const pinned = events.find((e) => e.pinned) ?? null;
+  const changed = selectedId !== (pinned?.id ?? null);
+
   return (
-    <div className="space-y-4">
-      <SlotPreview events={events} />
+    <>
+      <Note>
+        注目イベント4枠のうち3枠はスコアで自動選出されます。残り1枠を手動でピン留めできます。
+        ピン留めしない場合は4枠すべて自動選出されます。
+      </Note>
 
-      <p className="text-sm text-gray-600">
-        ピン留めしたイベントはサイネージの先頭に固定されます。
-        <strong>全体で1件だけ</strong>で、別のイベントを選ぶと現在のピンは自動で外れます。
-        残りの枠は注目スコアの高い順に自動で選ばれます。
-      </p>
+      {error !== null && <Note tone="danger">{error}</Note>}
 
-      {error !== null && <p className="text-red-700">{error}</p>}
-
-      {events.length === 0 ? (
-        <p className="text-gray-500">開催前のイベントがありません。</p>
-      ) : (
-        <ul className="space-y-3">
-          {events.map((event) => (
-            <li
-              key={event.id}
-              className={`rounded border p-4 ${
-                event.pinned ? "border-gray-900 bg-gray-50" : "border-gray-200"
-              }`}
+      <Panel
+        title="現在のピン留め"
+        action={
+          pinned !== null && (
+            <Button
+              variant="danger"
+              size="xs"
+              disabled={busy}
+              onClick={() => run(() => unpinEvent(pinned.id))}
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  {event.pinned && (
-                    <span className="text-sm font-bold text-gray-900">📌 ピン留め中</span>
-                  )}
-                  <div className="truncate font-bold">{event.title}</div>
-                  <div className="mt-1 text-sm text-gray-500">
-                    {formatDate(event.starts_at)} ・ {event.location} ・ 参加{" "}
-                    {event.participants_count}名 ・ score {event.spotlight_score}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    event.pinned ? run(() => unpinEvent(event.id)) : setConfirming(event)
-                  }
-                  disabled={busy}
-                  className="shrink-0 rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-40"
-                >
-                  {event.pinned ? "ピン留めを解除" : "ここにピン留め"}
-                </button>
+              ピン留めを解除
+            </Button>
+          )
+        }
+      >
+        {pinned === null ? (
+          <p className="text-[13px] text-gray-500">
+            ピン留めなし。注目枠は4枠すべてスコア順で自動選出されます。
+          </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-[13px] font-semibold">
+                {pinned.title}
+                <Badge tone="pinned">📌 ピン留め中</Badge>
               </div>
+              <div className="text-[11px] text-gray-500">
+                開催：{formatDate(pinned.starts_at)} ・ 参加：{pinned.participants_count}名
+              </div>
+            </div>
+          </div>
+        )}
+      </Panel>
 
-              {confirming?.id === event.id && (
-                <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
-                  <p>
-                    サイネージの表示が変わります。現在のピンは自動で外れます。よろしいですか？
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => run(() => pinEvent(event.id))}
-                      disabled={busy}
-                      className="rounded bg-gray-900 px-3 py-1 text-white disabled:opacity-40"
-                    >
-                      ピン留めする
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirming(null)}
-                      className="rounded border border-gray-300 px-3 py-1"
-                    >
-                      やめる
-                    </button>
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <Panel title="ピン留めするイベントを選ぶ">
+        <Note>
+          スコアが高い順に表示しています（スコア = 開催間近ボーナス × 15 + 直近3日の参加増加数 × 10）
+        </Note>
 
-      <p className="text-sm text-gray-500">
+        {events.length === 0 ? (
+          <p className="text-[13px] text-gray-500">開催前のイベントがありません。</p>
+        ) : (
+          <>
+            <div className="mb-4">
+              {events.map((event) => (
+                <EventRow
+                  key={event.id}
+                  event={event}
+                  selected={selectedId === event.id}
+                  onSelect={() => setSelectedId(event.id)}
+                />
+              ))}
+            </div>
+
+            {changed && (
+              <Note tone="warning">
+                サイネージとトップページの表示が変わります。現在のピンは自動で外れます。
+              </Note>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                disabled={!changed || busy}
+                onClick={() => setSelectedId(pinned?.id ?? null)}
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!changed || busy || selectedId === null}
+                onClick={() => selectedId !== null && run(() => pinEvent(selectedId))}
+              >
+                ピン留めを保存
+              </Button>
+            </div>
+          </>
+        )}
+      </Panel>
+
+      <p className="text-xs text-gray-500">
         注目スコアはこの画面にだけ表示しています。数値が見えると、順位を上げるための操作を誘発するためです。
       </p>
-    </div>
+    </>
   );
 }
 
-// 現在のトップ／サイネージの表示順(wireframes/wireframe-admin.html A2)。
-//
-// この一覧は API が「ピン留め優先 → score 降順」で返しているので、
-// 先頭から4件が実際に注目枠に出るものと一致する。
-// 空枠は描かない。閑散期に空箱が並ぶのが最も見苦しい(画面①の注記)
-const SPOTLIGHT_SLOTS = 4;
-
-function SlotPreview({ events }: { events: AdminEventRow[] }) {
-  const slots = events.slice(0, SPOTLIGHT_SLOTS);
-  if (slots.length === 0) return null;
-
+function EventRow({
+  event,
+  selected,
+  onSelect,
+}: {
+  event: AdminEventRow;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <section>
-      <h2 className="mb-2 text-sm text-gray-600">現在のトップ／サイネージの表示順</h2>
-      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {slots.map((event, index) => (
-          <li
-            key={event.id}
-            className={`rounded border p-3 ${
-              event.pinned ? "border-gray-900 bg-gray-50" : "border-gray-200"
-            }`}
-          >
-            <div className="text-xs text-gray-500">枠{index + 1}</div>
-            <div className="mt-1 truncate font-bold">
-              {event.pinned && "📌 "}
-              {event.title}
-            </div>
-            <div className="mt-1 text-xs text-gray-500">
-              {event.pinned ? "手動で固定" : `自動 ・ score ${event.spotlight_score}`}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
+    // 行のどこを押しても選べる。16pxの丸だけが的だと押しにくい
+    <label className="flex cursor-pointer items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
+      <input
+        type="radio"
+        name="pinned-event"
+        checked={selected}
+        onChange={onSelect}
+        className="h-4 w-4 shrink-0 accent-gray-900"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-semibold">{event.title}</span>
+        <span className="block text-[11px] text-gray-500">
+          開催：{formatDate(event.starts_at)} ・ {event.location} ・ 参加{" "}
+          {event.participants_count}名
+        </span>
+      </span>
+      <span className="shrink-0 text-xs text-gray-500">
+        スコア <strong className="text-gray-900">{event.spotlight_score}</strong>
+      </span>
+    </label>
   );
 }
 
