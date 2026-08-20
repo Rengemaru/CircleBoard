@@ -89,12 +89,31 @@ export function EventDetailPage() {
             ))}
           </div>
           <h1 className="mt-2 text-2xl font-bold">{event.title}</h1>
+          <p className="mt-1 text-gray-600">{formatCountdown(event.starts_at)}</p>
         </div>
 
         <dl className="space-y-2 text-sm">
           <Row label="開催日時" value={formatDateTime(event.starts_at)} />
           <Row label="開催場所" value={event.location} />
+          {/* 残り枠(ワイヤーフレーム ③ のサイド)。定員なしのときに
+              「残り null枠」と出さない */}
+          <Row label="残り枠" value={formatRemaining(event)} />
         </dl>
+
+        {/* 外部リンクは任意。connpass や申し込みフォームへ飛ばす。
+            外部サイトなので新しいタブで開く */}
+        {event.external_url !== null && event.external_url !== "" && (
+          <p className="text-sm">
+            <a
+              href={event.external_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline"
+            >
+              関連リンクを開く ↗
+            </a>
+          </p>
+        )}
 
         <section>
           <h2 className="mb-2 font-bold">概要</h2>
@@ -207,6 +226,28 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+// 開催までの日数。時刻を無視して日付だけで引くのは、サーバー側の計算
+// (spec-v2.2.md §3.4)と揃えるため
+function formatCountdown(startsAt: string): string {
+  const start = new Date(startsAt);
+  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((startDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (days > 0) return `あと${days}日`;
+  if (days === 0) return "本日開催";
+  return "開催済み";
+}
+
+// 定員が null のときは無制限(spec-v2.2.md §2.2)。
+// 満員を超えて参加できることは無いが、キャンセル前提の数え方にしないため
+// 負の数は 0 に丸める
+function formatRemaining(event: EventDetail): string {
+  if (event.capacity === null) return "制限なし";
+  return `${Math.max(0, event.capacity - event.participants_count)}名`;
 }
 
 function formatDateTime(value: string): string {
