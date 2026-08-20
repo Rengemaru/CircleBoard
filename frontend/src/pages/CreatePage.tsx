@@ -14,6 +14,23 @@ import type { Tag } from "../types/event";
 //   プロジェクト … 継続的にコミットして成果物を作る。ログイン必須
 type Kind = "event" | "project";
 
+// 概要の書き出しに迷わないための雛形。value ではなく placeholder に入れる
+const EVENT_TEMPLATE = `【このイベントについて】
+
+【参加対象】
+
+【当日の流れ】
+
+【持ち物・事前準備】`;
+
+const PROJECT_TEMPLATE = `【このプロジェクトについて】
+
+【作るもの・目指す成果物】
+
+【使う技術】
+
+【求めるメンバー】`;
+
 export function CreatePage() {
   const navigate = useNavigate();
   const { user, loading } = useCurrentUser();
@@ -25,6 +42,7 @@ export function CreatePage() {
   const [location, setLocation] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
   const [meetingSchedule, setMeetingSchedule] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +68,8 @@ export function CreatePage() {
               location,
               starts_at: startsAt,
               capacity: capacity === "" ? null : Number(capacity),
+              // 空欄は null。空文字を送ると「空文字のリンク」が保存される
+              external_url: externalUrl === "" ? null : externalUrl,
               tag_ids: selectedTagIds,
             },
           }),
@@ -144,11 +164,14 @@ export function CreatePage() {
           />
         </Field>
 
+        {/* テンプレートは placeholder として表示する。初期値として入れると、
+            消さずにそのまま送信されてしまう(wireframe-member.html ⑥の注記) */}
         <Field label="概要">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={6}
+            rows={10}
+            placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
             className="w-full rounded border border-gray-300 px-3 py-2"
           />
         </Field>
@@ -159,6 +182,7 @@ export function CreatePage() {
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                placeholder="部室A / オンライン（Zoom）"
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </Field>
@@ -191,6 +215,20 @@ export function CreatePage() {
           />
         </Field>
 
+        {/* 外部リンクはイベントのみ。projects テーブルに列を作っていない
+            (docs/er.md)。connpass や Google フォームへの導線に使う */}
+        {kind === "event" && (
+          <Field label="外部リンク（任意）">
+            <input
+              type="url"
+              value={externalUrl}
+              onChange={(e) => setExternalUrl(e.target.value)}
+              placeholder="https://connpass.com/event/xxxxx"
+              className="w-full rounded border border-gray-300 px-3 py-2"
+            />
+          </Field>
+        )}
+
         {/* タグは既存のものから選ぶ。作成APIは無い(docs/api-spec.md §4) */}
         <fieldset>
           <legend className="mb-2 text-sm text-gray-700">タグ</legend>
@@ -212,13 +250,24 @@ export function CreatePage() {
           </div>
         </fieldset>
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-        >
-          作成する
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
+          >
+            作成する
+          </button>
+          {/* 直前の画面に戻る。/ に固定で飛ばすと、一覧から来た人が
+              一覧に戻れない */}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="rounded border border-gray-300 px-4 py-2"
+          >
+            キャンセル
+          </button>
+        </div>
       </form>
     </Frame>
   );
