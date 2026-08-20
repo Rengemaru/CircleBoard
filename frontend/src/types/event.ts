@@ -17,6 +17,8 @@ export type EventSummary = {
   capacity: number | null;
   participants_count: number;
   status: "recruiting" | "completed";
+  // トップページの📌バッジに使う。spotlight_score は公開されない
+  pinned: boolean;
   external_url: string | null;
   tags: Tag[];
   // owner はログイン時のみサーバーが返す。未ログインではキーごと存在しない

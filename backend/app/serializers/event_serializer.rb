@@ -34,6 +34,10 @@ class EventSerializer
       # ここを event_participations.active.size にすると N+1 になる(Event モデル参照)
       participants_count: @event.active_event_participations.size,
       status: @event.status,
+      # トップページの📌バッジに使う。サイネージでも公開している情報なので
+      # 未ログインでも返す。一方 spotlight_score は返さない
+      # (wireframes/wireframe-admin.html A2「一般ユーザーには見せない」)
+      pinned: @event.pinned,
       external_url: @event.external_url,
       tags: @event.tags.map { TagSerializer.new(_1).as_json }
     }

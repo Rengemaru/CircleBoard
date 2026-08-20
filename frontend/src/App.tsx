@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
+import { TopPage } from "./pages/TopPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SignagePage } from "./pages/SignagePage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
@@ -12,7 +13,7 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PlaceholderPage name="トップ" />} />
+        <Route path="/" element={<TopPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:id" element={<PlaceholderPage name="イベント詳細" />} />
         <Route path="/projects" element={<PlaceholderPage name="プロジェクト一覧" />} />

@@ -9,6 +9,9 @@ module Api
       events = Event.active.includes(:tags, :owner, :active_event_participations)
       events = filter_by_status(events)
       events = filter_by_tag(events)
+      # ピン留めを先頭に、残りは注目スコア降順(wireframe-member.html 画面①)。
+      # 順序には使うが、スコアの数値そのものは返さない
+      events = events.order(pinned: :desc, spotlight_score: :desc, starts_at: :asc)
 
       render json: { events: events.map { EventSerializer.new(_1, current_user: current_user).as_json } }
     end

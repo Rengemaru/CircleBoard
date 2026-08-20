@@ -74,3 +74,36 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
     end
   end
 end
+
+# トップページの「注目イベント」は、ピン留めを先頭に spotlight_score 降順で
+# 並べる(wireframes/wireframe-member.html 画面①)。
+# ただし score そのものは公開しない(画面② A2 の要求)。
+RSpec.describe "GET /api/events の並び順", type: :request do
+  it "ピン留めを先頭に、残りは spotlight_score の降順で返す" do
+    low = create(:event, starts_at: 5.days.from_now, spotlight_score: 10)
+    high = create(:event, starts_at: 6.days.from_now, spotlight_score: 200)
+    pinned = create(:event, starts_at: 7.days.from_now, spotlight_score: 1, pinned: true)
+
+    get "/api/events"
+
+    ids = response.parsed_body["events"].map { _1["id"] }
+    expect(ids).to eq([ pinned.id, high.id, low.id ])
+  end
+
+  it "pinned を返す（トップページの📌バッジに使う）" do
+    create(:event, pinned: true)
+
+    get "/api/events"
+
+    expect(response.parsed_body["events"].first["pinned"]).to be(true)
+  end
+
+  # 数値が見えると、順位を上げるための操作を誘発する
+  it "spotlight_score は返さない" do
+    create(:event, spotlight_score: 210)
+
+    get "/api/events"
+
+    expect(response.parsed_body["events"].first.keys).not_to include("spotlight_score")
+  end
+end

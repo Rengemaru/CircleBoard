@@ -93,6 +93,10 @@
 | `tag_id` | タグで絞り込み |
 | `status` | `recruiting` / `completed`（既定は `recruiting`） |
 
+**並び順:** ピン留めが先頭 → `spotlight_score` 降順 → `starts_at` 昇順（画面①の注記）。
+`pinned` は返すが、**`spotlight_score` は返さない**（画面 A2「一般ユーザーには見せない」）。
+順序には使うが、数値そのものは公開しない。
+
 ```json
 {
   "events": [
