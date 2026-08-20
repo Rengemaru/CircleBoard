@@ -18,6 +18,9 @@ Rails.application.routes.draw do
     resource :signage, only: [ :show ]
 
     namespace :admin do
+      # アカウント発行のみ。一覧・編集・停止・削除UIは MVP 対象外(CLAUDE.md §10)
+      resources :users, only: [ :create ]
+      resources :signage_tokens, only: [ :index, :create, :destroy ]
       resources :events, only: [] do
         # 全体で1件だけなので単数形
         resource :pin, only: [ :update, :destroy ], controller: "pins"
