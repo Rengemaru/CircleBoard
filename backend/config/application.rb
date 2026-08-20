@@ -41,6 +41,16 @@ module App
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # APIモードは session / cookie ミドルウェアを読み込まないので手で戻す。
+    # 認証はサーバー側セッション + HttpOnly Cookie で行う(docs/api-spec.md §0)。
+    # トークンをJSから触れる場所に置かないため、この方式を選んでいる。
+    config.middleware.use ActionDispatch::Cookies
+    config.session_store :cookie_store,
+                         key: "_circleboard_session",
+                         httponly: true,      # JSから読めない = XSSで盗まれない
+                         same_site: :lax
+    config.middleware.use config.session_store, config.session_options
+
     # コンテナのログを docker compose logs で読めるようにする。
     # development の既定は log/development.log への出力で、コンテナ外から見えない。
     if ENV["RAILS_LOG_TO_STDOUT"].present?

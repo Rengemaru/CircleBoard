@@ -3,6 +3,8 @@ Rails.application.routes.draw do
   get "/healthz", to: "healthz#show"
 
   namespace :api do
+    # 単数形リソース。ログイン中のセッションは常に1つなのでIDを取らない
+    resource :session, only: [ :show, :create, :destroy ]
     resources :events, only: [ :index ]
   end
 end

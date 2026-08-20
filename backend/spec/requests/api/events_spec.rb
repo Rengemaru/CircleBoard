@@ -13,4 +13,17 @@ RSpec.describe "GET /api/events", type: :request do
     expect(events.size).to eq(1)
     expect(events.first).not_to have_key("owner")
   end
+
+  # 「常に owner を返さない実装」でも上のテストは通ってしまうため、
+  # 逆方向も確かめる。同じ EventSerializer の分岐が両方向で効いていることの確認
+  it "ログイン時は owner を返す" do
+    user = create(:user, password: "password123")
+    event = create(:event, owner: user)
+    post "/api/session", params: { email: user.email, password: "password123" }, as: :json
+
+    get "/api/events"
+
+    owner = response.parsed_body["events"].first["owner"]
+    expect(owner).to eq("id" => event.owner.id, "name" => event.owner.name)
+  end
 end
