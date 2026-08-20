@@ -55,7 +55,7 @@ module Api
     end
 
     def require_owner_or_admin
-      return if current_user.admin? || @event.owner_id == current_user.id
+      return if owner_or_admin?(@event)
 
       render_error(:forbidden, "この企画を編集する権限がありません")
     end

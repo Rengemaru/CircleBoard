@@ -23,6 +23,12 @@ class ApplicationController < ActionController::API
     render_error(:unauthorized, "ログインしてください") unless signed_in?
   end
 
+  # 企画を編集・削除してよいのは owner 本人と管理者だけ(docs/api-spec.md §2/§3)。
+  # イベントとプロジェクトで同じ判定なので、ここに置く
+  def owner_or_admin?(resource)
+    current_user.admin? || resource.owner_id == current_user.id
+  end
+
   # エラーレスポンスの形は docs/api-spec.md §0 の
   # { "error": { "code": ..., "message": ... } } に統一する。
   # 各コントローラでハッシュを組み立てると、形がずれても気づけない。

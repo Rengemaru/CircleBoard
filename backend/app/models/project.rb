@@ -6,6 +6,11 @@ class Project < ApplicationRecord
 
   belongs_to :owner, class_name: "User", optional: true
 
+  # DB の NOT NULL 制約に対応する presence のみ(仕様書 §2.3)。
+  # activity_schedule / meeting_schedule / capacity は NULL可なので付けない
+  validates :title, presence: true
+  validates :description, presence: true
+
   has_many :project_tags, dependent: :destroy
   has_many :tags, through: :project_tags
   # プロジェクトを消しても参加レコードは残す（project_id が NULL になる）ため

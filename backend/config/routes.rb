@@ -6,5 +6,6 @@ Rails.application.routes.draw do
     # 単数形リソース。ログイン中のセッションは常に1つなのでIDを取らない
     resource :session, only: [ :show, :create, :destroy ]
     resources :events, only: [ :index, :show, :create, :update, :destroy ]
+    resources :projects, only: [ :index, :show, :create, :update, :destroy ]
   end
 end
