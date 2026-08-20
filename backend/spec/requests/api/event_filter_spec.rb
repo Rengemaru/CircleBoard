@@ -79,15 +79,35 @@ end
 # 並べる(wireframes/wireframe-member.html 画面①)。
 # ただし score そのものは公開しない(画面② A2 の要求)。
 RSpec.describe "GET /api/events の並び順", type: :request do
-  it "ピン留めを先頭に、残りは spotlight_score の降順で返す" do
+  # 画面② は日付順で描かれている。一覧としてはこちらが素直
+  it "既定では開催日の近い順で返す" do
+    late = create(:event, starts_at: 7.days.from_now, spotlight_score: 200)
+    early = create(:event, starts_at: 3.days.from_now, spotlight_score: 1)
+
+    get "/api/events"
+
+    expect(response.parsed_body["events"].map { _1["id"] }).to eq([ early.id, late.id ])
+  end
+
+  # トップページの「注目イベント」枠(画面①)が要求する順序
+  it "?sort=spotlight ではピン留めを先頭に、残りを spotlight_score の降順で返す" do
     low = create(:event, starts_at: 5.days.from_now, spotlight_score: 10)
     high = create(:event, starts_at: 6.days.from_now, spotlight_score: 200)
     pinned = create(:event, starts_at: 7.days.from_now, spotlight_score: 1, pinned: true)
 
-    get "/api/events"
+    get "/api/events", params: { sort: "spotlight" }
 
     ids = response.parsed_body["events"].map { _1["id"] }
     expect(ids).to eq([ pinned.id, high.id, low.id ])
+  end
+
+  it "未知の sort は既定（日付順）に戻す" do
+    late = create(:event, starts_at: 7.days.from_now, spotlight_score: 200)
+    early = create(:event, starts_at: 3.days.from_now, spotlight_score: 1)
+
+    get "/api/events", params: { sort: "unknown" }
+
+    expect(response.parsed_body["events"].map { _1["id"] }).to eq([ early.id, late.id ])
   end
 
   it "pinned を返す（トップページの📌バッジに使う）" do

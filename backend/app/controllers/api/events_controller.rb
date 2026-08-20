@@ -9,9 +9,7 @@ module Api
       events = Event.active.includes(:tags, :owner, :active_event_participations)
       events = filter_by_status(events)
       events = filter_by_tag(events)
-      # ピン留めを先頭に、残りは注目スコア降順(wireframe-member.html 画面①)。
-      # 順序には使うが、スコアの数値そのものは返さない
-      events = events.order(pinned: :desc, spotlight_score: :desc, starts_at: :asc)
+      events = sort_events(events)
 
       render json: { events: events.map { EventSerializer.new(_1, current_user: current_user).as_json } }
     end
@@ -64,6 +62,16 @@ module Api
     end
 
     private
+
+    # 既定は開催日の近い順(wireframe-member.html 画面② は日付順で描かれている)。
+    # ?sort=spotlight のときだけ、ピン留めを先頭に注目スコア降順にする。
+    # トップページの「注目イベント」枠(画面①)がこの順序を要求している。
+    # 順序には使うが、スコアの数値そのものは返さない(画面 A2「一般ユーザーには見せない」)
+    def sort_events(scope)
+      return scope.order(starts_at: :asc) unless params[:sort] == "spotlight"
+
+      scope.order(pinned: :desc, spotlight_score: :desc, starts_at: :asc)
+    end
 
     # 既定は募集中のみ。終了イベントは表示しない
     # (wireframes/wireframe-member.html 画面② / docs/api-spec.md §2)。

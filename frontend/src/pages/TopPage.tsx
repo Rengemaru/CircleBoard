@@ -16,6 +16,9 @@ export function TopPage() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+  // 通信に失敗したとき「0件」と表示すると、企画が無いのか繋がっていないのかを
+  // 見分けられない。部室のディスプレイでは「今日は企画が無いんだ」と誤読される
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCurrentUser()
@@ -25,15 +28,26 @@ export function TopPage() {
         if (current !== null) {
           fetchProjects()
             .then(setProjects)
-            .catch(() => setProjects([]));
+            .catch((e: unknown) => setError(toMessage(e)));
         }
       })
       .catch(() => setUser(null));
 
-    fetchEvents()
+    fetchEvents({ sort: "spotlight" })
       .then(setEvents)
-      .catch(() => setEvents([]));
+      .catch((e: unknown) => setError(toMessage(e)));
   }, []);
+
+  if (error !== null) {
+    return (
+      <>
+        <SiteHeader user={user} />
+        <main className="mx-auto max-w-3xl p-6">
+          <p className="rounded border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -188,6 +202,10 @@ function formatDate(value: string): string {
 function formatCapacity(event: EventSummary): string {
   if (event.capacity === null) return `${event.participants_count}名`;
   return `${event.participants_count} / ${event.capacity}名`;
+}
+
+function toMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "読み込みに失敗しました";
 }
 
 function formatMembers(project: ProjectSummary): string {
