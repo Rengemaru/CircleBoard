@@ -18,8 +18,10 @@ Rails.application.routes.draw do
     resource :signage, only: [ :show ]
 
     namespace :admin do
-      # アカウント発行のみ。一覧・編集・停止・削除UIは MVP 対象外(CLAUDE.md §10)
-      resources :users, only: [ :create ]
+      # ユーザー管理(wireframes/wireframe-admin-ver2.html ②③)。
+      # 編集と停止はまだ持たない。停止は users に suspended_at が無く、
+      # 追加には spec-v2.2.md §2 の変更が要る(docs/instructions.md T7-4)
+      resources :users, only: [ :index, :create, :destroy ]
       resources :signage_tokens, only: [ :index, :create, :destroy ]
       # ピン留め設定画面用。spotlight_score を公開APIに載せないため専用に持つ
       resources :events, only: [ :index ] do

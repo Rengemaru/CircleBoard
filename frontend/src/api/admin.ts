@@ -26,6 +26,17 @@ export type AdminEventRow = {
   pinned: boolean;
 };
 
+// ユーザー管理画面(wireframes/wireframe-admin-ver2.html ②)専用。
+// 公開APIの UserSerializer は email を返さないので、形が違う
+export type AdminUserRow = {
+  id: number;
+  name: string;
+  email: string;
+  role: "admin" | "member" | "demo";
+  enrollment_year: number;
+  graduation_year: number;
+};
+
 export type NewUserInput = {
   name: string;
   email: string;
@@ -38,6 +49,17 @@ export type NewUserInput = {
 export async function fetchAdminEvents(): Promise<AdminEventRow[]> {
   const data = await apiFetch<{ events: AdminEventRow[] }>("/api/admin/events");
   return data.events;
+}
+
+export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
+  const data = await apiFetch<{ users: AdminUserRow[] }>("/api/admin/users");
+  return data.users;
+}
+
+// 物理削除。企画と参加記録は owner_id / user_id が null になって残る
+// (docs/er.md の ON DELETE SET NULL)
+export async function deleteUser(id: number): Promise<void> {
+  await apiFetch<void>(`/api/admin/users/${id}`, { method: "DELETE" });
 }
 
 export async function fetchSignageTokens(): Promise<SignageTokenRow[]> {

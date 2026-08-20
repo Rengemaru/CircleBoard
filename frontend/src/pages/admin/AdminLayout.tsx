@@ -76,7 +76,7 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
       <div className="py-3">
         <NavGroup>管理</NavGroup>
         <NavItem to="/admin/users" icon="👥">
-          アカウント発行
+          ユーザー管理
         </NavItem>
 
         <NavGroup>サイネージ</NavGroup>
@@ -114,7 +114,9 @@ function NavItem({
   children: React.ReactNode;
 }) {
   const { pathname } = useLocation();
-  const active = pathname === to;
+  // 配下の画面(例: /admin/users/new)でも親の項目を選択状態にする。
+  // 発行画面にいるとき、どこにも印が付いていないと現在地が分からない
+  const active = pathname === to || pathname.startsWith(`${to}/`);
 
   return (
     <Link

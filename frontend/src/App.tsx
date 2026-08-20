@@ -12,6 +12,7 @@ import { SignagePage } from "./pages/SignagePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
+import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 
 // 画面構成は wireframes/ の3ファイルに対応する。
@@ -33,10 +34,9 @@ export function App() {
         </Route>
 
         {/* 管理画面はナビもフッターも AdminLayout が持つ */}
-        {/* URLは wireframe-admin-ver2.html に合わせる。
-            ユーザー一覧(②)を作るまでは /admin/users も発行フォームを出す */}
+        {/* URLは wireframe-admin-ver2.html に合わせる */}
         <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/users/new" element={<AdminUsersPage />} />
+        <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
         <Route path="/admin/pin" element={<AdminPinsPage />} />
         <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
 
