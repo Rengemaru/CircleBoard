@@ -7,6 +7,9 @@ module Api
     def index
       # includes はN+1対策。1件ずつ関連を引きに行かせない(CLAUDE.md §3-3)
       events = Event.active.includes(:tags, :owner, :active_event_participations)
+      events = filter_by_status(events)
+      events = filter_by_tag(events)
+
       render json: { events: events.map { EventSerializer.new(_1, current_user: current_user).as_json } }
     end
 
@@ -58,6 +61,27 @@ module Api
     end
 
     private
+
+    # 既定は募集中のみ。終了イベントは表示しない
+    # (wireframes/wireframe-member.html 画面② / docs/api-spec.md §2)。
+    # 「過去の企画」セクションは MVP 対象外(CLAUDE.md §10)。
+    # 未知の値を渡されたら既定に戻す。エラーにしないのは、URLを手で編集された
+    # だけで画面が壊れるのを避けるため
+    def filter_by_status(scope)
+      status = params[:status]
+      return scope.recruiting unless Event.statuses.key?(status)
+
+      scope.where(status: status)
+    end
+
+    # 絞り込みは ?tag_id= で行い、URLで共有できる状態にする
+    # (wireframes/wireframe-member.html 画面②)
+    def filter_by_tag(scope)
+      tag_id = params[:tag_id]
+      return scope if tag_id.blank?
+
+      scope.joins(:event_tags).where(event_tags: { tag_id: tag_id })
+    end
 
     def set_event
       @event = Event.active
