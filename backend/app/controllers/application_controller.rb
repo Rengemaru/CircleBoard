@@ -23,6 +23,13 @@ class ApplicationController < ActionController::API
     render_error(:unauthorized, "ログインしてください") unless signed_in?
   end
 
+  # 管理者専用のエンドポイントで使う。
+  # docs/api-spec.md §6 は「すべてのエンドポイントで role: admin を検証する。
+  # フロントでメニューを隠すだけにしない」と定めている
+  def require_admin
+    render_error(:forbidden, "管理者権限が必要です") unless current_user&.admin?
+  end
+
   # 企画を編集・削除してよいのは owner 本人と管理者だけ(docs/api-spec.md §2/§3)。
   # イベントとプロジェクトで同じ判定なので、ここに置く
   def owner_or_admin?(resource)
