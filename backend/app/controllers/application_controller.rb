@@ -12,4 +12,18 @@ class ApplicationController < ActionController::API
 
     @current_user = User.find_by(id: session[:user_id])
   end
+
+  def signed_in?
+    current_user.present?
+  end
+
+  # エラーレスポンスの形は docs/api-spec.md §0 の
+  # { "error": { "code": ..., "message": ... } } に統一する。
+  # 各コントローラでハッシュを組み立てると、形がずれても気づけない。
+  #
+  # code は Rails のステータスシンボルをそのまま文字列にしている
+  # (:unauthorized → "unauthorized")。対応表を別に持つと二重管理になるため。
+  def render_error(status, message)
+    render json: { error: { code: status.to_s, message: message } }, status: status
+  end
 end

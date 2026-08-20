@@ -17,9 +17,9 @@ RSpec.describe "GET /api/events", type: :request do
   # 「常に owner を返さない実装」でも上のテストは通ってしまうため、
   # 逆方向も確かめる。同じ EventSerializer の分岐が両方向で効いていることの確認
   it "ログイン時は owner を返す" do
-    user = create(:user, password: "password123")
+    user = create(:user)
     event = create(:event, owner: user)
-    post "/api/session", params: { email: user.email, password: "password123" }, as: :json
+    sign_in(user)
 
     get "/api/events"
 

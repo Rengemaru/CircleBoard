@@ -41,7 +41,7 @@ RSpec.describe "Api::Sessions", type: :request do
     end
 
     it "ログイン後は自分を返す" do
-      post "/api/session", params: { email: user.email, password: "password123" }, as: :json
+      sign_in(user)
 
       get "/api/session"
 
@@ -51,7 +51,7 @@ RSpec.describe "Api::Sessions", type: :request do
 
   describe "DELETE /api/session" do
     it "ログアウトすると 204 を返し、以降は未ログインになる" do
-      post "/api/session", params: { email: user.email, password: "password123" }, as: :json
+      sign_in(user)
 
       delete "/api/session"
       expect(response).to have_http_status(:no_content)

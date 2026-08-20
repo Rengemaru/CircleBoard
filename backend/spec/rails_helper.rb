@@ -39,9 +39,13 @@ begin
 rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
+# spec/support 配下のヘルパーを読み込む
+Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
+
 RSpec.configure do |config|
   # create(:event) のように前置き無しで書けるようにする
   config.include FactoryBot::Syntax::Methods
+  config.include AuthenticationHelpers, type: :request
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [

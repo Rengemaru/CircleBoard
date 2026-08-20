@@ -14,9 +14,7 @@ module Api
       unless user&.authenticate(params[:password])
         # 「メールアドレスが存在しない」と「パスワードが違う」を区別しない。
         # 区別すると、どのメールアドレスが登録済みかを外部から調べられる
-        return render json: {
-          error: { code: "unauthorized", message: "メールアドレスまたはパスワードが違います" }
-        }, status: :unauthorized
+        return render_error(:unauthorized, "メールアドレスまたはパスワードが違います")
       end
 
       # セッション固定攻撃対策。ログイン前のセッションIDを使い回さない
