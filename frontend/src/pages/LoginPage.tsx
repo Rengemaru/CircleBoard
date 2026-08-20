@@ -17,6 +17,9 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 空欄のまま押されたときは required がブラウザ側で止める。
+  // 送っても 401 が返るだけなので、往復する意味がない
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -53,6 +56,7 @@ export function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              required
               className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </label>
@@ -64,6 +68,7 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              required
               className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </label>
