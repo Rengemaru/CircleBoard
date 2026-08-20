@@ -127,6 +127,8 @@
 
 - `visibility: trashed` は **404**
 - 一覧と詳細で**同じ `EventSerializer` を使う**（片方だけ塞ぐ漏れを防ぐ）
+- **企画者が退会済みの場合は `owner: null`**（キーは残る）。仕様書 §4.2 のサンプルコードが
+  `@event.owner && {...}` と書いているのに合わせている。フロントは `owner` が null になりうる前提で型を定義すること
 
 ### `POST /api/events` — 作成 🔒メンバー
 
@@ -146,6 +148,10 @@
 → 201。`owner_id` は `current_user` から設定する（**リクエストの値を信用しない**）。
 
 ### `PATCH /api/events/:id` — 編集 🔒owner / admin
+
+→ 200。**レスポンスは `GET /api/events/:id`（詳細）と同じ形**。`POST` の 201 も同様。
+別の形を返す実装にしないこと（同じシリアライザを使い回す原則の延長）。
+
 ### `DELETE /api/events/:id` — 論理削除 🔒owner / admin
 → 204。`visibility: trashed` に更新。物理削除しない。
 
