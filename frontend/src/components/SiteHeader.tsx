@@ -22,6 +22,17 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
             </Link>
           ) : (
             <span className="flex items-center gap-3 text-gray-700">
+              {/* 管理画面への入口。admin のときだけ出す。
+                  これは表示の話であって制限ではない。管理APIは全て
+                  サーバー側で role を検証している(docs/api-spec.md §6)ので、
+                  リンクを知られても操作はできない。
+                  出しっぱなしにしないのは、押しても断られるだけのリンクを
+                  全員に見せる意味がないため */}
+              {user.role === "admin" && (
+                <Link to="/admin/pins" className="underline">
+                  管理
+                </Link>
+              )}
               {user.name}
               <LogoutButton />
             </span>
