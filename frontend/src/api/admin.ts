@@ -35,6 +35,35 @@ export type AdminUserRow = {
   role: "admin" | "member" | "demo";
   enrollment_year: number;
   graduation_year: number;
+  // 卒業したかどうかはサーバーが判断する。年度の切り替わり(4月始まり)を
+  // 跨ぐ規則なので、画面ごとに計算しない(backend の User#graduated?)
+  graduated: boolean;
+};
+
+// 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
+// ワイヤーフレームの「停止中アカウント」は suspended_at が無いので含まない
+export type DashboardStats = {
+  member_count: number;
+  graduate_count: number;
+  active_project_count: number;
+  recruiting_project_count: number;
+  events_this_month_count: number;
+  next_event: { id: number; title: string; days_until: number } | null;
+};
+
+export type ActivityRow = {
+  id: number;
+  kind: "event" | "project";
+  title: string;
+  status: string;
+  // 投稿者は退会で null になりうる(ON DELETE SET NULL)
+  owner_name: string | null;
+  created_at: string;
+};
+
+export type Dashboard = {
+  stats: DashboardStats;
+  recent_activity: ActivityRow[];
 };
 
 export type NewUserInput = {
@@ -49,6 +78,10 @@ export type NewUserInput = {
 export async function fetchAdminEvents(): Promise<AdminEventRow[]> {
   const data = await apiFetch<{ events: AdminEventRow[] }>("/api/admin/events");
   return data.events;
+}
+
+export async function fetchDashboard(): Promise<Dashboard> {
+  return apiFetch<Dashboard>("/api/admin/dashboard");
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {

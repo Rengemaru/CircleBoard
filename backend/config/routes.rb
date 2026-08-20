@@ -18,6 +18,10 @@ Rails.application.routes.draw do
     resource :signage, only: [ :show ]
 
     namespace :admin do
+      # 管理者トップの集計(wireframes/wireframe-admin-ver2.html ①)。
+      # 1件しかないので単数形
+      resource :dashboard, only: [ :show ]
+
       # ユーザー管理(wireframes/wireframe-admin-ver2.html ②③)。
       # 編集と停止はまだ持たない。停止は users に suspended_at が無く、
       # 追加には spec-v2.2.md §2 の変更が要る(docs/instructions.md T7-4)

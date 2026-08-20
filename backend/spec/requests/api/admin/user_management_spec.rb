@@ -31,7 +31,7 @@ RSpec.describe "ユーザー管理", type: :request do
       row = response.parsed_body["users"].find { _1["id"] == member.id }
       # 公開APIの UserSerializer は email を返さない。この画面だけが受け取る
       expect(row.keys).to contain_exactly(
-        "id", "name", "email", "role", "enrollment_year", "graduation_year"
+        "id", "name", "email", "role", "enrollment_year", "graduation_year", "graduated"
       )
       expect(row["email"]).to eq(member.email)
     end
@@ -41,6 +41,20 @@ RSpec.describe "ユーザー管理", type: :request do
       get "/api/admin/users"
 
       expect(response.body).not_to include("password")
+    end
+
+    # 年度の切り替わりを跨ぐ判断なのでサーバーが返す(User#graduated?)。
+    # 画面ごとに計算させると、RubyとTypeScriptに同じ規則が2本並ぶ
+    it "卒業したかどうかを判定して返す" do
+      sign_in(admin)
+      graduate = create(:user, graduation_year: Date.current.year - 3)
+      current = create(:user, graduation_year: Date.current.year + 3)
+      get "/api/admin/users"
+
+      rows = response.parsed_body["users"].index_by { _1["id"] }
+
+      expect(rows[graduate.id]["graduated"]).to be(true)
+      expect(rows[current.id]["graduated"]).to be(false)
     end
 
     it "卒業年度の新しい順に返す" do

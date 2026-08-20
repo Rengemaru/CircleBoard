@@ -278,6 +278,79 @@
 **すべてのエンドポイントで `role: admin` を検証する。** フロントでメニューを隠すだけにしない。
 admin以外のログインユーザーは **403**、未ログインは **401**。
 
+### `GET /api/admin/dashboard` — 管理者トップの集計（Phase 7 で追加）
+
+`wireframes/wireframe-admin-ver2.html` ① 用。集計を1本にまとめているのは、
+画面が開くたびに3往復させないため。別々に取ると数字が互いにずれる。
+
+```json
+{
+  "stats": {
+    "member_count": 42,
+    "graduate_count": 8,
+    "active_project_count": 6,
+    "recruiting_project_count": 3,
+    "events_this_month_count": 4,
+    "next_event": { "id": 12, "title": "LT大会 vol.13", "days_until": 3 }
+  },
+  "recent_activity": [
+    {
+      "id": 12,
+      "kind": "event",
+      "title": "LT大会 vol.13",
+      "status": "recruiting",
+      "owner_name": "山田太郎",
+      "created_at": "2026-08-01T10:00:00+09:00"
+    }
+  ]
+}
+```
+
+- `next_event` は開催予定が無ければ `null`。対象は `Event.spotlight_targets`
+  （開催当日は23時まで含む）と同じ定義を使う
+- `active_project_count` は「終了していない」件数。募集中も含む
+- `recent_activity` はイベントとプロジェクトを混ぜて新しい順に最大5件
+- `owner_name` は退会で `null` になりうる
+- ワイヤーフレームにある「停止中アカウント」は返さない。`users.suspended_at` が
+  無いため（`spec-v2.2.md` §0.3 で「作らない」）
+
+### `GET /api/admin/users` — ユーザー一覧（Phase 7 で追加）
+
+`wireframes/wireframe-admin-ver2.html` ② 用。
+
+```json
+{
+  "users": [
+    {
+      "id": 3,
+      "name": "鈴木一郎",
+      "email": "ichiro@example.ac.jp",
+      "role": "member",
+      "enrollment_year": 2024,
+      "graduation_year": 2028,
+      "graduated": false
+    }
+  ]
+}
+```
+
+- 公開APIの `UserSerializer` は `email` を返さない（`spec-v2.2.md` §4.1 の
+  アクセス制御表に無いため意図的に落としている）。この画面だけが受け取る
+- `graduated` はサーバーが判定する。日本の学年は4月始まりで卒業は3月なので、
+  年度の切り替わりを跨ぐ規則になる。画面ごとに計算させると Ruby と
+  TypeScript に同じ規則が2本並ぶ（`User#graduated?`）
+- 卒業年度の新しい順。検索と絞り込みのクエリは受けない。部員は数十人で、
+  1文字打つたびに往復させる意味がないため画面側で絞る
+
+### `DELETE /api/admin/users/:id` — ユーザー削除（Phase 7 で追加）
+
+→ 204。物理削除。外部キーがすべて `ON DELETE SET NULL` なので、その人が作った
+企画と参加記録は残り、`owner_id` / `user_id` だけが `null` になる。
+
+- **自分自身は 422。** 管理者は他の管理者を消せるが、消した本人が管理者として
+  残るため、これだけで管理者が0人になることは起こらない
+- 存在しないIDは 404
+
 ### `POST /api/admin/users` — アカウント発行
 
 ```json

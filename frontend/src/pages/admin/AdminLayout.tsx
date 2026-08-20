@@ -71,9 +71,13 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
 
       {/* 未実装の画面はここに出さない。押すと 404 になるリンクを並べても
           「準備中」という情報しか伝わらない。
-          ダッシュボード(T7-2)・企画一覧(T7-3)・FAQ編集(T7-6)は
-          実装した時点でこの一覧に足す */}
+          企画一覧(T7-3)・FAQ編集(T7-6)は実装した時点でこの一覧に足す */}
       <div className="py-3">
+        <NavGroup>メイン</NavGroup>
+        <NavItem to="/admin" icon="📊" exact>
+          ダッシュボード
+        </NavItem>
+
         <NavGroup>管理</NavGroup>
         <NavItem to="/admin/users" icon="👥">
           ユーザー管理
@@ -88,7 +92,7 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
         </NavItem>
 
         <NavGroup>アカウント</NavGroup>
-        <NavItem to="/" icon="↩">
+        <NavItem to="/" icon="↩" exact>
           通常画面に戻る
         </NavItem>
       </div>
@@ -107,16 +111,19 @@ function NavGroup({ children }: { children: React.ReactNode }) {
 function NavItem({
   to,
   icon,
+  exact = false,
   children,
 }: {
   to: string;
   icon: string;
+  exact?: boolean;
   children: React.ReactNode;
 }) {
   const { pathname } = useLocation();
   // 配下の画面(例: /admin/users/new)でも親の項目を選択状態にする。
-  // 発行画面にいるとき、どこにも印が付いていないと現在地が分からない
-  const active = pathname === to || pathname.startsWith(`${to}/`);
+  // 発行画面にいるとき、どこにも印が付いていないと現在地が分からない。
+  // ただし /admin は全ての管理画面の前方一致になるので完全一致だけで判定する
+  const active = exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
 
   return (
     <Link

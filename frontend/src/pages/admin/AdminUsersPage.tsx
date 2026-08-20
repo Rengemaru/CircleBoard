@@ -190,10 +190,8 @@ function UserRow({
   isSelf: boolean;
   onDelete: () => void;
 }) {
-  const graduated = isGraduated(user);
-
   return (
-    <tr className={graduated ? "opacity-65" : ""}>
+    <tr className={user.graduated ? "opacity-65" : ""}>
       <Td>
         <span className={isSelf ? "font-bold" : ""}>{user.name}</span>
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}
@@ -205,7 +203,7 @@ function UserRow({
       <Td>
         {user.role === "admin" ? (
           <Badge tone="admin">管理者</Badge>
-        ) : graduated ? (
+        ) : user.graduated ? (
           <Badge tone="grad">卒業生</Badge>
         ) : (
           <Badge tone="active">現役</Badge>
@@ -242,17 +240,6 @@ function Td({ className = "", children }: { className?: string; children: React.
   );
 }
 
-// 日本の学年は4月始まりで、卒業は3月。graduation_year は「卒業する年」なので、
-// 2026年3月に卒業する人は graduation_year = 2026。
-// いま2026年8月なら、その人はもう卒業生。
-function isGraduated(user: AdminUserRow): boolean {
-  const now = new Date();
-  // 1〜3月はまだ前年度。4月から新年度が始まる
-  const academicYear = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
-
-  return user.graduation_year <= academicYear;
-}
-
 function matchesKeyword(user: AdminUserRow, keyword: string): boolean {
   const q = keyword.trim().toLowerCase();
   if (q === "") return true;
@@ -267,9 +254,9 @@ function matchesFilter(user: AdminUserRow, filter: Filter): boolean {
     case "admin":
       return user.role === "admin";
     case "grad":
-      return isGraduated(user);
+      return user.graduated;
     case "active":
-      return !isGraduated(user);
+      return !user.graduated;
   }
 }
 
