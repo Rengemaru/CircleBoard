@@ -54,6 +54,8 @@ function PinPicker() {
 
   return (
     <div className="space-y-4">
+      <SlotPreview events={events} />
+
       <p className="text-sm text-gray-600">
         ピン留めしたイベントはサイネージの先頭に固定されます。
         <strong>全体で1件だけ</strong>で、別のイベントを選ぶと現在のピンは自動で外れます。
@@ -129,6 +131,43 @@ function PinPicker() {
         注目スコアはこの画面にだけ表示しています。数値が見えると、順位を上げるための操作を誘発するためです。
       </p>
     </div>
+  );
+}
+
+// 現在のトップ／サイネージの表示順(wireframes/wireframe-admin.html A2)。
+//
+// この一覧は API が「ピン留め優先 → score 降順」で返しているので、
+// 先頭から4件が実際に注目枠に出るものと一致する。
+// 空枠は描かない。閑散期に空箱が並ぶのが最も見苦しい(画面①の注記)
+const SPOTLIGHT_SLOTS = 4;
+
+function SlotPreview({ events }: { events: AdminEventRow[] }) {
+  const slots = events.slice(0, SPOTLIGHT_SLOTS);
+  if (slots.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="mb-2 text-sm text-gray-600">現在のトップ／サイネージの表示順</h2>
+      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {slots.map((event, index) => (
+          <li
+            key={event.id}
+            className={`rounded border p-3 ${
+              event.pinned ? "border-gray-900 bg-gray-50" : "border-gray-200"
+            }`}
+          >
+            <div className="text-xs text-gray-500">枠{index + 1}</div>
+            <div className="mt-1 truncate font-bold">
+              {event.pinned && "📌 "}
+              {event.title}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              {event.pinned ? "手動で固定" : `自動 ・ score ${event.spotlight_score}`}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

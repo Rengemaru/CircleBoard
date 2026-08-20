@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CopyButton } from "../../components/CopyButton";
 import {
   createSignageToken,
   fetchSignageTokens,
@@ -103,20 +104,30 @@ function TokenList() {
               )}
             </div>
 
+            {/* 発行日。同じ端末名で作り直したときに、どちらが新しいかを
+                名前だけでは判断できない */}
+            <div className="mt-1 text-sm text-gray-500">
+              {formatDate(token.created_at)} 発行
+            </div>
+
             {/* 端末に貼り付けるURL。ここだけはトークンの実値を見せる。
                 admin 以外はこのAPIに到達できない(docs/api-spec.md §6) */}
             <p className="mt-2 break-all font-mono text-xs text-gray-600">{token.url}</p>
 
-            {token.revoked_at === null && (
-              <button
-                type="button"
-                onClick={() => revoke(token.id)}
-                disabled={busy}
-                className="mt-3 rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-40"
-              >
-                無効にする
-              </button>
-            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {/* URLは手で打つには長い。端末のブラウザに貼れる形で渡す */}
+              <CopyButton text={token.url} label="URLをコピー" />
+              {token.revoked_at === null && (
+                <button
+                  type="button"
+                  onClick={() => revoke(token.id)}
+                  disabled={busy}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-40"
+                >
+                  無効にする
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

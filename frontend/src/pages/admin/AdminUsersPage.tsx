@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CopyButton } from "../../components/CopyButton";
 import { createUser, type NewUserInput } from "../../api/admin";
 import { AdminLayout } from "./AdminLayout";
 
@@ -132,15 +133,29 @@ function IssuedNotice({ issued, onClose }: { issued: Issued; onClose: () => void
       <p className="rounded bg-amber-50 p-3 text-sm text-amber-900">
         本人に伝えてください。この画面を閉じると再表示できません。
       </p>
-      <button
-        type="button"
-        onClick={onClose}
-        className="rounded border border-gray-300 px-4 py-2"
-      >
-        閉じる
-      </button>
+      {/* 手で書き写すと打ち間違える。そのまま DM に貼れる形でコピーする
+          (wireframes/wireframe-admin.html A1) */}
+      <div className="flex flex-wrap items-center gap-3">
+        <CopyButton text={handoverText(issued)} label="コピー" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded border border-gray-300 px-4 py-2"
+        >
+          閉じる
+        </button>
+      </div>
     </div>
   );
+}
+
+// 本人に渡す文面。メール送信機能が無いので、口頭やDMで伝える運用
+function handoverText(issued: Issued): string {
+  return [
+    "CircleBoard のアカウントを発行しました。",
+    `メールアドレス: ${issued.email}`,
+    `初期パスワード: ${issued.password}`,
+  ].join("\n");
 }
 
 function Row({ label, value }: { label: string; value: string }) {
