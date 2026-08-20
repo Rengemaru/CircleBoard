@@ -21,7 +21,8 @@ Rails.application.routes.draw do
       # アカウント発行のみ。一覧・編集・停止・削除UIは MVP 対象外(CLAUDE.md §10)
       resources :users, only: [ :create ]
       resources :signage_tokens, only: [ :index, :create, :destroy ]
-      resources :events, only: [] do
+      # ピン留め設定画面用。spotlight_score を公開APIに載せないため専用に持つ
+      resources :events, only: [ :index ] do
         # 全体で1件だけなので単数形
         resource :pin, only: [ :update, :destroy ], controller: "pins"
       end

@@ -290,6 +290,27 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
 ```
 → 201
 
+### `GET /api/admin/events` — ピン留め設定画面用の一覧（実装時に追加）
+
+```json
+{
+  "events": [
+    {
+      "id": 12, "title": "新歓ハッカソン2026",
+      "starts_at": "2026-09-28T10:00:00+09:00", "location": "部室A",
+      "participants_count": 8, "spotlight_score": 210, "pinned": true
+    }
+  ]
+}
+```
+
+**公開APIと分けている理由:** `wireframes/wireframe-admin.html` A2 が
+「score はこの画面にだけ表示する。**一般ユーザーには見せない**（数値が見えると、
+順位を上げるための操作を誘発するため）」と定めている。
+`spotlight_score` を `GET /api/events` に足すとこの要求を破るため、管理者専用に持つ。
+
+開催前のイベントのみ。並び順はピン留めが先頭 → `spotlight_score` 降順。
+
 ### `PUT /api/admin/events/:id/pin` — ピン留め設定
 
 → 200。**既存のピンを外す処理と新しいピンを立てる処理を同一トランザクションで行う**（部分ユニークインデックスに衝突するため）。

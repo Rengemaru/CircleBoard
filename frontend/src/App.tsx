@@ -2,6 +2,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SignagePage } from "./pages/SignagePage";
+import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
+import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 
 // 画面構成は wireframes/ の3ファイルに対応する。
 // T1-3 ではルーティングの器だけを作り、中身は各タスクで差し替える。
@@ -17,12 +20,9 @@ export function App() {
         <Route path="/create" element={<PlaceholderPage name="企画作成" />} />
         <Route path="/login" element={<PlaceholderPage name="ログイン" />} />
         <Route path="/legal" element={<PlaceholderPage name="利用規約" />} />
-        <Route path="/admin/users" element={<PlaceholderPage name="管理者 / アカウント発行" />} />
-        <Route path="/admin/pins" element={<PlaceholderPage name="管理者 / ピン留め設定" />} />
-        <Route
-          path="/admin/signage-tokens"
-          element={<PlaceholderPage name="管理者 / トークン管理" />}
-        />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/pins" element={<AdminPinsPage />} />
+        <Route path="/admin/signage-tokens" element={<AdminSignageTokensPage />} />
         <Route path="/signage" element={<SignagePage />} />
       </Routes>
     </BrowserRouter>
