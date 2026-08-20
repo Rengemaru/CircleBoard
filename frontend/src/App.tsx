@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { SignagePage } from "./pages/SignagePage";
 
 // 画面構成は wireframes/ の3ファイルに対応する。
 // T1-3 ではルーティングの器だけを作り、中身は各タスクで差し替える。
@@ -22,7 +23,7 @@ export function App() {
           path="/admin/signage-tokens"
           element={<PlaceholderPage name="管理者 / トークン管理" />}
         />
-        <Route path="/signage" element={<PlaceholderPage name="サイネージ" />} />
+        <Route path="/signage" element={<SignagePage />} />
       </Routes>
     </BrowserRouter>
   );
