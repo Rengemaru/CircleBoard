@@ -8,7 +8,23 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // ナビゲーションは一切置かない。ヘッダー・フッター・リンクも表示しない
 // (wireframes/wireframe-signage.html「共通仕様」)。
 // 視認距離2〜3mを想定し、最小フォントは24px相当。
+// 60秒ごとにページごと読み込み直す(wireframe-signage.html「共通仕様」)。
+// WebSocket は不採用。1台のディスプレイが1分遅れて更新されることに実害は無く、
+// 常時接続を維持する仕組みを持つと、切れたときに気づけない方が問題になる。
+const RELOAD_INTERVAL_SECONDS = 60;
+
+function useAutoReload() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.location.reload();
+    }, RELOAD_INTERVAL_SECONDS * 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+}
+
 export function SignagePage() {
+  useAutoReload();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [data, setData] = useState<SignageData | null>(null);
@@ -43,6 +59,7 @@ export function SignagePage() {
   if (!hasEvents && !hasProjects) {
     return (
       <Screen>
+        <Header />
         <EmptyState />
       </Screen>
     );
@@ -82,7 +99,30 @@ function Header() {
         <div className="text-[2.1vw] font-bold tracking-tight">CircleBoard</div>
         <div className="mt-1 text-[1.05vw] text-[#5d6474]">情報系学生サークル</div>
       </div>
+      <Clock />
     </header>
+  );
+}
+
+// 時計はリロードとは独立に毎秒更新する(wireframe-signage.html「共通仕様」)。
+// 60秒に1回しか動かない時計は、画面が固まっているのか動いているのかが
+// 遠目に分からない。動いている時計は「生きている画面」の証拠になる
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="text-right">
+      <div className="font-mono text-[3.1vw] font-bold leading-none tracking-tight">
+        {formatClock(now)}
+      </div>
+      <div className="mt-[0.35em] text-[1.05vw] text-[#5d6474]">{formatToday(now)}</div>
+    </div>
   );
 }
 
@@ -218,6 +258,22 @@ function EmptyState() {
       <p className="text-[1.4vw] text-[#5d6474]">企画の投稿はこちらから</p>
     </div>
   );
+}
+
+function formatClock(now: Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(now);
+}
+
+function formatToday(now: Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(now);
 }
 
 function formatStartsAt(value: string): string {
