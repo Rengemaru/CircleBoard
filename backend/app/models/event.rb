@@ -10,6 +10,12 @@ class Event < ApplicationRecord
   # 一意性や数値範囲など、仕様書に無い検証は足さない。
   # DB制約だけだと保存時に例外が飛び、フォームにエラーを返せないため
   # アプリ層にも同じ制約を置いている。
+  # 定員判定はここ1箇所。capacity が nil のときは無制限(仕様書 §2.2)。
+  # フロントでボタンを隠すのは表示の話であって制限ではないので、API側で必ず使う
+  def full?
+    capacity.present? && active_event_participations.size >= capacity
+  end
+
   validates :title, presence: true
   validates :description, presence: true
   validates :location, presence: true
