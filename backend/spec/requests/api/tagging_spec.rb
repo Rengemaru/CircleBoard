@@ -39,6 +39,19 @@ RSpec.describe "企画へのタグ付け", type: :request do
       expect(response.parsed_body["error"].keys).to contain_exactly("code", "message")
     end
 
+    # 配列以外や数値でない値を渡されても 500 にせず 422 で弾く
+    it "tag_ids が配列でない場合は 422 を返す" do
+      post "/api/events", params: { event: base_params.merge(tag_ids: { "0" => web.id }) }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "tag_ids に数値でない値が混ざると 422 を返す" do
+      post "/api/events", params: { event: base_params.merge(tag_ids: [ web.id, "abc" ]) }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
     it "category: skill のタグは指定できない" do
       skill = create(:tag, name: "Rails", category: :skill)
 

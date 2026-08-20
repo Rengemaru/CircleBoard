@@ -36,9 +36,15 @@ class ApplicationController < ActionController::API
   # 重複は取り除く。UNIQUE(event_id, tag_id) があるので同じIDを2回渡されても
   # DBは壊れないが、その手前で整えておく
   def resolve_tags(raw_ids)
-    ids = Array(raw_ids).map(&:to_i).uniq
-    return [] if ids.empty?
+    return [] if raw_ids.blank?
+    # 配列以外(ハッシュなど)で渡された場合は弾く。to_i を呼んで
+    # NoMethodError で 500 にしない
+    return nil unless raw_ids.is_a?(Array)
 
+    ids = raw_ids.map { |id| Integer(id, exception: false) }
+    return nil if ids.any?(&:nil?)
+
+    ids = ids.uniq
     tags = Tag.project_event.where(id: ids).to_a
     tags.size == ids.size ? tags : nil
   end

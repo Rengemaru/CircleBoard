@@ -21,7 +21,7 @@ module Api
       # owner は current_user から設定する。リクエストの owner_id を信用しない
       # (docs/api-spec.md §2)。event_params でも許可していない
       tags = resolve_tags(tag_ids_param)
-      return render_error(:unprocessable_entity, "存在しないタグが指定されています") if tags.nil?
+      return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       event = current_user.owned_events.new(event_params)
       event.tags = tags
@@ -36,7 +36,7 @@ module Api
 
     def update
       tags = resolve_tags(tag_ids_param)
-      return render_error(:unprocessable_entity, "存在しないタグが指定されています") if tags.nil?
+      return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       # タグの割り当ては保存済みレコードに対して即座に中間テーブルへ書き込まれる。
       # 本体の更新が失敗したときにタグだけ変わった状態が残らないよう、まとめて巻き戻す
