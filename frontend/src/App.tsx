@@ -8,6 +8,7 @@ import { EventDetailPage } from "./pages/EventDetailPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { SignagePage } from "./pages/SignagePage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
@@ -29,6 +30,8 @@ export function App() {
         <Route path="/admin/pins" element={<AdminPinsPage />} />
         <Route path="/admin/signage-tokens" element={<AdminSignageTokensPage />} />
         <Route path="/signage" element={<SignagePage />} />
+        {/* 定義していないURL。何も出さないと真っ白な画面になる */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

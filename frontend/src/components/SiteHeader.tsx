@@ -1,12 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import type { CurrentUser } from "../api/session";
+import { logout, type CurrentUser } from "../api/session";
 
 // メンバー画面で共通のヘッダー(wireframes/wireframe-member.html)。
 // サイネージには置かない（ナビゲーションを一切表示しない仕様のため）。
 export function SiteHeader({ user }: { user: CurrentUser | null }) {
   return (
     <header className="border-b border-gray-200">
-      <div className="mx-auto flex max-w-3xl items-center gap-6 p-4">
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 p-4">
         <Link to="/" className="font-bold">
           CircleBoard
         </Link>
@@ -21,11 +21,29 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
               ログイン
             </Link>
           ) : (
-            <span className="text-gray-700">{user.name}</span>
+            <span className="flex items-center gap-3 text-gray-700">
+              {user.name}
+              <LogoutButton />
+            </span>
           )}
         </div>
       </div>
     </header>
+  );
+}
+
+// ログアウトすると Cookie が消えるので、画面を作り直すために遷移し直す
+function LogoutButton() {
+  async function submit() {
+    await logout();
+    // 状態を持ち回すより、トップから読み込み直す方が取りこぼしが無い
+    window.location.assign("/");
+  }
+
+  return (
+    <button type="button" onClick={submit} className="underline">
+      ログアウト
+    </button>
   );
 }
 

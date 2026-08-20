@@ -16,14 +16,23 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
+    });
+  } catch {
+    // サーバーが落ちている / ネットワークが切れている場合、fetch は
+    // TypeError("Failed to fetch") を投げる。そのまま画面に出しても
+    // 利用者には何のことか分からないので、読める文言に置き換える。
+    // status は HTTP の応答が無かったことを表す 0 にする
+    throw new ApiError(0, "サーバーに接続できませんでした。時間をおいて試してください");
+  }
 
   if (!response.ok) {
     // エラーの形は docs/api-spec.md の { error: { code, message } } に従う。
