@@ -12,6 +12,7 @@ import { SignagePage } from "./pages/SignagePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
+import { AdminPostsPage } from "./pages/admin/AdminPostsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
 import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
@@ -39,6 +40,7 @@ export function App() {
         <Route path="/admin" element={<AdminDashboardPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
+        <Route path="/admin/posts" element={<AdminPostsPage />} />
         <Route path="/admin/pin" element={<AdminPinsPage />} />
         <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
 
