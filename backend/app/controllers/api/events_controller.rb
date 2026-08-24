@@ -77,12 +77,19 @@ module Api
     # (wireframes/wireframe-member.html 画面② / docs/api-spec.md §2)。
     # 「過去の企画」セクションは MVP 対象外(CLAUDE.md §10)。
     # 未知の値を渡されたら既定に戻す。エラーにしないのは、URLを手で編集された
-    # だけで画面が壊れるのを避けるため
+    # だけで画面が壊れるのを避けるため。
+    #
+    # 募集中のときは開催日が過ぎたものも外す。status を completed に変え忘れた
+    # 企画は必ず出るので、これが無いとトップと一覧に「あと-1日」が並ぶ。
+    # 判定はモデルの upcoming に持たせ、サイネージと同じ基準にしている
+    # (開催当日は23時まで)。
+    # completed は終わったものを見に行く指定なので、日付では絞らない
     def filter_by_status(scope)
       status = params[:status]
-      return scope.recruiting unless Event.statuses.key?(status)
+      status = "recruiting" unless Event.statuses.key?(status)
+      scope = scope.where(status: status)
 
-      scope.where(status: status)
+      status == "recruiting" ? scope.upcoming : scope
     end
 
     # 絞り込みは ?tag_id= で行い、URLで共有できる状態にする

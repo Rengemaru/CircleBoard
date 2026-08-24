@@ -41,6 +41,65 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
     end
   end
 
+  # status を completed に変え忘れた企画は運用上必ず出る。
+  # 外さないとトップと一覧に「あと-1日」が並ぶ
+  describe "開催日が過ぎた募集中イベント" do
+    let!(:past) { create(:event, title: "終わった会", status: :recruiting, starts_at: 1.day.ago) }
+
+    it "既定では返さない" do
+      get "/api/events"
+
+      expect(titles).not_to include("終わった会")
+    end
+
+    it "status=recruiting を明示しても返さない" do
+      get "/api/events", params: { status: "recruiting" }
+
+      expect(titles).not_to include("終わった会")
+    end
+
+    it "tag_id と併用しても返さない" do
+      past.tags = [ tag ]
+
+      get "/api/events", params: { tag_id: tag.id }
+
+      expect(titles).to be_empty
+    end
+
+    # completed は終わったものを見に行く指定。日付で絞ると必ず0件になる
+    it "status=completed のときは日付で絞らない" do
+      create(:event, title: "先月の会", status: :completed, starts_at: 1.month.ago)
+
+      get "/api/events", params: { status: "completed" }
+
+      expect(titles).to contain_exactly("終了した会", "先月の会")
+    end
+
+    # 「まだ開催されていない」の基準はサイネージと同じ(Event.upcoming)。
+    # 別々に書くと23時台だけ食い違う
+    it "開催当日は23時までは返す" do
+      travel_to(Time.zone.local(2026, 6, 15, 22, 59, 0)) do
+        create(:event, title: "今夜の会", status: :recruiting,
+                       starts_at: Time.zone.local(2026, 6, 15, 19, 0, 0))
+
+        get "/api/events"
+
+        expect(titles).to include("今夜の会")
+      end
+    end
+
+    it "開催当日でも23時を過ぎたら返さない" do
+      travel_to(Time.zone.local(2026, 6, 15, 23, 0, 0)) do
+        create(:event, title: "今夜の会", status: :recruiting,
+                       starts_at: Time.zone.local(2026, 6, 15, 19, 0, 0))
+
+        get "/api/events"
+
+        expect(titles).not_to include("今夜の会")
+      end
+    end
+  end
+
   describe "tag_id" do
     before { hackathon.tags = [ tag ] }
 
