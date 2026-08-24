@@ -1,0 +1,32 @@
+# 本番の入口。docs/spec-v2.2.md §7.3 の Caddyfile に対応する。
+#
+# ドメインとバックエンドの宛先は環境変数で受ける。コードにホスト名を
+# 直書きしない(CLAUDE.md §3-5)。
+#   SITE_ADDRESS   … 例: circleboard.example.jp
+#                     ドメイン名を書くと Caddy が証明書を自動取得・自動更新する
+#   BACKEND_ORIGIN … 例: backend:3000（Compose のサービス名）
+#
+# 既定を :80 にしているのは、ドメインを渡さずに起動したときに
+# 証明書の取得を試みて失敗しないようにするため（手元での確認用）。
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy {$BACKEND_ORIGIN:backend:3000}
+	}
+
+	# 死活監視は /api 配下ではない(docs/api-spec.md §7)。
+	# ここで振り分けないと SPA の index.html が 200 で返り、
+	# Rails が落ちていても「正常」に見えてしまう
+	handle /healthz {
+		reverse_proxy {$BACKEND_ORIGIN:backend:3000}
+	}
+
+	handle {
+		root * /srv/public
+		# React Router(SPA)のための設定。/events/12 に直接アクセスされても
+		# index.html を返し、ルーティングは React に任せる
+		try_files {path} /index.html
+		file_server
+	}
+}
