@@ -55,9 +55,14 @@ export function App() {
 // 各ページに書いて回ると、新しい画面を足したときに付け忘れる
 function MemberLayout() {
   return (
-    <>
-      <Outlet />
+    // 背景をうすいグレーにして、内容を白い面で浮かせる
+    // (wireframe-admin-ver2.html の .admin-body と同じ考え方)。
+    // 縦を flex で伸ばすのは、内容が短い画面でフッターが宙に浮かないようにするため
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex-1">
+        <Outlet />
+      </div>
       <SiteFooter />
-    </>
+    </div>
   );
 }

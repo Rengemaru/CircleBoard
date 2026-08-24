@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { MemberPage } from "../components/MemberPage";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Chip } from "../components/ui/Chip";
+import { Note } from "../components/ui/Note";
+import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import type { EventDetail } from "../types/event";
@@ -54,45 +59,43 @@ export function EventDetailPage() {
 
   if (error !== null && event === null) {
     return (
-      <>
-        <SiteHeader user={user} />
-        <main className="mx-auto max-w-3xl p-6">
-          <p className="text-red-700">{error}</p>
-        </main>
-      </>
+      <MemberPage user={user}>
+        <Note tone="danger">{error}</Note>
+      </MemberPage>
     );
   }
   if (event === null) {
     return (
-      <>
-        <SiteHeader user={user} />
-        <main className="mx-auto max-w-3xl p-6 text-gray-500">読み込み中…</main>
-      </>
+      <MemberPage user={user}>
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
     );
   }
 
   const full = event.capacity !== null && event.participants_count >= event.capacity;
 
   return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-3xl space-y-6 p-6">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-sm">
-              {event.status === "recruiting" ? "募集中" : "終了"}
-            </span>
-            {event.tags.map((tag) => (
-              <span key={tag.id} className="rounded bg-gray-100 px-2 py-0.5 text-sm">
-                {tag.name}
-              </span>
-            ))}
-          </div>
-          <h1 className="mt-2 text-2xl font-bold">{event.title}</h1>
-          <p className="mt-1 text-gray-600">{formatCountdown(event.starts_at)}</p>
+    <MemberPage user={user}>
+      <Link to="/events" className="mb-3 inline-block text-xs text-gray-500 hover:text-gray-900">
+        ← イベント一覧
+      </Link>
+
+      <Panel>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={event.status === "recruiting" ? "recruiting" : "completed"}>
+            {event.status === "recruiting" ? "募集中" : "終了"}
+          </Badge>
+          {event.pinned && <Badge tone="pinned">📌 ピン留め</Badge>}
+          {event.tags.map((tag) => (
+            <Chip key={tag.id}>{tag.name}</Chip>
+          ))}
         </div>
 
-        <dl className="space-y-2 text-sm">
+        <h1 className="mt-2.5 text-xl font-bold">{event.title}</h1>
+        {/* 開催の近さがこの画面で一番効く情報なので、見出しの直下に大きく置く */}
+        <p className="mt-1 text-lg font-bold text-gray-700">{formatCountdown(event.starts_at)}</p>
+
+        <dl className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-[13px]">
           <Row label="開催日時" value={formatDateTime(event.starts_at)} />
           <Row label="開催場所" value={event.location} />
           {/* 残り枠(ワイヤーフレーム ③ のサイド)。定員なしのときに
@@ -103,64 +106,62 @@ export function EventDetailPage() {
         {/* 外部リンクは任意。connpass や申し込みフォームへ飛ばす。
             外部サイトなので新しいタブで開く */}
         {event.external_url !== null && event.external_url !== "" && (
-          <p className="text-sm">
+          <p className="mt-3 text-[13px]">
             <a
               href={event.external_url}
               target="_blank"
               rel="noreferrer noopener"
-              className="underline"
+              className="text-gray-700 underline hover:text-gray-900"
             >
               関連リンクを開く ↗
             </a>
           </p>
         )}
+      </Panel>
 
-        <section>
-          <h2 className="mb-2 font-bold">概要</h2>
-          <p className="whitespace-pre-wrap text-sm">{event.description}</p>
-        </section>
+      <Panel title="概要">
+        <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{event.description}</p>
+      </Panel>
 
-        <section>
-          <h2 className="mb-2 font-bold">
-            参加者 {event.participants_count}
-            {event.capacity !== null && ` / ${event.capacity}`}名
-          </h2>
-          {/* participants キーが無い＝未ログイン。サーバーが落としている */}
-          {event.participants === undefined ? (
-            <p className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-              参加者一覧はログインすると表示されます
-            </p>
-          ) : (
-            <ul className="flex flex-wrap gap-2 text-sm">
-              {event.participants.map((p) => (
-                <li key={p.id} className="rounded bg-gray-100 px-2 py-0.5">
-                  {p.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* owner キーが無い＝未ログイン。実名がインターネットに公開されるのを避ける */}
-        {event.owner !== undefined && event.owner !== null && (
-          <section>
-            <h2 className="mb-1 font-bold">主催</h2>
-            <p className="text-sm">{event.owner.name}</p>
-          </section>
+      <Panel
+        title={`参加者 ${event.participants_count}${
+          event.capacity !== null ? ` / ${event.capacity}` : ""
+        }名`}
+      >
+        {/* participants キーが無い＝未ログイン。サーバーが落としている */}
+        {event.participants === undefined ? (
+          <Note>参加者一覧はログインすると表示されます。</Note>
+        ) : event.participants.length === 0 ? (
+          <p className="text-[13px] text-gray-500">まだ参加者がいません。</p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {event.participants.map((p) => (
+              <li key={p.id}>
+                <Chip>{p.name}</Chip>
+              </li>
+            ))}
+          </ul>
         )}
+      </Panel>
 
-        {error !== null && <p className="text-red-700">{error}</p>}
+      {/* owner キーが無い＝未ログイン。実名がインターネットに公開されるのを避ける */}
+      {event.owner !== undefined && event.owner !== null && (
+        <Panel title="主催">
+          <p className="text-[13px]">{event.owner.name}</p>
+        </Panel>
+      )}
 
-        <ParticipationButton
-          loggedIn={user !== null}
-          joined={event.current_user_joined === true}
-          full={full}
-          busy={busy}
-          onJoin={join}
-          onCancel={cancel}
-        />
-      </main>
-    </>
+      {error !== null && <Note tone="danger">{error}</Note>}
+
+      <ParticipationButton
+        loggedIn={user !== null}
+        joined={event.current_user_joined === true}
+        full={full}
+        busy={busy}
+        onJoin={join}
+        onCancel={cancel}
+      />
+    </MemberPage>
   );
 }
 
@@ -182,40 +183,30 @@ function ParticipationButton({
   // 未ログイン時のラベルは「ログインして参加」→ /login へ(ワイヤーフレーム ③)
   if (!loggedIn) {
     return (
-      <Link to="/login" className="inline-block rounded bg-gray-900 px-4 py-2 text-white">
-        ログインして参加
+      <Link to="/login">
+        <Button variant="primary">ログインして参加</Button>
       </Link>
     );
   }
 
   if (joined) {
     return (
-      <button
-        type="button"
-        onClick={onCancel}
-        disabled={busy}
-        className="rounded border border-gray-300 px-4 py-2 disabled:opacity-40"
-      >
+      <Button variant="ghost" onClick={onCancel} disabled={busy}>
         参加をキャンセル
-      </button>
+      </Button>
     );
   }
 
   // 満員時はボタンを消す。ただしAPI側でも必ず定員を検証し422を返す。
   // ボタンの非表示は表示の話であって制限ではない(ワイヤーフレーム ③)
   if (full) {
-    return <p className="text-sm text-gray-600">満員です</p>;
+    return <Note tone="warning">満員です。空きが出ると参加できるようになります。</Note>;
   }
 
   return (
-    <button
-      type="button"
-      onClick={onJoin}
-      disabled={busy}
-      className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-    >
+    <Button variant="primary" onClick={onJoin} disabled={busy}>
       参加する
-    </button>
+    </Button>
   );
 }
 

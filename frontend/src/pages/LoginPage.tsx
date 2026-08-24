@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { MemberPage } from "../components/MemberPage";
+import { Button } from "../components/ui/Button";
+import { Field, INPUT_CLASS } from "../components/ui/Field";
+import { Note } from "../components/ui/Note";
+import { Panel } from "../components/ui/Panel";
 import { login } from "../api/session";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
@@ -37,56 +41,41 @@ export function LoginPage() {
   }
 
   return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-sm p-6">
-        <h1 className="mb-6 text-2xl font-bold">ログイン</h1>
+    <MemberPage user={user} width="narrow">
+      <Panel title="ログイン">
+        <form onSubmit={submit}>
+          {error !== null && <Note tone="danger">{error}</Note>}
 
-        <form onSubmit={submit} className="space-y-4">
-          {error !== null && (
-            <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              {error}
-            </p>
-          )}
-
-          <label className="block">
-            <span className="mb-1 block text-sm text-gray-700">メールアドレス</span>
+          <Field label="メールアドレス" required>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className={INPUT_CLASS}
             />
-          </label>
+          </Field>
 
-          <label className="block">
-            <span className="mb-1 block text-sm text-gray-700">パスワード</span>
+          <Field label="パスワード" required>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className={INPUT_CLASS}
             />
-          </label>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-          >
+          <Button type="submit" variant="primary" disabled={busy} className="w-full">
             ログイン
-          </button>
+          </Button>
         </form>
+      </Panel>
 
-        {/* パスワード再発行UIは MVP 対象外。rails console で対応する(CLAUDE.md §10) */}
-        <p className="mt-6 text-sm text-gray-500">
-          アカウントは部長が発行します。パスワードを忘れた場合も部長に連絡してください。
-        </p>
-      </main>
-    </>
+      {/* パスワード再発行UIは MVP 対象外。rails console で対応する(CLAUDE.md §10) */}
+      <Note>アカウントは部長が発行します。パスワードを忘れた場合も部長に連絡してください。</Note>
+    </MemberPage>
   );
 }
