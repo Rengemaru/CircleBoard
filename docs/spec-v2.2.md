@@ -711,6 +711,20 @@ CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
 
 **重要：ビルドはVPS上で行わない。** GitHub Actions側でビルドしてイメージをレジストリに置き、VPSは `pull` するだけにする（§7.7）。VPS上で `docker build` を走らせるとメモリ不足で落ちるのが典型的事故。
 
+#### 実装時の差分（D-3 / 2026-08-24）
+
+上のサンプルは1つの Dockerfile に2ステージを書いているが、**Reactステージの成果物の行き先が書かれていない**。§7.2 は「ビルド済みの静的ファイルをCaddyが配信する」と定めているので、実物では**サービスごとに Dockerfile を分けた**。
+
+| 実物 | 中身 | 最終イメージ |
+|---|---|---|
+| `backend/Dockerfile` | builderで gem をビルド → 実行イメージへコピー | `ruby:3.3-slim` + libpq5。非rootで Puma |
+| `frontend/Dockerfile` | builderで `npm run build` → `dist` をコピー | `caddy:2-alpine` + `Caddyfile`。**これが入口のWebサーバーを兼ねる** |
+
+- **Vite の環境変数はビルド時に埋め込まれる。** 実行時には差し替えられないので `ARG VITE_API_BASE_URL` で受ける。本番は同一オリジンなので既定は空文字（`/api/...` という相対パスになる）
+- **`/healthz` も Caddy から backend へ振り分ける。** §7.3 のサンプルは `/api/*` しか転送しておらず、そのままだと `/healthz` に SPA の index.html が 200 で返る。Railsが落ちていても監視が正常と判断してしまう
+- 実行時に渡す秘密情報（`RAILS_MASTER_KEY` / `SECRET_KEY_BASE` / `DATABASE_URL`）はイメージに焼かない（§7.5 A-7）
+- マイグレーションはイメージの起動時ではなくデプロイ手順で実行する（§7.7）
+
 ### 7.5 セキュリティ設定（公開サーバーの必須項目）
 
 v2.0の「デプロイ時に再検討する項目」が全て必須化した。

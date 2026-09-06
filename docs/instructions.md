@@ -376,7 +376,7 @@ DB → API → 画面を1本通す。
 |---|---|---|
 | D-1 | VPS初期設定（非rootユーザー / SSH鍵 / ufw / fail2ban） | 0.5日 |
 | D-2 | ドメイン取得 + DNS | 0.25日 |
-| D-3 | 本番用Dockerfile（マルチステージ） | 1日 |
+| ~~D-3~~ | ~~本番用Dockerfile（マルチステージ）~~ | **完了**（2026-08-24）。`backend/Dockerfile`（gemのビルドと実行を分離・非root）と `frontend/Dockerfile`（React をビルドして `caddy:2-alpine` に載せる）＋ `frontend/Caddyfile`。サンプルとの差分は `spec-v2.2.md` §7.4 に追記 |
 | D-4 | Caddy + HTTPS | 0.5日 |
 | D-5 | production設定（credentials / force_ssl / secure cookie / CORS） | 0.5日 |
 | D-6 | rack-attack | 0.5日 |
