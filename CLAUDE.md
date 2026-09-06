@@ -292,3 +292,50 @@ docker compose logs -f backend
 - スマホ専用ナビ（ボトムナビ・FAB・スティッキーバー）※レスポンシブ対応はする
 - 「過去の企画」セクション
 - trashed → archived の自動移行バッチ
+
+---
+
+## 11. 自動実装パイプライン
+
+Issue にラベルを付けると、計画 → 実装 → レビュー → 修正 → PR まで自動で進む
+仕組みが `.github/workflows/` にあります。使い方は `docs/pipeline.md`、
+仕様は `docs/claude-pipeline-spec.md` を読んでください。
+
+パイプラインが動くときの追加規約です。**手で作業するときも同じ基準で書きます。**
+
+### 11-1. 1つの PR で変える非テストコードは300行まで
+
+追加行と削除行の合計です。テストコードは**別枠で数え、上限はありません**。
+300行の圧力でテストが削られるのを防ぐためです。
+
+超える場合は PR を分けます。`pipeline-line-gate.yml` が自動で数えて落とします。
+ロックファイル・生成物・バイナリは集計から除外されます。
+
+### 11-2. 新規ロジックにはテストを書く
+
+行数では縛れないので、正確性レビューが判定します。backend の新規ロジックに
+対応するテストがなければ **high** として修正ループに入ります。
+
+frontend はテストランナーが未導入のため、この判定の対象外です
+（`npm run lint` と `npm run typecheck` が通ることが条件）。
+Vitest の導入は別Issueとして残しています。
+
+### 11-3. 検証コマンド
+
+CI では Ruby・Node・PostgreSQL が用意された状態で、次がそのまま走ります。
+
+```bash
+cd backend && bundle exec rspec
+cd backend && bundle exec rubocop
+cd frontend && npm run lint
+cd frontend && npm run typecheck
+```
+
+手元では §8 のとおり `docker compose exec` 経由で実行します。
+
+### 11-4. パイプライン自身は Claude に変更させない
+
+`.github/`、`.claude/`、`CLAUDE.md` への変更は、セキュリティレビューが
+**critical** として止めます。レビューや上限を自分で外せる状態にしないためです。
+
+これらを変えるときは、人間が自分でブランチを切って PR を出します。
