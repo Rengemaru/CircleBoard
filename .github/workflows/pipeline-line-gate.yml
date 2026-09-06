@@ -1,0 +1,156 @@
+name: Pipeline Line Gate
+
+# PR の変更行数を数えて、レビューできる大きさに収まっているかを判定する
+# (claude-pipeline-spec.md §7.1)。
+#
+# LLM は使わない。行数を数えるだけの処理に非決定性を持ち込むと、
+# 同じ PR で結果が変わりうるチェックになってしまう(非交渉事項 #10)。
+#
+# テストコードは非テストと別枠で数える。300行の圧力でテストが削られるのを
+# 防ぐため(非交渉事項 #4)。このリポジトリでは MAX_TEST_LINES=0(無制限)。
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: line-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    # ブランチ保護の必須チェックにはこの名前で登録する
+    name: line-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          # base...head の差分を取るので、両方の履歴が要る
+          fetch-depth: 0
+
+      - name: Count changed lines
+        id: count
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MAX_NON_TEST_LINES: "300"
+          # 0 は無制限。テストは書きたいだけ書ける(非交渉事項 #4)
+          MAX_TEST_LINES: "0"
+        run: |
+          set -euo pipefail
+
+          git diff --numstat "${BASE_SHA}...${HEAD_SHA}" > numstat.tsv
+
+          non_test=0
+          test_lines=0
+          : > excluded.md
+
+          while IFS="$(printf '\t')" read -r added deleted path; do
+            [ -n "${path:-}" ] || continue
+
+            # numstat は測れないファイルを "-" で返す(バイナリ)
+            if [ "$added" = "-" ] || [ "$deleted" = "-" ]; then
+              printf -- '- %s (バイナリ)\n' "$path" >> excluded.md
+              continue
+            fi
+
+            excluded=0
+            case "$path" in
+              *.lock|*lock.json|*lock.yaml|go.sum|*/go.sum) excluded=1 ;;
+              *__snapshots__/*|dist/*|*/dist/*|build/*|*/build/*) excluded=1 ;;
+              *.generated.*) excluded=1 ;;
+            esac
+            if [ "$excluded" = "1" ]; then
+              printf -- '- %s (自動生成)\n' "$path" >> excluded.md
+              continue
+            fi
+
+            case "$path" in
+              backend/spec/*|spec/*|test/*|tests/*|*__tests__/*|*.test.*|*.spec.*)
+                test_lines=$(( test_lines + added + deleted ))
+                ;;
+              *)
+                non_test=$(( non_test + added + deleted ))
+                ;;
+            esac
+          done < numstat.tsv
+
+          verdict=pass
+          reason=""
+          if [ "$non_test" -gt "$MAX_NON_TEST_LINES" ]; then
+            verdict=fail
+            reason="非テストの変更行が ${non_test} 行で、上限 ${MAX_NON_TEST_LINES} 行を超えています。"
+          fi
+          if [ "$MAX_TEST_LINES" -ne 0 ] && [ "$test_lines" -gt "$MAX_TEST_LINES" ]; then
+            verdict=fail
+            reason="${reason}テストの変更行が ${test_lines} 行で、上限 ${MAX_TEST_LINES} 行を超えています。"
+          fi
+
+          {
+            echo "non_test=${non_test}"
+            echo "test_lines=${test_lines}"
+            echo "verdict=${verdict}"
+            echo "reason=${reason}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post sticky comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          NON_TEST: ${{ steps.count.outputs.non_test }}
+          TEST_LINES: ${{ steps.count.outputs.test_lines }}
+          VERDICT: ${{ steps.count.outputs.verdict }}
+          REASON: ${{ steps.count.outputs.reason }}
+        run: |
+          set -euo pipefail
+
+          # 同じコメントを更新し続ける。push のたびに新しいコメントを積むと
+          # PR のタイムラインが行数報告で埋まって読めなくなる
+          MARKER='<!-- pipeline-line-gate -->'
+
+          if [ "$VERDICT" = "pass" ]; then
+            head_line='✅ **行数ゲート: 通過**'
+          else
+            head_line="❌ **行数ゲート: 超過** — ${REASON}"
+          fi
+
+          {
+            printf '%s\n' "$MARKER"
+            printf '%s\n\n' "$head_line"
+            printf '| 区分 | 変更行数 (追加+削除) | 上限 |\n'
+            printf '|---|---:|---:|\n'
+            printf '| 非テスト | %s | 300 |\n' "$NON_TEST"
+            printf '| テスト | %s | 無制限 |\n' "$TEST_LINES"
+            printf '\n<details><summary>集計から除外したファイル</summary>\n\n'
+            if [ -s excluded.md ]; then
+              cat excluded.md
+            else
+              printf 'なし\n'
+            fi
+            printf '\n</details>\n'
+          } > body.md
+
+          jq -n --rawfile b body.md '{body: $b}' > payload.json
+
+          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"${MARKER}\")) | .id] | first // empty")"
+
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${id}" --input payload.json > /dev/null
+          else
+            gh api -X POST "repos/${REPO}/issues/${PR}/comments" --input payload.json > /dev/null
+          fi
+
+      - name: Fail when over the limit
+        if: steps.count.outputs.verdict == 'fail'
+        env:
+          REASON: ${{ steps.count.outputs.reason }}
+        run: |
+          echo "::error::${REASON}"
+          exit 1

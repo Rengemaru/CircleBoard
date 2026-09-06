@@ -1,0 +1,95 @@
+name: Pipeline Kill Switch
+
+# 親Issue を閉じたら、その計画から出たものを全部止める
+# (claude-pipeline-spec.md §7.3)。
+#
+# 自動で動き続けるパイプラインには「止める手段」が要る。ユーザーが確実に
+# 操作できて、状態を1つ見れば分かるものとして、親Issue のクローズを合図にした。
+#
+# LLM は使わない(非交渉事項 #10)。止めたいときに動く保証が要るものを、
+# 非決定的な処理に任せない。
+#
+# 何度実行しても同じ結果になるようにしてある(spec §7.3-4)。
+# open なものだけを対象にするので、2回目は対象が空になるだけで済む。
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  kill:
+    if: contains(github.event.issue.labels.*.name, 'pipeline:parent')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Generate app token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.PIPELINE_APP_ID }}
+          private-key: ${{ secrets.PIPELINE_APP_PRIVATE_KEY }}
+
+      - name: Stop everything under this parent
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PARENT: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          echo "parent: #${PARENT}"
+
+          # 1. 同じ親を持つ open なサブIssue を集める
+          subtasks=""
+          for n in $(gh issue list --label pipeline:subtask --state open \
+                       --limit 200 --json number --jq '.[].number'); do
+            b="$(gh issue view "$n" --json body --jq .body)"
+            p="$(printf '%s\n' "$b" | sed -n 's/^parent: *\([0-9][0-9]*\).*$/\1/p' | head -1)"
+            [ "$p" = "$PARENT" ] || continue
+            subtasks="${subtasks} ${n}"
+          done
+
+          if [ -z "$subtasks" ]; then
+            echo "停止対象のサブIssueはありません"
+          fi
+
+          # 2. サブIssue を Closes している open な PR を閉じ、
+          #    そのブランチで動いているジョブを止める。
+          #    PR を先に片付けるのは、Issue を閉じてから PR が残ると
+          #    「どのIssueのための PR か」を辿れなくなるため
+          for pr in $(gh pr list --state open --limit 200 --json number --jq '.[].number'); do
+            pr_body="$(gh pr view "$pr" --json body --jq .body)"
+            closed_issue="$(printf '%s\n' "$pr_body" \
+              | sed -n 's/.*[Cc]loses #\([0-9][0-9]*\).*/\1/p' | head -1)"
+            [ -n "$closed_issue" ] || continue
+
+            match=0
+            for s in $subtasks; do
+              [ "$s" = "$closed_issue" ] && match=1
+            done
+            [ "$match" = "1" ] || continue
+
+            head_ref="$(gh pr view "$pr" --json headRefName --jq .headRefName)"
+            echo "stopping PR #${pr} (branch ${head_ref})"
+
+            # 3. 実行中・待機中のジョブを止める。PR を閉じただけでは
+            #    走っている実装担当やレビューはそのまま最後まで動く
+            for run_id in $(gh run list --branch "$head_ref" --limit 50 \
+                              --json databaseId,status \
+                              --jq '.[] | select(.status == "in_progress" or .status == "queued") | .databaseId'); do
+              echo "cancelling run ${run_id}"
+              gh run cancel "$run_id" || true
+            done
+
+            gh pr close "$pr" --comment "親Issue #${PARENT} が閉じられたため、この PR を停止しました。"
+          done
+
+          # 4. サブIssue を閉じる
+          for s in $subtasks; do
+            echo "closing subtask #${s}"
+            gh issue close "$s" --comment "親Issue #${PARENT} が閉じられたため、このサブタスクを停止しました。"
+          done
