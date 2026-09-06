@@ -21,6 +21,18 @@ Rack::Attack.throttle("logins/ip", limit: LOGIN_ATTEMPTS_PER_MINUTE, period: 1.m
   req.ip if req.post? && req.path == "/api/session"
 end
 
+SIGNAGE_REQUESTS_PER_MINUTE = 30
+
+# サイネージは同一IPから30回/分(docs/api-spec.md §5 / spec-v2.2.md §7.5 A-4)。
+#
+# サイネージ端末は60秒ごとに自分でリロードする(T3-6)ので、1台なら1回/分。
+# 部室の回線は1つのグローバルIPに見えるため、上限は「同じ回線にぶら下がる
+# 端末の台数」で消費される。30回/分は、1台運用(spec-v2.2.md §5.1)に対して
+# 十分な余裕がある。台数を増やすときはここを見直す
+Rack::Attack.throttle("signage/ip", limit: SIGNAGE_REQUESTS_PER_MINUTE, period: 1.minute) do |req|
+  req.ip if req.get? && req.path == "/api/signage"
+end
+
 # 制限に当たったときの応答。形は docs/api-spec.md §0 の
 # { "error": { "code": ..., "message": ... } } に合わせる。
 # ここだけ別の形にすると、フロントのエラー処理が1箇所で済まなくなる
