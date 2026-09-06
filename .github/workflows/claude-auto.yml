@@ -1,0 +1,67 @@
+name: Claude Auto
+
+# Issue に "auto" ラベルが付いたときだけ、Claude が中身を読んで取り掛かる。
+#
+# opened(Issue を立てた瞬間)にしていないのは、CLAUDE.md §7 が
+# 「1タスクずつ止まって人間がレビューする」を求めているため。
+# 記録として立てるだけの Issue と、いま着手してほしい Issue を区別する。
+# ラベルを付けた状態で Issue を作れば labeled も同時に飛ぶので、
+# 「立てた瞬間に走る」動きは auto を付けて立てれば得られる。
+#
+# @claude とメンションして動かす経路は claude.yml が持っている。こちらは別物。
+on:
+  issues:
+    types: [labeled]
+
+# 同時に複数の Issue へラベルを付けても1本ずつ処理する。
+# 並行で走らせると、同じファイルを触るブランチが交差して差分が読めなくなる
+concurrency:
+  group: claude-auto
+  cancel-in-progress: false
+
+jobs:
+  work:
+    if: github.event.label.name == 'auto'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # 履歴の全部は要らないが、ブランチを切って push するので浅すぎない程度に取る
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        env:
+          # プロンプトから gh を使うために要る。GITHUB_TOKEN は上の permissions に従う
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            gh issue view ${{ github.event.issue.number }} --comments で Issue を読み、そこに書かれた作業に取り掛かる。
+
+            先に CLAUDE.md と docs/spec-v2.2.md を読み、その規約に従うこと。とくに次を守る。
+
+            - 「要オーナー判断」ラベルが付いている Issue は実装しない。
+              何を決める必要があるかを整理して Issue にコメントし、そこで停止する。
+            - docs/spec-v2.2.md の §2 / §3 / §4.1、および API の観測可能な契約
+              (JSONのキー名・キーの有無・値の意味・HTTPステータス) を変える必要が出たら、
+              実装せず、選択肢を2つ以上添えて Issue にコメントし、そこで停止する。
+            - Issue に書かれた範囲の外に手を出さない。「ついでに直す」をしない。
+            - #1 が open のままなら、それは現状の動作確認が未了ということ。
+              その旨を Issue にコメントし、実装には入らない。
+
+            実装する場合は main から新しいブランチを切り、PR を出す。main に直接コミットしない。
+            PR の本文には CLAUDE.md §7 の5項目 (変更ファイル / 設計判断と理由 / 仕様書との差異 /
+            人間が自分の手で確認する手順 / 気になっているが手を付けていない点) を書く。
+            コミットメッセージは Conventional Commits に従う。
+          # --max-turns は暴走の上限。1タスクが半日〜1日相当なので、
+          # これを超えるようならタスクの粒度かこちらの指示が間違っている
+          claude_args: '--max-turns 30 --allowedTools "Bash,Read,Edit,Write,Glob,Grep"'
