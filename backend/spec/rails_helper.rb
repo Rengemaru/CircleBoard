@@ -58,6 +58,16 @@ RSpec.configure do |config|
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
   # instead of true.
+  # レート制限は、それ自体を検証する spec だけで有効にする。
+  # 常に有効だと、spec は同じIP(127.0.0.1)から何度もログインするので、
+  # 6本目以降が 429 で落ちる。検証したい spec には :rack_attack を付ける
+  config.around do |example|
+    Rack::Attack.enabled = example.metadata[:rack_attack].present?
+    Rack::Attack.cache.store.clear
+    example.run
+    Rack::Attack.enabled = false
+  end
+
   config.use_transactional_fixtures = true
 
   # You can uncomment this line to turn off ActiveRecord support entirely.
