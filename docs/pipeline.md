@@ -178,6 +178,26 @@ JSON
 
 ### ② レビュー2本（`fix` は動かない状態）
 
+> **先に知っておくこと: レビューは、ワークフローが main に入るまで動きません。**
+>
+> `claude-code-action` には「実行するワークフローファイルが**デフォルトブランチに
+> 同一内容で存在すること**」という検証があります。`.github/workflows/claude-review.yml`
+> を変更する PR では、この検証に引っかかって Action が自分を skip します。
+>
+> ```
+> Workflow validation failed. The workflow file must exist and have identical
+> content to the version on the repository's default branch.
+> ```
+>
+> このとき Action は成功扱いで終わり、`structured_output` が空になるため、
+> 続く `Read structured output` ステップが**わざと失敗します**。
+> パイプラインが壊れているのではなく、レビューが行われなかったことを
+> 黙って通さないための挙動です。
+>
+> **つまり ② の確認は、この PR をマージしてからでないと取れません。**
+> 逆に言えば、レビューや上限を書き換える PR ではレビューが動かないので、
+> `.github/` を変える PR は必ず人間が読んでください。
+
 `PIPELINE_FIX_ENABLED` を**設定しないまま**にします。`fix` ジョブは起動しません。
 
 さらに、`fix` は head ブランチが `claude/` で始まる PR にしか動かないので、

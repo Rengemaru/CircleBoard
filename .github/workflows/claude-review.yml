@@ -10,6 +10,11 @@ name: Claude Review
 #
 # 修正ループは最大3周で needs-human に落ちる(非交渉事項 #6)。
 # 重大度だけを終了条件にすると、レビュアーと修正担当が延々やり取りしうる。
+#
+# 注意: このファイル自身を変更する PR では、claude-code-action が
+# 「ワークフローがデフォルトブランチに同一内容で存在すること」を検証して
+# 自分を skip する。その結果 structured_output が空になり、
+# Read structured output ステップが失敗する。詳細は docs/pipeline.md §6-②
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, unlabeled]
@@ -100,7 +105,9 @@ jobs:
         working-directory: backend
         env:
           RAILS_ENV: test
-        run: bin/rails db:prepare
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
 
       - name: Run correctness review
         id: review
@@ -325,7 +332,9 @@ jobs:
         working-directory: backend
         env:
           RAILS_ENV: test
-        run: bin/rails db:prepare
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
 
       - name: Run fixer
         uses: anthropics/claude-code-action@v1

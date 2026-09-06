@@ -77,7 +77,9 @@ jobs:
         working-directory: backend
         env:
           RAILS_ENV: test
-        run: bin/rails db:prepare
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
 
       - name: Run implementer
         uses: anthropics/claude-code-action@v1
