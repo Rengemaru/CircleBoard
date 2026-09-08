@@ -9,6 +9,7 @@ import { PageHeading } from "../components/ui/PageHeading";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { formatCountdown } from "../lib/countdown";
 import type { EventSummary, Tag } from "../types/event";
 
 // イベント一覧(wireframes/wireframe-member.html 画面②)。ゲスト可。
@@ -153,20 +154,6 @@ function EventCard({ event }: { event: EventSummary }) {
       </div>
     </li>
   );
-}
-
-// 開催までの日数。時刻を無視して日付だけで引くのは、サーバー側の計算
-// (spec-v2.2.md §3.4)と揃えるため
-function formatCountdown(startsAt: string): string {
-  const start = new Date(startsAt);
-  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = Math.round((startDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-
-  if (days > 0) return `あと${days}日`;
-  if (days === 0) return "本日開催";
-  return "開催済み";
 }
 
 function formatDate(date: Date): string {

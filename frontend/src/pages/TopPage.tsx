@@ -8,6 +8,7 @@ import { SectionHeading } from "../components/ui/SectionHeading";
 import { fetchEvents } from "../api/events";
 import { fetchProjects } from "../api/projects";
 import { fetchCurrentUser, type CurrentUser } from "../api/session";
+import { formatCountdown } from "../lib/countdown";
 import type { EventSummary } from "../types/event";
 import type { ProjectSummary } from "../types/project";
 
@@ -97,7 +98,7 @@ function SpotlightSection({ events }: { events: EventSummary[] | null }) {
             {/* 開催の近さがこの枠で一番効く情報なので、数字を一番大きく置く
                 (ver2 の .stat-value と同じ 28px) */}
             <div className="text-[28px] leading-none font-bold">
-              あと{daysUntil(event.starts_at)}日
+              {formatCountdown(event.starts_at)}
             </div>
             <div className="mt-2 text-xs text-gray-500">
               {formatDate(event.starts_at)} ・ {event.location}
@@ -192,18 +193,6 @@ function ListPanel({ children }: { children: React.ReactNode }) {
       <ul className="divide-y divide-gray-100">{children}</ul>
     </div>
   );
-}
-
-// サーバーは days_until をサイネージAPIでしか返さないので、ここで数える。
-// 時刻を無視して日付だけで引くのは、サーバー側の計算(spec-v2.2.md §3.4)と
-// 揃えるため
-function daysUntil(startsAt: string): number {
-  const start = new Date(startsAt);
-  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  return Math.round((startDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 function formatDate(value: string): string {

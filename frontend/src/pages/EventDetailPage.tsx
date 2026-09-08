@@ -8,6 +8,7 @@ import { Note } from "../components/ui/Note";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { formatCountdown } from "../lib/countdown";
 import type { EventDetail } from "../types/event";
 
 // イベント詳細(wireframes/wireframe-member.html ③)。ゲスト可だが表示内容が変わる。
@@ -217,20 +218,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
-}
-
-// 開催までの日数。時刻を無視して日付だけで引くのは、サーバー側の計算
-// (spec-v2.2.md §3.4)と揃えるため
-function formatCountdown(startsAt: string): string {
-  const start = new Date(startsAt);
-  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = Math.round((startDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-
-  if (days > 0) return `あと${days}日`;
-  if (days === 0) return "本日開催";
-  return "開催済み";
 }
 
 // 定員が null のときは無制限(spec-v2.2.md §2.2)。
