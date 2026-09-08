@@ -38,12 +38,51 @@ env:
     {"type":"object","required":["role","max_severity","findings"],"properties":{"role":{"type":"string","enum":["correctness","security"]},"max_severity":{"type":"string","enum":["none","low","medium","high","critical"]},"findings":{"type":"array","items":{"type":"object","required":["severity","file","summary"],"properties":{"severity":{"type":"string","enum":["low","medium","high","critical"]},"file":{"type":"string"},"line":{"type":"integer"},"summary":{"type":"string"},"suggestion":{"type":"string"}}}}}}
 
 jobs:
-  correctness:
+  # レビューを実行できる PR かどうかを先に判定する。
+  #
+  # claude-code-action は、実行するワークフローがデフォルトブランチに同一内容で
+  # 存在しないと自分を skip する。このファイルを変更する PR がそれに当たり、
+  # レビューは行われない。それを「失敗」として出すと、本当にレビューが壊れた
+  # ときと見分けが付かないので、理由を明示して skip に倒す。
+  #
+  # 起動条件をこのジョブに集約している。後続は needs でぶら下がるだけでよく、
+  # 同じ条件を3か所に書き写さずに済む(書き写すと片方だけ直す事故が起きる)
+  preflight:
     # needs-human が付いている間は Claude 系ジョブを全部止める(spec §4.1)
     if: >-
       contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action) &&
       !contains(github.event.pull_request.labels.*.name, 'needs-human') &&
       github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      reviewable: ${{ steps.check.outputs.reviewable }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this PR changes the review workflow
+        id: check
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$BASE"
+
+          if git diff --quiet FETCH_HEAD HEAD -- .github/workflows/claude-review.yml; then
+            echo "reviewable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "reviewable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::この PR は .github/workflows/claude-review.yml を変更しているため、claude-code-action のワークフロー検証によりレビューは実行されません。人間が読んでください(docs/pipeline.md §6-②)"
+          fi
+
+  correctness:
+    needs: [preflight]
+    if: needs.preflight.outputs.reviewable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -142,10 +181,8 @@ jobs:
           echo "findings=$(printf '%s' "$RAW" | jq -c '.findings')" >> "$GITHUB_OUTPUT"
 
   security:
-    if: >-
-      contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action) &&
-      !contains(github.event.pull_request.labels.*.name, 'needs-human') &&
-      github.event.pull_request.draft == false
+    needs: [preflight]
+    if: needs.preflight.outputs.reviewable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -199,11 +236,14 @@ jobs:
   # ここで LLM を呼ぶ理由がない(非交渉事項 #10)
   mark-passed:
     needs: [correctness, security]
+    # 「critical/high でない」ではなく「none/low/medium のいずれかである」で判定する。
+    # 除外リストで書くと、判定が空文字や未知の値になったときに
+    # 素通りして review:passed が付いてしまう
     if: >-
       needs.correctness.result == 'success' &&
       needs.security.result == 'success' &&
-      !contains(fromJSON('["critical","high"]'), needs.correctness.outputs.max_severity) &&
-      !contains(fromJSON('["critical","high"]'), needs.security.outputs.max_severity)
+      contains(fromJSON('["none","low","medium"]'), needs.correctness.outputs.max_severity) &&
+      contains(fromJSON('["none","low","medium"]'), needs.security.outputs.max_severity)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
