@@ -71,6 +71,7 @@
 |---|---|---|---|---|
 | 1 | `users.suspended_at` | 0.2-5 で「作らない」 | **追加する**（2026-08-20） | `wireframe-admin-ver2.html` ② がアカウント停止を要求。0.3 の基準どおり「必要になったので今入れる」ケースであり、基準を破ってはいない |
 | 2 | 管理者画面の枚数 | 0.2-10 で「3画面」 | **7画面**（`wireframe-admin-ver2.html`） | オーナーがワイヤーフレームを差し替え。着手順は `docs/instructions.md` Phase 7 |
+| 3 | UIコンポーネントライブラリ | `CLAUDE.md` §1 で「採用しない（提案も不要）」 | **`smarthr-ui` を採用する**（2026-09-09） | オーナー判断。併せて Tailwind を v4 から v3.4 に降格する（`smarthr-ui` が `tailwindcss@^3.4` に依存するため）。手順は `docs/instructions.md` Phase 8 |
 
 **`is_active_override` は引き続き作りません。** 停止は `suspended_at` の有無だけで表せます。
 真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れてしまいます。

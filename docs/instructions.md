@@ -484,6 +484,66 @@ Dockerfileはその前提で書いてください（VPS上で docker build を�
 
 ---
 
+# Phase 8 — Tailwind 3 への降格と SmartHR UI の導入
+
+## オーナーの決定（2026-09-09）
+
+- **`smarthr-ui` を採用する。** `CLAUDE.md` §1 の「採用しないもの: UIコンポーネントライブラリ（MUI等）」を、このライブラリについて撤回する
+- **Tailwind を v4.3.3 から v3.4 に降格する。** `smarthr-ui@99.6.0` が `tailwindcss@^3.4.19` に依存しているため
+
+## 着手前に人間がやること（ブロッカー）
+
+**`CLAUDE.md` §1 の「採用しないもの」から UIコンポーネントライブラリを外す。**
+`CLAUDE.md` は §11-6 により Claude が変更できません。ここが直るまで 8-1 に着手しません。
+
+## 調べた事実（2026-09-09 / `smarthr-ui@99.6.0`, 2026-09-03 リリース）
+
+| 項目 | 内容 |
+|---|---|
+| ライセンス | MIT |
+| peerDependencies | `react ^18 \|\| ^19` / `react-dom` 同左 / `styled-components ^5.0.1` / `react-intl ^7 \|\| ^8 \|\| ^10` |
+| 主な dependencies | `tailwindcss ^3.4.19` `react-icons` `react-pdf` `dayjs` `decimal.js` `react-draggable` `polished` |
+| セットアップ | `import "smarthr-ui/smarthr-ui.css"` と、`<IntlProvider locale="ja">` + `<ThemeProvider theme={createTheme()}>` の2枚 |
+| ロゴ・SmartHR Blue | **外部は使用不可。** コンポーネントは MIT だが、ブランド資産は別扱い。配色は自前で決める |
+
+## いまの構成との差分（実測）
+
+- `frontend/src/index.css` は `@import "tailwindcss";` の1行だけ。v3 では `@tailwind base/components/utilities` の3行と、`tailwind.config.js` / `postcss.config.js` が要る
+- `vite.config.ts` の `@tailwindcss/vite` プラグインを外す
+- **v4 専用のユーティリティは1つも使っていない**（`shadow-xs` `outline-hidden` `bg-linear-to-*` `@container` などの出現数はすべて 0）
+- 手当てが要るのは **`rounded-sm` の9箇所だけ**。v4 の `rounded-sm` は 0.25rem で、v3 では `rounded` が同じ値になる
+- 色を書かない `border` は14箇所あるが、すべて `border-gray-200` 等を併記済みなので、v3 の既定色に戻っても影響なし
+
+## PR の分割
+
+1本ずつマージします。**どの時点で止めても main が壊れない順序**にしてあります（`CLAUDE.md` §11-1 の300行上限）。
+
+| 順 | 内容 | 目安 |
+|---|---|---|
+| 8-1 | Tailwind 3 への降格のみ。`smarthr-ui` はまだ入れない。`rounded-sm` → `rounded` の置換を含む | 非テスト 60行 |
+| 8-2 | `smarthr-ui` / `styled-components@5` / `react-intl` の追加と `main.tsx` の Provider 2枚。**画面は変えない** | 40行 |
+| 8-3 | `components/ui/Button.tsx` を smarthr-ui の Button に差し替える | 1本 |
+| 8-4 | `Field` `Note` `Badge` `Chip` `Panel` `Modal` `SectionHeading` `PageHeading` を差し替える | **1コンポーネント1本** |
+| 8-5 | admin の表（`AdminPostsPage` / `AdminUsersPage`）を smarthr-ui の Table に差し替える | 画面ごとに1本 |
+| 8-6 | member 側8画面の見直し | 画面ごとに1本 |
+
+8-1 と 8-2 は見た目が変わりません。**変わらないことを確認してからマージします。**
+
+## 判断が要る点（着手前にオーナーが決める）
+
+1. **サイネージ（`/signage`）を対象にするか。** 1920x1080 固定・`vw` 単位・独自配色で、業務SaaS向けのコンポーネントとは前提が違います。**対象外を推奨します**
+2. **バンドルサイズ。** 現在 322kB / gzip 97kB。`styled-components` `react-intl` `react-pdf` `react-icons` が加わります。部室ディスプレイは常時表示なので影響は初回ロードのみですが、数値は 8-2 の PR で報告します
+3. **Tailwind 3 に留まる期間。** 新機能は v4 側にのみ入ります。smarthr-ui 側も Tailwind への移行を進めているため、将来 v4 に戻れる可能性があります。戻すときは 8-1 の逆をやります
+
+## この方針で失うもの（記録として残す）
+
+T7-5 で作り直した member 側8画面の Tailwind 実装は、8-6 で大部分が置き換わります。
+`CLAUDE.md` §0 の「開発者本人が説明できるコードか」という基準に対して、
+**UI の説明の軸が「自分で組んだ」から「既製のデザインシステムをどう選び、どう組み込んだか」に変わります。**
+面接で話す内容もそちらに寄ります。オーナーはこれを承知のうえで決定しています。
+
+---
+
 ## 付録: 検証の手順（Phase 1〜2 の実運用から）
 
 タスクごとに、静的レビュー（仕様適合・規約）と動作チェックを分けて行い、最後に判定係が可否を宣告する。
