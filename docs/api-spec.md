@@ -93,6 +93,17 @@
 | `tag_id` | タグで絞り込み |
 | `status` | `recruiting` / `completed`（既定は `recruiting`） |
 
+**`recruiting` は開催日が過ぎたものを含めない**（既定・明示のどちらでも）。
+「まだ開催されていない」の基準はサイネージと同じで、**開催当日は23時まで含める**
+（`Event.upcoming`。§5 の除外条件と同じ判定を使う）。
+
+`status` を `completed` にしたときは日付で絞らない。終わったものを見に行く指定であり、
+日付で絞ると必ず0件になるため。
+
+> **この条件を足した理由（2026-08-24 に追加）**
+> `status` を `completed` に変え忘れた企画は運用上必ず出る。
+> 日付で絞らないと、トップページと一覧に「あと-1日」の企画が並ぶ。
+
 **並び順:** ピン留めが先頭 → `spotlight_score` 降順 → `starts_at` 昇順（画面①の注記）。
 `pinned` は返すが、**`spotlight_score` は返さない**（画面 A2「一般ユーザーには見せない」）。
 順序には使うが、数値そのものは公開しない。
@@ -404,6 +415,58 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
 }
 ```
 → 201
+
+### `GET /api/admin/posts` — 企画一覧・全件（Phase 7 で追加）
+
+`wireframes/wireframe-admin-ver2.html` ④ 用。イベントとプロジェクトを1つの配列に混ぜ、
+**論理削除済み（`visibility: trashed`）も含めて**返す。
+
+```json
+{
+  "posts": [
+    {
+      "id": 12, "kind": "event", "title": "新歓ハッカソン2026",
+      "status": "recruiting", "trashed": false,
+      "owner_name": "田中太郎", "capacity": 20,
+      "participants_count": 8, "created_at": "2026-04-20T18:00:00+09:00"
+    },
+    {
+      "id": 3, "kind": "project", "title": "不適切な投稿",
+      "status": "recruiting", "trashed": true,
+      "owner_name": null, "capacity": null,
+      "participants_count": 0, "created_at": "2026-03-10T12:00:00+09:00"
+    }
+  ]
+}
+```
+
+**公開APIと分けている理由:** `GET /api/events` と `GET /api/projects` は
+論理削除済みを必ず外す。この画面は消したものを一覧して復旧する場所なので、
+`trashed` が見えないと成立しない。
+
+- 並び順は `created_at` の降順（投稿日の新しい順）。2つのテーブルを混ぜるため
+  Ruby 側で並べる
+- `status` はイベントが2値（`recruiting` / `completed`）、プロジェクトが3値
+  （`recruiting` / `in_progress` / `completed`）。`trashed` は `visibility` 列であり
+  `status` とは独立するので、別のキーで返す
+- `participants_count` は公開APIと同じ数え方。イベントはキャンセル済みを除き、
+  プロジェクトはそのまま数える
+- `owner_name` は退会で `null` になりうる（`ON DELETE SET NULL`）
+- 検索・絞り込みのクエリは受けない。件数が部内の企画数に留まるため画面側で絞る
+  （`GET /api/admin/users` と同じ扱い）
+
+### `DELETE /api/admin/events/:event_id/trash` — 論理削除の取り消し（Phase 7 で追加）
+### `DELETE /api/admin/projects/:project_id/trash`
+
+→ 204。`visibility` を `trashed` から `active` に戻す。
+
+**削除側の入口を admin に作っていない理由:** 論理削除は `DELETE /api/events/:id` と
+`DELETE /api/projects/:id` で owner 本人も行える一般の操作であり、管理者もそれを通る。
+同じことをする入口を2本持たない。復旧だけがここにあるのは、公開APIが
+`trashed` を必ず 404 にするため（消えたものに触れるのは管理者だけ）。
+
+- 存在しないIDは 404
+- すでに `active` な企画に対して呼んでも 204。結果が同じなのでエラーにしない
 
 ### `GET /api/admin/events` — ピン留め設定画面用の一覧（実装時に追加）
 

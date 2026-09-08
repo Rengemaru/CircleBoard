@@ -29,10 +29,19 @@ Rails.application.routes.draw do
         resource :suspension, only: [ :update, :destroy ], controller: "suspensions"
       end
       resources :signage_tokens, only: [ :index, :create, :destroy ]
+      # 企画一覧・全件(wireframes/wireframe-admin-ver2.html ④)。
+      # イベントとプロジェクトを1つの表に混ぜるので、どちらでもない名前で持つ
+      resources :posts, only: [ :index ]
       # ピン留め設定画面用。spotlight_score を公開APIに載せないため専用に持つ
       resources :events, only: [ :index ] do
         # 全体で1件だけなので単数形
         resource :pin, only: [ :update, :destroy ], controller: "pins"
+        # 論理削除の取り消し。削除は DELETE /api/events/:id をそのまま使う
+        resource :trash, only: [ :destroy ], controller: "trashes"
+      end
+      # 復旧だけを持つ。プロジェクトの一覧は admin/posts が返す
+      resources :projects, only: [] do
+        resource :trash, only: [ :destroy ], controller: "trashes"
       end
     end
   end

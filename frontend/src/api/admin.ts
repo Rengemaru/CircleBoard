@@ -43,6 +43,34 @@ export type AdminUserRow = {
   suspended_at: string | null;
 };
 
+// 企画一覧・全件(wireframes/wireframe-admin-ver2.html ④)専用。
+// 公開APIの一覧は論理削除済みを必ず外すので、この画面では使えない
+export type PostKind = "event" | "project";
+
+export type AdminPostRow = {
+  id: number;
+  kind: PostKind;
+  title: string;
+  // イベントは recruiting / completed の2値、プロジェクトは in_progress を含む3値
+  status: "recruiting" | "in_progress" | "completed";
+  // 論理削除済みかどうか。status とは別の列(visibility)なので独立して立つ。
+  // 「削除済みの募集中」があり得る
+  trashed: boolean;
+  // 投稿者は退会で null になりうる(ON DELETE SET NULL)
+  owner_name: string | null;
+  // null は定員なし(spec-v2.2.md §2.2/§2.3)
+  capacity: number | null;
+  participants_count: number;
+  created_at: string;
+};
+
+// URLの組み立てを1箇所に置く。`${kind}s` と綴ると、種別が増えたときに
+// 壊れる場所が分からなくなる
+const RESOURCE: Record<PostKind, string> = {
+  event: "events",
+  project: "projects",
+};
+
 // 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
 export type DashboardStats = {
   member_count: number;
@@ -106,6 +134,24 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
 // (docs/er.md の ON DELETE SET NULL)
 export async function deleteUser(id: number): Promise<void> {
   await apiFetch<void>(`/api/admin/users/${id}`, { method: "DELETE" });
+}
+
+export async function fetchAdminPosts(): Promise<AdminPostRow[]> {
+  const data = await apiFetch<{ posts: AdminPostRow[] }>("/api/admin/posts");
+  return data.posts;
+}
+
+// 削除は公開APIをそのまま使う。owner 本人も行える一般の操作なので、
+// 同じことをする入口を管理者用にもう1本作らない。
+// 物理削除ではなく visibility を trashed にするだけで、復旧できる
+export async function trashPost(kind: PostKind, id: number): Promise<void> {
+  await apiFetch<void>(`/api/${RESOURCE[kind]}/${id}`, { method: "DELETE" });
+}
+
+// 復旧は管理者だけ。公開APIは論理削除済みを必ず 404 にするので、
+// admin 名前空間に置いている(backend の Api::Admin::TrashesController)
+export async function restorePost(kind: PostKind, id: number): Promise<void> {
+  await apiFetch<void>(`/api/admin/${RESOURCE[kind]}/${id}/trash`, { method: "DELETE" });
 }
 
 export async function fetchSignageTokens(): Promise<SignageTokenRow[]> {
