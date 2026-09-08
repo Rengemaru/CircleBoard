@@ -1,0 +1,425 @@
+name: Claude Review
+
+# PR に対して正確性レビューとセキュリティレビューを並列で走らせ、
+# critical/high が残っていれば修正担当に引き渡す
+# (claude-pipeline-spec.md §3 / §5 / §6)。
+#
+# レビュー2本は read-only。書き込み権限を持つのは fix だけ(非交渉事項 #8)。
+# 「指摘する役」と「直す役」を分けているので、レビュアーが自分の指摘を
+# 自分で消して回ることがない。
+#
+# 修正ループは最大3周で needs-human に落ちる(非交渉事項 #6)。
+# 重大度だけを終了条件にすると、レビュアーと修正担当が延々やり取りしうる。
+#
+# 注意: このファイル自身を変更する PR では、claude-code-action が
+# 「ワークフローがデフォルトブランチに同一内容で存在すること」を検証して
+# 自分を skip する。その結果 structured_output が空になり、
+# Read structured output ステップが失敗する。詳細は docs/pipeline.md §6-②
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, unlabeled]
+
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # 実装担当が PR を開き、修正担当が push する。どちらも bot 起点なので、
+  # ここに列挙しないと連鎖が静かに止まる(spec §8.2)。[bot] は付けない書式。
+  #
+  # public リポジトリなので '*' は使わない。公式ドキュメントに、
+  # '*' だと誰が作った GitHub App でも Issue や PR を作ってこのパイプラインを
+  # 起動できる、という警告がある
+  PIPELINE_ALLOWED_BOTS: 'claude,circleboard-pipeline'
+
+  # 両レビュアー共通の構造化出力スキーマ(spec §5)。
+  # HTML コメントを自前でパースする代わりに action の structured_output を使う
+  REVIEW_SCHEMA: >-
+    {"type":"object","required":["role","max_severity","findings"],"properties":{"role":{"type":"string","enum":["correctness","security"]},"max_severity":{"type":"string","enum":["none","low","medium","high","critical"]},"findings":{"type":"array","items":{"type":"object","required":["severity","file","summary"],"properties":{"severity":{"type":"string","enum":["low","medium","high","critical"]},"file":{"type":"string"},"line":{"type":"integer"},"summary":{"type":"string"},"suggestion":{"type":"string"}}}}}}
+
+jobs:
+  # レビューを実行できる PR かどうかを先に判定する。
+  #
+  # claude-code-action は、実行するワークフローがデフォルトブランチに同一内容で
+  # 存在しないと自分を skip する。このファイルを変更する PR がそれに当たり、
+  # レビューは行われない。それを「失敗」として出すと、本当にレビューが壊れた
+  # ときと見分けが付かないので、理由を明示して skip に倒す。
+  #
+  # 起動条件をこのジョブに集約している。後続は needs でぶら下がるだけでよく、
+  # 同じ条件を3か所に書き写さずに済む(書き写すと片方だけ直す事故が起きる)
+  preflight:
+    # needs-human が付いている間は Claude 系ジョブを全部止める(spec §4.1)
+    if: >-
+      contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action) &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-human') &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      reviewable: ${{ steps.check.outputs.reviewable }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this PR changes the review workflow
+        id: check
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$BASE"
+
+          if git diff --quiet FETCH_HEAD HEAD -- .github/workflows/claude-review.yml; then
+            echo "reviewable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "reviewable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::この PR は .github/workflows/claude-review.yml を変更しているため、claude-code-action のワークフロー検証によりレビューは実行されません。人間が読んでください(docs/pipeline.md §6-②)"
+          fi
+
+  correctness:
+    needs: [preflight]
+    if: needs.preflight.outputs.reviewable == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    outputs:
+      max_severity: ${{ steps.severity.outputs.max_severity }}
+      findings: ${{ steps.severity.outputs.findings }}
+
+    # rspec は PostgreSQL に接続できないと1本も走らない。
+    # docker compose と同じ postgres:16-alpine を使い、手元と CI で
+    # バージョン差による挙動の違いが出ないようにしている
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: circleboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d circleboard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # 接続情報は database.yml ではなく環境変数から読む(CLAUDE.md §3-5)
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/circleboard_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        # v1 はタグではなくブランチなので、動く先が黙って変わらないよう版を固定する
+        uses: ruby/setup-ruby@v1.321.0
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare test database
+        working-directory: backend
+        env:
+          RAILS_ENV: test
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
+
+      - name: Run correctness review
+        id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: ${{ env.PIPELINE_ALLOWED_BOTS }}
+          prompt: |
+            /pipeline-review-correctness
+
+            REPO: ${{ github.repository }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Bash(cd:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(bundle exec rspec:*),Bash(npm run lint:*),Bash(npm run typecheck:*),mcp__github_inline_comment__create_inline_comment"
+            --json-schema '${{ env.REVIEW_SCHEMA }}'
+
+      - name: Read structured output
+        id: severity
+        env:
+          RAW: ${{ steps.review.outputs.structured_output }}
+        run: |
+          set -euo pipefail
+          max="$(printf '%s' "$RAW" | jq -r '.max_severity // empty' 2>/dev/null || true)"
+          if [ -z "$max" ]; then
+            # レビュアーが判定を返せなかったということ。ここを none に倒すと
+            # 「レビューが壊れている」が「指摘なし」として素通りするので失敗させる
+            echo "::error::正確性レビューが構造化出力を返しませんでした。人間が確認してください"
+            exit 1
+          fi
+          echo "max_severity=${max}" >> "$GITHUB_OUTPUT"
+          echo "findings=$(printf '%s' "$RAW" | jq -c '.findings')" >> "$GITHUB_OUTPUT"
+
+  security:
+    needs: [preflight]
+    if: needs.preflight.outputs.reviewable == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    outputs:
+      max_severity: ${{ steps.severity.outputs.max_severity }}
+      findings: ${{ steps.severity.outputs.findings }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # テストは走らせないので Ruby も Postgres も用意しない(spec §3 補足)。
+      # レビュー2本を並列にしている意味が、準備の重さで消えないようにする
+      - name: Run security review
+        id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: ${{ env.PIPELINE_ALLOWED_BOTS }}
+          prompt: |
+            /pipeline-review-security
+
+            REPO: ${{ github.repository }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
+            --json-schema '${{ env.REVIEW_SCHEMA }}'
+
+      - name: Read structured output
+        id: severity
+        env:
+          RAW: ${{ steps.review.outputs.structured_output }}
+        run: |
+          set -euo pipefail
+          max="$(printf '%s' "$RAW" | jq -r '.max_severity // empty' 2>/dev/null || true)"
+          if [ -z "$max" ]; then
+            echo "::error::セキュリティレビューが構造化出力を返しませんでした。人間が確認してください"
+            exit 1
+          fi
+          echo "max_severity=${max}" >> "$GITHUB_OUTPUT"
+          echo "findings=$(printf '%s' "$RAW" | jq -c '.findings')" >> "$GITHUB_OUTPUT"
+
+  # critical/high が無いときはラベルを付けるだけ。判断は済んでいるので
+  # ここで LLM を呼ぶ理由がない(非交渉事項 #10)
+  mark-passed:
+    needs: [correctness, security]
+    # 「critical/high でない」ではなく「none/low/medium のいずれかである」で判定する。
+    # 除外リストで書くと、判定が空文字や未知の値になったときに
+    # 素通りして review:passed が付いてしまう
+    if: >-
+      needs.correctness.result == 'success' &&
+      needs.security.result == 'success' &&
+      contains(fromJSON('["none","low","medium"]'), needs.correctness.outputs.max_severity) &&
+      contains(fromJSON('["none","low","medium"]'), needs.security.outputs.max_severity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Label as passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh label create 'review:passed' --color 0e8a16 --description 'critical/high なし。人間のレビュー待ち' --force
+          gh pr edit "$PR" --add-label 'review:passed'
+
+  fix:
+    needs: [correctness, security]
+    # spec §6 の6条件をそのまま並べている。1つでも欠けると、
+    # 人間が止めた PR を自動修正が上書きしたり、ループが止まらなくなる。
+    #
+    # 先頭の PIPELINE_FIX_ENABLED は段階的導入のためのスイッチ
+    # (docs/pipeline.md)。レビュー2本の判定を見てから自動修正を入れたいので、
+    # リポジトリ変数を 'true' にするまで fix は動かない。
+    # 未設定のあいだ critical/high の PR は人間待ちで止まる
+    if: >-
+      vars.PIPELINE_FIX_ENABLED == 'true' &&
+      needs.correctness.result == 'success' &&
+      needs.security.result == 'success' &&
+      (contains(fromJSON('["critical","high"]'), needs.correctness.outputs.max_severity) ||
+       contains(fromJSON('["critical","high"]'), needs.security.outputs.max_severity)) &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-human') &&
+      !contains(github.event.pull_request.labels.*.name, 'loop:3') &&
+      startsWith(github.event.pull_request.head.ref, 'claude/') &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: circleboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d circleboard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/circleboard_test
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          # GITHUB_TOKEN の資格情報を残さない。それで push すると
+          # GitHub の再帰防止で synchronize が飛ばず、レビューが再実行されない。
+          # push は claude-code-action が App として行う(spec §8.1)
+          persist-credentials: false
+
+      # push より前にカウンタを進める(spec §6-1)。修正の後に進めると、
+      # 途中で失敗したときに周回数が増えないまま同じ修正を繰り返しうる
+      - name: Bump loop counter
+        id: loop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          for n in 1 2 3; do
+            gh label create "loop:${n}" --color fbca04 --description "修正ループ ${n} 周目" --force
+          done
+          gh label create 'needs-human' --color d73a4a --description '自動処理を停止。人間の判断待ち' --force
+
+          current=0
+          labels="$(gh pr view "$PR" --json labels --jq '.labels[].name')"
+          for n in 1 2 3; do
+            if printf '%s\n' "$labels" | grep -qx "loop:${n}"; then current="$n"; fi
+          done
+          next=$(( current + 1 ))
+
+          # loop:N は排他(spec §4.1)。付けてから外す順にしているのは、
+          # 先に外すと途中で失敗したとき周回数が消えるため
+          gh pr edit "$PR" --add-label "loop:${next}"
+          if [ "$current" -gt 0 ]; then
+            gh pr edit "$PR" --remove-label "loop:${current}"
+          fi
+          # 前回 passed だった PR が再び指摘を受けた場合、古いラベルを外す
+          if printf '%s\n' "$labels" | grep -qx 'review:passed'; then
+            gh pr edit "$PR" --remove-label 'review:passed'
+          fi
+
+          echo "round=${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.321.0
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare test database
+        working-directory: backend
+        env:
+          RAILS_ENV: test
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
+
+      - name: Run fixer
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: ${{ env.PIPELINE_ALLOWED_BOTS }}
+          prompt: |
+            /pipeline-fix
+
+            REPO: ${{ github.repository }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            BRANCH: ${{ github.event.pull_request.head.ref }}
+            LOOP_ROUND: ${{ steps.loop.outputs.round }}
+
+            CORRECTNESS_MAX_SEVERITY: ${{ needs.correctness.outputs.max_severity }}
+            CORRECTNESS_FINDINGS: ${{ needs.correctness.outputs.findings }}
+
+            SECURITY_MAX_SEVERITY: ${{ needs.security.outputs.max_severity }}
+            SECURITY_FINDINGS: ${{ needs.security.outputs.findings }}
+          claude_args: |
+            --max-turns 60
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(cd:*),Bash(git:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(bundle exec rspec:*),Bash(bundle exec rubocop:*),Bash(npm run lint:*),Bash(npm run typecheck:*)"
+
+  # needs-human が外されたら周回数をリセットする(spec §6 末尾)。
+  # 人間が指摘を裁いた後の PR は、また3周ぶん自動修正を試せる状態に戻す
+  reset-loop:
+    if: >-
+      github.event.action == 'unlabeled' &&
+      github.event.label.name == 'needs-human'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Clear loop labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          labels="$(gh pr view "$PR" --json labels --jq '.labels[].name')"
+          for n in 1 2 3; do
+            if printf '%s\n' "$labels" | grep -qx "loop:${n}"; then
+              gh pr edit "$PR" --remove-label "loop:${n}"
+            fi
+          done

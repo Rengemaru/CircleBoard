@@ -1,0 +1,102 @@
+name: Claude Implement
+
+# サブIssue に claude:implement が付いたら、ブランチを切って実装し PR を出す
+# (claude-pipeline-spec.md §3 実装担当)。
+#
+# ラベルを付けるのは計画担当かアンロック(どちらも bot)なので、
+# allowed_bots の設定が要る。ここが空だと連鎖が例外もエラーも出さずに止まる。
+on:
+  issues:
+    types: [labeled]
+
+# 同じサブIssue に対して実装を二重に走らせない。
+# 走り直しになった場合は古い方を捨ててよいので cancel-in-progress: true
+concurrency:
+  group: implement-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  implement:
+    if: github.event.label.name == 'claude:implement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+
+    # rspec は PostgreSQL に接続できないと1本も走らない。
+    # docker compose と同じ postgres:16-alpine を使い、手元と CI で
+    # バージョン差による挙動の違いが出ないようにしている
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: circleboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d circleboard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # 接続情報は database.yml ではなく環境変数から読む(CLAUDE.md §3-5)
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/circleboard_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Set up Ruby
+        # v1 はタグではなくブランチなので、動く先が黙って変わらないよう版を固定する
+        uses: ruby/setup-ruby@v1.321.0
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare test database
+        working-directory: backend
+        env:
+          RAILS_ENV: test
+        # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+        # bundle exec 経由なら実行ビットに依存しない
+        run: bundle exec rails db:prepare
+
+      - name: Run implementer
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 計画担当(Claude GitHub App)とアンロック(カスタム App)が付けた
+          # ラベルで起動する。[bot] は付けない書式(spec §8.2)。
+          # カスタム App のスラグは docs/pipeline.md の手順で確認して合わせる
+          allowed_bots: 'claude,circleboard-pipeline'
+          # github_token は渡さない。App として PR を作らせることで、
+          # その PR が claude-review.yml を起動する(spec §8.1)
+          prompt: |
+            /pipeline-implement
+
+            REPO: ${{ github.repository }}
+            ISSUE_NUMBER: ${{ github.event.issue.number }}
+            BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          claude_args: |
+            --max-turns 100
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(cd:*),Bash(git:*),Bash(gh pr create:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(bundle exec rspec:*),Bash(bundle exec rubocop:*),Bash(npm run lint:*),Bash(npm run typecheck:*)"

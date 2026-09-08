@@ -1,0 +1,66 @@
+name: Claude Plan
+
+# 親Issue に claude:plan ラベルが付いたら、順序付きのサブIssue に分解する
+# (claude-pipeline-spec.md §3 計画担当)。
+#
+# 計画に人間の承認ゲートは置かない(非交渉事項 #1)。最初のサブIssueから出てくる
+# PR が事実上のゲートになる。計画が的外れなら、その PR を閉じて親Issue を閉じれば
+# キルスイッチが全部片付ける。
+on:
+  issues:
+    types: [labeled]
+
+# 同じ親Issue を二重に計画しない。cancel-in-progress は false にしている。
+# 途中で止めるとサブIssueが半分だけ作られた状態が残り、
+# order の連番が壊れたまま実装担当が動き出すため
+concurrency:
+  group: plan-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.event.label.name == 'claude:plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # --force は「あれば更新、なければ作成」。毎回流しても副作用がない。
+          # ラベルの作成自体はワークフローを起動しないので GITHUB_TOKEN で足りる
+          gh label create 'pipeline:parent'  --color 5319e7 --description '計画の親Issue。閉じるとキルスイッチが動く' --force
+          gh label create 'pipeline:subtask' --color b4a8f0 --description '計画から生成されたサブIssue' --force
+          gh label create 'claude:implement' --color 0e8a16 --description '実装担当を起動する' --force
+
+      - name: Run planner
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # github_token を渡さない。Claude GitHub App として認証させることで、
+          # 最後に付ける claude:implement が claude-implement.yml を起動する。
+          # GITHUB_TOKEN で付けると GitHub の再帰防止で連鎖が静かに止まる(spec §8.1)
+          #
+          # このワークフローを起動できるのはラベルを付けられる write 権限者だけ。
+          # bot 起点の経路はないので allowed_bots は空のまま(spec §8.3)
+          allowed_bots: ''
+          prompt: |
+            /pipeline-plan
+
+            REPO: ${{ github.repository }}
+            ISSUE_NUMBER: ${{ github.event.issue.number }}
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label:*)"
