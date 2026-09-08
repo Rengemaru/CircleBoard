@@ -181,7 +181,7 @@ function PostList() {
       <Note tone="warning">
         企画の内容そのものは、この画面からは編集できません。文面を直したいときは owner
         本人に依頼するか、
-        <code className="mx-1 rounded-sm bg-gray-100 px-1">rails console</code>
+        <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
         で対応します。
       </Note>
 

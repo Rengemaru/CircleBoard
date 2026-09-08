@@ -176,7 +176,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
 
       <Note>
         パスワードの再発行と権限の変更は、この画面からはできません。
-        <code className="mx-1 rounded-sm bg-gray-100 px-1">rails console</code>
+        <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
         で対応します(CLAUDE.md §10)。
       </Note>
 

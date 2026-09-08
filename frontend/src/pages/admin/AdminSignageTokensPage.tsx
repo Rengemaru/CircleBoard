@@ -173,7 +173,7 @@ function TokenCard({
 
       {/* 端末に貼り付けるURL。ここだけはトークンの実値を見せる。
           admin 以外はこのAPIに到達できない(docs/api-spec.md §6) */}
-      <code className="min-w-0 flex-[2] truncate rounded-sm bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-500">
+      <code className="min-w-0 flex-[2] truncate rounded bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-500">
         {token.url}
       </code>
 
