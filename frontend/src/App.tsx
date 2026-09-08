@@ -12,6 +12,7 @@ import { SignagePage } from "./pages/SignagePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
+import { AdminPostsPage } from "./pages/admin/AdminPostsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
 import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
@@ -39,6 +40,7 @@ export function App() {
         <Route path="/admin" element={<AdminDashboardPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
+        <Route path="/admin/posts" element={<AdminPostsPage />} />
         <Route path="/admin/pin" element={<AdminPinsPage />} />
         <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
 
@@ -53,9 +55,14 @@ export function App() {
 // 各ページに書いて回ると、新しい画面を足したときに付け忘れる
 function MemberLayout() {
   return (
-    <>
-      <Outlet />
+    // 背景をうすいグレーにして、内容を白い面で浮かせる
+    // (wireframe-admin-ver2.html の .admin-body と同じ考え方)。
+    // 縦を flex で伸ばすのは、内容が短い画面でフッターが宙に浮かないようにするため
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex-1">
+        <Outlet />
+      </div>
       <SiteFooter />
-    </>
+    </div>
   );
 }

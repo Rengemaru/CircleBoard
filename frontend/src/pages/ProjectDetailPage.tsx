@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { LoginRequired } from "../components/LoginRequired";
+import { MemberPage } from "../components/MemberPage";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Chip } from "../components/ui/Chip";
+import { Note } from "../components/ui/Note";
+import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import type { ProjectSummary } from "../types/project";
@@ -41,49 +47,57 @@ export function ProjectDetailPage() {
   }
 
   if (loading) {
-    return <Frame user={null}>読み込み中…</Frame>;
+    return (
+      <MemberPage user={null}>
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
   }
 
   if (user === null) {
     return (
-      <Frame user={null}>
-        <p className="rounded border border-gray-200 bg-gray-50 p-4">
-          プロジェクトの閲覧にはログインが必要です。
-          <Link to="/login" className="ml-2 underline">
-            ログイン
-          </Link>
-        </p>
-      </Frame>
+      <MemberPage user={null}>
+        <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
+      </MemberPage>
     );
   }
 
   if (error !== null && project === null) {
-    return <Frame user={user}><p className="text-red-700">{error}</p></Frame>;
+    return (
+      <MemberPage user={user}>
+        <Note tone="danger">{error}</Note>
+      </MemberPage>
+    );
   }
   if (project === null) {
-    return <Frame user={user}>読み込み中…</Frame>;
+    return (
+      <MemberPage user={user}>
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
   }
 
   const full = project.capacity !== null && project.participants_count >= project.capacity;
 
   return (
-    <Frame user={user}>
-      <div className="space-y-6">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-sm">
-              {project.status === "recruiting" ? "募集中" : "進行中"}
-            </span>
-            {project.tags.map((tag) => (
-              <span key={tag.id} className="rounded bg-gray-100 px-2 py-0.5 text-sm">
-                {tag.name}
-              </span>
-            ))}
-          </div>
-          <h1 className="mt-2 text-2xl font-bold">{project.title}</h1>
+    <MemberPage user={user}>
+      <Link to="/projects" className="mb-3 inline-block text-xs text-gray-500 hover:text-gray-900">
+        ← プロジェクト一覧
+      </Link>
+
+      <Panel>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
+            {project.status === "recruiting" ? "募集中" : "進行中"}
+          </Badge>
+          {project.tags.map((tag) => (
+            <Chip key={tag.id}>{tag.name}</Chip>
+          ))}
         </div>
 
-        <dl className="space-y-2 text-sm">
+        <h1 className="mt-2.5 text-xl font-bold">{project.title}</h1>
+
+        <dl className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-[13px]">
           {project.activity_schedule !== null && (
             <Row label="活動日" value={project.activity_schedule} />
           )}
@@ -94,71 +108,55 @@ export function ProjectDetailPage() {
               「残り null枠」と出さない */}
           <Row label="残り枠" value={formatRemaining(project)} />
         </dl>
+      </Panel>
 
-        <section>
-          <h2 className="mb-2 font-bold">概要</h2>
-          <p className="whitespace-pre-wrap text-sm">{project.description}</p>
-        </section>
+      <Panel title="概要">
+        <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{project.description}</p>
+      </Panel>
 
-        <section>
-          <h2 className="mb-2 font-bold">
-            メンバー {project.participants_count}
-            {project.capacity !== null && ` / ${project.capacity}`}名
-          </h2>
-          <ul className="flex flex-wrap gap-2 text-sm">
+      <Panel
+        title={`メンバー ${project.participants_count}${
+          project.capacity !== null ? ` / ${project.capacity}` : ""
+        }名`}
+      >
+        {(project.participants ?? []).length === 0 ? (
+          <p className="text-[13px] text-gray-500">まだメンバーがいません。</p>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
             {(project.participants ?? []).map((p) => (
-              <li key={p.id} className="rounded bg-gray-100 px-2 py-0.5">
-                {p.name}
+              <li key={p.id}>
                 {/* 誰が主催かを一覧の中でも分かるようにする(ワイヤーフレーム⑤)。
                     下の「主催」欄と照らし合わせずに済む */}
-                {p.id === project.owner?.id && (
-                  <span className="ml-1 text-gray-500">（主催）</span>
-                )}
+                <Chip>
+                  {p.name}
+                  {p.id === project.owner?.id && (
+                    <span className="ml-1 text-gray-400">（主催）</span>
+                  )}
+                </Chip>
               </li>
             ))}
           </ul>
-        </section>
-
-        {project.owner !== undefined && project.owner !== null && (
-          <section>
-            <h2 className="mb-1 font-bold">主催</h2>
-            <p className="text-sm">{project.owner.name}</p>
-          </section>
         )}
+      </Panel>
 
-        {error !== null && <p className="text-red-700">{error}</p>}
+      {project.owner !== undefined && project.owner !== null && (
+        <Panel title="主催">
+          <p className="text-[13px]">{project.owner.name}</p>
+        </Panel>
+      )}
 
-        {project.current_user_joined === true ? (
-          <p className="text-sm text-gray-600">参加しています</p>
-        ) : full ? (
-          <p className="text-sm text-gray-600">定員に達しています</p>
-        ) : (
-          <button
-            type="button"
-            onClick={join}
-            disabled={busy}
-            className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-          >
-            参加を申請する
-          </button>
-        )}
-      </div>
-    </Frame>
-  );
-}
+      {error !== null && <Note tone="danger">{error}</Note>}
 
-function Frame({
-  user,
-  children,
-}: {
-  user: Parameters<typeof SiteHeader>[0]["user"];
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-3xl p-6">{children}</main>
-    </>
+      {project.current_user_joined === true ? (
+        <Note>このプロジェクトに参加しています。脱退は部長に連絡してください。</Note>
+      ) : full ? (
+        <Note tone="warning">定員に達しています。</Note>
+      ) : (
+        <Button variant="primary" onClick={join} disabled={busy}>
+          参加を申請する
+        </Button>
+      )}
+    </MemberPage>
   );
 }
 

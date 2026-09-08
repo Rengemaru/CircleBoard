@@ -8,10 +8,10 @@ import { Link } from "react-router-dom";
 // サイネージには付けない（ナビゲーションを一切表示しない仕様のため）。
 export function SiteFooter() {
   return (
-    <footer className="mt-12 border-t border-gray-200">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm text-gray-500">
+    <footer className="mt-10 border-t border-gray-200 bg-white">
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-4 text-xs text-gray-500">
         <span>CircleBoard</span>
-        <Link to="/legal" className="underline">
+        <Link to="/legal" className="hover:text-gray-900">
           よくある質問・利用規約
         </Link>
       </div>

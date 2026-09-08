@@ -41,18 +41,26 @@ class Event < ApplicationRecord
   # 計算式だけに任せると、終わったイベントがサイネージの先頭に居座る。
   #
   # 開催当日は23時まで載せ、23時を過ぎたら落とす(§3.5 の括弧書き)。
-  # 日付が変わるまで載せ続けると、深夜に「今日開催」と出続けてしまう
-  SPOTLIGHT_SAME_DAY_CUTOFF_HOUR = 23
+  # 日付が変わるまで載せ続けると、深夜に「今日開催」と出続けてしまう。
+  #
+  # サイネージ専用の値ではないので SPOTLIGHT_ を付けない。
+  # 一覧APIも同じ基準で「まだ開催されていない」を判断する(upcoming 参照)
+  SAME_DAY_CUTOFF_HOUR = 23
 
-  scope :spotlight_targets, lambda {
-    from = if Time.current.hour >= SPOTLIGHT_SAME_DAY_CUTOFF_HOUR
+  # まだ開催されていないもの。この判定はここ1箇所だけに置く。
+  # サイネージ(spotlight_targets)と一覧API(EventsController#index)が
+  # 別々に「開催日 > 今」と書くと、23時台だけ食い違う
+  scope :upcoming, lambda {
+    from = if Time.current.hour >= SAME_DAY_CUTOFF_HOUR
              Date.current.tomorrow.in_time_zone
     else
              Time.current.beginning_of_day
     end
 
-    active.recruiting.where(starts_at: from..)
+    where(starts_at: from..)
   }
+
+  scope :spotlight_targets, -> { active.recruiting.upcoming }
 
   # cron から毎日1回呼ばれる入口(spec-v2.2.md §3.4)。
   #

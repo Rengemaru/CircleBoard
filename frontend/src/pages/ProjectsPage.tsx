@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { LoginRequired } from "../components/LoginRequired";
+import { MemberPage } from "../components/MemberPage";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Chip, FilterChip } from "../components/ui/Chip";
+import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
 import { fetchProjects } from "../api/projects";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -86,31 +92,36 @@ export function ProjectsPage() {
   }
 
   if (loading) {
-    return <Frame user={null}>読み込み中…</Frame>;
+    return (
+      <MemberPage user={null}>
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
   }
 
   // 未ログインは API 自体が 401 を返す。画面側でも案内を出す
   if (user === null) {
     return (
-      <Frame user={null}>
-        <p className="rounded border border-gray-200 bg-gray-50 p-4">
-          プロジェクトの閲覧にはログインが必要です。
-          <Link to="/login" className="ml-2 underline">
-            ログイン
-          </Link>
-        </p>
-      </Frame>
+      <MemberPage user={null}>
+        <PageHeading title="プロジェクト" />
+        <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
+      </MemberPage>
     );
   }
 
   return (
-    <Frame user={user}>
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">プロジェクト</h1>
-        <Link to="/create" className="text-sm underline">
-          ＋ プロジェクトを作成
-        </Link>
-      </div>
+    <MemberPage user={user}>
+      <PageHeading
+        title="プロジェクト"
+        subtitle="継続的に成果物を作る企画です。途中からでも参加できます"
+        action={
+          <Link to="/create">
+            <Button variant="primary" size="sm">
+              ＋ プロジェクトを作成
+            </Button>
+          </Link>
+        }
+      />
 
       <FilterRow label="STATUS">
         {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
@@ -141,47 +152,47 @@ export function ProjectsPage() {
         </FilterRow>
       )}
 
-      {error !== null ? (
-        <p className="rounded border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>
-      ) : projects === null ? (
-        <p className="text-gray-500">読み込み中…</p>
-      ) : projects.length === 0 ? (
-        <p className="text-gray-500">
-          {status === "all" && selectedTagId === null
-            ? "いま募集中のプロジェクトはありません。"
-            : "この条件のプロジェクトはありません。"}
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </ul>
-      )}
-    </Frame>
+      <div className="mt-5">
+        {error !== null ? (
+          <Note tone="danger">{error}</Note>
+        ) : projects === null ? (
+          <p className="text-[13px] text-gray-500">読み込み中…</p>
+        ) : projects.length === 0 ? (
+          <p className="text-[13px] text-gray-500">
+            {status === "all" && selectedTagId === null
+              ? "いま募集中のプロジェクトはありません。"
+              : "この条件のプロジェクトはありません。"}
+          </p>
+        ) : (
+          <ul className="space-y-4">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </MemberPage>
   );
 }
 
 function ProjectCard({ project }: { project: ProjectSummary }) {
   return (
-    <li className="rounded-lg border border-gray-200 p-4">
+    <li className="rounded border border-gray-200 bg-white p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-sm">
+        <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
           {project.status === "recruiting" ? "募集中" : "進行中"}
-        </span>
+        </Badge>
         {project.tags.map((tag) => (
-          <span key={tag.id} className="rounded bg-gray-100 px-2 py-0.5 text-xs">
-            {tag.name}
-          </span>
+          <Chip key={tag.id}>{tag.name}</Chip>
         ))}
       </div>
-      <h2 className="mt-2 text-lg font-bold">
+      <h2 className="mt-2 text-sm font-bold">
         <Link to={`/projects/${project.id}`} className="hover:underline">
           {project.title}
         </Link>
       </h2>
-      <p className="mt-1 line-clamp-2 text-sm text-gray-700">{project.description}</p>
-      <div className="mt-2 text-sm text-gray-500">
+      <p className="mt-1.5 line-clamp-2 text-[13px] text-gray-700">{project.description}</p>
+      <div className="mt-2.5 text-xs text-gray-500">
         {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
         {formatMembers(project)}
       </div>
@@ -193,47 +204,12 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
 // どちらの条件を触っているのかを取り違えないようにする
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="w-14 shrink-0 font-mono text-xs text-gray-400">{label}</span>
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <span className="w-14 shrink-0 font-mono text-[10px] tracking-wider text-gray-400">
+        {label}
+      </span>
       {children}
     </div>
-  );
-}
-
-function FilterChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded border px-3 py-1 text-sm ${
-        active ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Frame({
-  user,
-  children,
-}: {
-  user: Parameters<typeof SiteHeader>[0]["user"];
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-3xl p-6">{children}</main>
-    </>
   );
 }
 

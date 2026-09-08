@@ -1,27 +1,32 @@
 import { Link, useLocation } from "react-router-dom";
+import { Button } from "./ui/Button";
 import { logout, type CurrentUser } from "../api/session";
 
-// メンバー画面で共通のヘッダー(wireframes/wireframe-member.html)。
+// メンバー画面で共通のヘッダー。
 // サイネージには置かない（ナビゲーションを一切表示しない仕様のため）。
+//
+// 見た目は wireframes/wireframe-admin-ver2.html の .admin-topbar に合わせている。
+// member 用の新しいワイヤーフレームは無いので、管理画面と同じ寸法・色・字送りを
+// 使うことで「同じプロダクトの画面」に見せる(docs/instructions.md Phase 7 T7-5)。
 export function SiteHeader({ user }: { user: CurrentUser | null }) {
   return (
-    <header className="border-b border-gray-200">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 p-4">
-        <Link to="/" className="font-bold">
+    <header className="border-b border-gray-200 bg-white">
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
+        <Link to="/" className="text-base font-bold tracking-tight">
           CircleBoard
         </Link>
-        <nav className="flex gap-4 text-sm">
+        <nav className="flex gap-4 text-[13px]">
           <NavLink to="/">ホーム</NavLink>
           <NavLink to="/projects">プロジェクト</NavLink>
           <NavLink to="/events">イベント</NavLink>
         </nav>
-        <div className="ml-auto text-sm">
+        <div className="ml-auto flex items-center gap-3 text-[13px]">
           {user === null ? (
-            <Link to="/login" className="text-gray-700 underline">
-              ログイン
+            <Link to="/login">
+              <Button size="sm">ログイン</Button>
             </Link>
           ) : (
-            <span className="flex items-center gap-3 text-gray-700">
+            <>
               {/* 管理画面への入口。admin のときだけ出す。
                   これは表示の話であって制限ではない。管理APIは全て
                   サーバー側で role を検証している(docs/api-spec.md §6)ので、
@@ -29,13 +34,15 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
                   出しっぱなしにしないのは、押しても断られるだけのリンクを
                   全員に見せる意味がないため */}
               {user.role === "admin" && (
-                <Link to="/admin" className="underline">
-                  管理
+                <Link to="/admin">
+                  <Button size="sm" variant="ghost">
+                    管理
+                  </Button>
                 </Link>
               )}
-              {user.name}
+              <span className="text-gray-700">{user.name}</span>
               <LogoutButton />
-            </span>
+            </>
           )}
         </div>
       </div>
@@ -52,9 +59,9 @@ function LogoutButton() {
   }
 
   return (
-    <button type="button" onClick={submit} className="underline">
+    <Button size="sm" variant="ghost" onClick={submit}>
       ログアウト
-    </button>
+    </Button>
   );
 }
 
@@ -65,7 +72,11 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className={active ? "border-b-2 border-gray-900 font-bold" : "text-gray-600"}
+      className={
+        active
+          ? "border-b-2 border-gray-900 pb-0.5 font-bold"
+          : "border-b-2 border-transparent pb-0.5 text-gray-500 hover:text-gray-900"
+      }
     >
       {children}
     </Link>

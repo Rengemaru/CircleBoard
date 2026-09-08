@@ -71,7 +71,7 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
 
       {/* 未実装の画面はここに出さない。押すと 404 になるリンクを並べても
           「準備中」という情報しか伝わらない。
-          企画一覧(T7-3)・FAQ編集(T7-6)は実装した時点でこの一覧に足す */}
+          FAQ編集(T7-6)は実装した時点でこの一覧に足す */}
       <div className="py-3">
         <NavGroup>メイン</NavGroup>
         <NavItem to="/admin" icon="📊" exact>
@@ -81,6 +81,9 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
         <NavGroup>管理</NavGroup>
         <NavItem to="/admin/users" icon="👥">
           ユーザー管理
+        </NavItem>
+        <NavItem to="/admin/posts" icon="📋">
+          企画一覧（全件）
         </NavItem>
 
         <NavGroup>サイネージ</NavGroup>

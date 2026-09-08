@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { useNavigate } from "react-router-dom";
+import { LoginRequired } from "../components/LoginRequired";
+import { MemberPage } from "../components/MemberPage";
+import { Button } from "../components/ui/Button";
+import { FilterChip } from "../components/ui/Chip";
+import { Field, INPUT_CLASS } from "../components/ui/Field";
+import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
+import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -104,7 +111,11 @@ export function CreatePage() {
   }
 
   if (loading) {
-    return <Frame user={null}>読み込み中…</Frame>;
+    return (
+      <MemberPage user={null}>
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
   }
 
   // 作成ボタンは未ログインでも見せてよいが、押下時は /login へ。
@@ -112,37 +123,29 @@ export function CreatePage() {
   // (wireframe-member.html ②の注記)。API側は必ず401を返す
   if (user === null) {
     return (
-      <Frame user={null}>
-        <p className="rounded border border-gray-200 bg-gray-50 p-4">
-          企画の作成にはログインが必要です。
-          <Link to="/login" className="ml-2 underline">
-            ログイン
-          </Link>
-        </p>
-      </Frame>
+      <MemberPage user={null}>
+        <LoginRequired>企画の作成にはログインが必要です。</LoginRequired>
+      </MemberPage>
     );
   }
 
   return (
-    <Frame user={user}>
-      <h1 className="mb-6 text-2xl font-bold">企画を作成</h1>
+    <MemberPage user={user}>
+      <PageHeading
+        title="企画を作成"
+        subtitle="作ったあとで編集はできません。内容を確認してから作成してください"
+      />
 
-      <form onSubmit={submit} className="max-w-xl space-y-4">
-        {error !== null && (
-          <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {error}
-          </p>
-        )}
+      {/* 必須の欄は required でブラウザ側でも止める。送っても 422 が返るだけで、
+          往復する意味がないため(ログインフォームと同じ扱い)。
+          検証そのものはサーバー側のモデルが持つ(spec-v2.2.md §2.2/§2.3) */}
+      <form onSubmit={submit}>
+        {error !== null && <Note tone="danger">{error}</Note>}
 
-        <fieldset>
-          <legend className="mb-2 text-sm text-gray-700">種類</legend>
-          <div className="flex gap-4 text-sm">
+        <Panel title="種類">
+          <div className="flex flex-wrap gap-4 text-[13px]">
             <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={kind === "event"}
-                onChange={() => setKind("event")}
-              />
+              <input type="radio" checked={kind === "event"} onChange={() => setKind("event")} />
               イベント（単発。未ログインでも閲覧できます）
             </label>
             <label className="flex items-center gap-2">
@@ -154,145 +157,117 @@ export function CreatePage() {
               プロジェクト（継続。ログイン必須）
             </label>
           </div>
-        </fieldset>
+        </Panel>
 
-        <Field label="タイトル">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </Field>
-
-        {/* テンプレートは placeholder として表示する。初期値として入れると、
-            消さずにそのまま送信されてしまう(wireframe-member.html ⑥の注記) */}
-        <Field label="概要">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={10}
-            placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </Field>
-
-        {kind === "event" ? (
-          <>
-            <Field label="開催場所">
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="部室A / オンライン（Zoom）"
-                className="w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </Field>
-            <Field label="開催日時">
-              <input
-                type="datetime-local"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </Field>
-          </>
-        ) : (
-          <Field label="MTGの予定（任意）">
+        <Panel title="内容">
+          <Field label="タイトル" required>
             <input
-              value={meetingSchedule}
-              onChange={(e) => setMeetingSchedule(e.target.value)}
-              placeholder="毎週水曜 19:00〜"
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className={INPUT_CLASS}
             />
           </Field>
-        )}
 
-        <Field label="定員（空欄なら無制限）">
-          <input
-            type="number"
-            value={capacity}
-            onChange={(e) => setCapacity(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </Field>
-
-        {/* 外部リンクはイベントのみ。projects テーブルに列を作っていない
-            (docs/er.md)。connpass や Google フォームへの導線に使う */}
-        {kind === "event" && (
-          <Field label="外部リンク（任意）">
-            <input
-              type="url"
-              value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://connpass.com/event/xxxxx"
-              className="w-full rounded border border-gray-300 px-3 py-2"
+          {/* テンプレートは placeholder として表示する。初期値として入れると、
+              消さずにそのまま送信されてしまう(wireframe-member.html ⑥の注記) */}
+          <Field label="概要" required hint="枠の中の見出しは目安です。書きやすい形で構いません">
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={10}
+              placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
+              required
+              className={INPUT_CLASS}
             />
           </Field>
-        )}
+
+          {kind === "event" ? (
+            <>
+              <Field label="開催場所" required>
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="部室A / オンライン（Zoom）"
+                  required
+                  className={INPUT_CLASS}
+                />
+              </Field>
+              <Field label="開催日時" required>
+                <input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  required
+                  className={INPUT_CLASS}
+                />
+              </Field>
+            </>
+          ) : (
+            <Field label="MTGの予定（任意）">
+              <input
+                value={meetingSchedule}
+                onChange={(e) => setMeetingSchedule(e.target.value)}
+                placeholder="毎週水曜 19:00〜"
+                className={INPUT_CLASS}
+              />
+            </Field>
+          )}
+
+          <Field label="定員（空欄なら無制限）">
+            <input
+              type="number"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </Field>
+
+          {/* 外部リンクはイベントのみ。projects テーブルに列を作っていない
+              (docs/er.md)。connpass や Google フォームへの導線に使う */}
+          {kind === "event" && (
+            <Field label="外部リンク（任意）">
+              <input
+                type="url"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                placeholder="https://connpass.com/event/xxxxx"
+                className={INPUT_CLASS}
+              />
+            </Field>
+          )}
+        </Panel>
 
         {/* タグは既存のものから選ぶ。作成APIは無い(docs/api-spec.md §4) */}
-        <fieldset>
-          <legend className="mb-2 text-sm text-gray-700">タグ</legend>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleTag(tag.id)}
-                className={`rounded border px-3 py-1 text-sm ${
-                  selectedTagIds.includes(tag.id)
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <Panel title="タグ">
+          {tags.length === 0 ? (
+            <p className="text-[13px] text-gray-500">選べるタグがありません。</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <FilterChip
+                  key={tag.id}
+                  active={selectedTagIds.includes(tag.id)}
+                  onClick={() => toggleTag(tag.id)}
+                >
+                  {tag.name}
+                </FilterChip>
+              ))}
+            </div>
+          )}
+        </Panel>
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40"
-          >
+        <div className="flex gap-2">
+          <Button type="submit" variant="primary" disabled={busy}>
             作成する
-          </button>
+          </Button>
           {/* 直前の画面に戻る。/ に固定で飛ばすと、一覧から来た人が
               一覧に戻れない */}
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="rounded border border-gray-300 px-4 py-2"
-          >
+          <Button variant="ghost" onClick={() => navigate(-1)}>
             キャンセル
-          </button>
+          </Button>
         </div>
       </form>
-    </Frame>
-  );
-}
-
-function Frame({
-  user,
-  children,
-}: {
-  user: Parameters<typeof SiteHeader>[0]["user"];
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-3xl p-6">{children}</main>
-    </>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm text-gray-700">{label}</span>
-      {children}
-    </label>
+    </MemberPage>
   );
 }

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { SiteHeader } from "../components/SiteHeader";
+import { MemberPage } from "../components/MemberPage";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Chip, FilterChip } from "../components/ui/Chip";
+import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -55,77 +60,57 @@ export function EventsPage() {
   }
 
   return (
-    <>
-      <SiteHeader user={user} />
-      <main className="mx-auto max-w-3xl p-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-2xl font-bold">イベント</h1>
-          {/* 作成ボタンは未ログインでも表示してよい。押下時は /login へ。
-              ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
-              （画面②の注記）。API側は必ず401を返す */}
-          <Link to="/create" className="text-sm underline">
-            ＋ イベントを作成
+    <MemberPage user={user}>
+      <PageHeading
+        title="イベント"
+        subtitle="単発の企画です。閲覧はログインなしでもできます"
+        action={
+          /* 作成ボタンは未ログインでも表示してよい。押下時は /login へ。
+             ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
+             （画面②の注記）。API側は必ず401を返す */
+          <Link to="/create">
+            <Button variant="primary" size="sm">
+              ＋ イベントを作成
+            </Button>
           </Link>
-        </div>
+        }
+      />
 
-        {tags.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            <FilterChip active={selectedTagId === null} onClick={() => selectTag(null)}>
-              すべて
+      {tags.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          <FilterChip active={selectedTagId === null} onClick={() => selectTag(null)}>
+            すべて
+          </FilterChip>
+          {tags.map((tag) => (
+            <FilterChip
+              key={tag.id}
+              active={selectedTagId === tag.id}
+              onClick={() => selectTag(tag.id)}
+            >
+              {tag.name}
             </FilterChip>
-            {tags.map((tag) => (
-              <FilterChip
-                key={tag.id}
-                active={selectedTagId === tag.id}
-                onClick={() => selectTag(tag.id)}
-              >
-                {tag.name}
-              </FilterChip>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {error !== null ? (
-          <p className="rounded border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>
-        ) : events === null ? (
-          <p className="text-gray-500">読み込み中…</p>
-        ) : events.length === 0 ? (
-          <p className="text-gray-500">
-            {selectedTagId === null
-              ? "開催予定のイベントはありません。"
-              : "このタグのイベントはありません。"}
-          </p>
-        ) : (
-          <ul className="space-y-4">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </ul>
-        )}
-      </main>
-    </>
-  );
-}
-
-function FilterChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded border px-3 py-1 text-sm ${
-        active ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300"
-      }`}
-    >
-      {children}
-    </button>
+      {error !== null ? (
+        <Note tone="danger">{error}</Note>
+      ) : events === null ? (
+        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      ) : events.length === 0 ? (
+        <p className="text-[13px] text-gray-500">
+          {selectedTagId === null
+            ? "開催予定のイベントはありません。"
+            : "このタグのイベントはありません。"}
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {events.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </ul>
+      )}
+    </MemberPage>
   );
 }
 
@@ -133,36 +118,38 @@ function EventCard({ event }: { event: EventSummary }) {
   const startsAt = new Date(event.starts_at);
 
   return (
-    <li className="rounded-lg border border-gray-200 p-4">
-      <div className="flex items-baseline gap-3 text-sm text-gray-500">
+    <li className="rounded border border-gray-200 bg-white p-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
         {/* 開催の近さが一覧で一番効く情報なので先頭に置く(ワイヤーフレーム②) */}
-        <span className="font-bold text-gray-900">{formatCountdown(event.starts_at)}</span>
+        <span className="text-sm font-bold text-gray-900">{formatCountdown(event.starts_at)}</span>
         <span>{formatDate(startsAt)}</span>
         <span>{event.location}</span>
-        {event.pinned && <span className="text-gray-900">📌 ピン留め</span>}
+        {event.pinned && <Badge tone="pinned">📌 ピン留め</Badge>}
       </div>
 
-      <h2 className="mt-1 text-lg font-bold">
+      <h2 className="mt-1.5 text-sm font-bold">
         <Link to={`/events/${event.id}`} className="hover:underline">
           {event.title}
         </Link>
       </h2>
 
       {event.tags.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-2">
+        <ul className="mt-2 flex flex-wrap gap-1.5">
           {event.tags.map((tag) => (
-            <li key={tag.id} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-              {tag.name}
+            <li key={tag.id}>
+              <Chip>{tag.name}</Chip>
             </li>
           ))}
         </ul>
       )}
 
-      <p className="mt-2 line-clamp-2 text-sm text-gray-700">{event.description}</p>
+      <p className="mt-2.5 line-clamp-2 text-[13px] text-gray-700">{event.description}</p>
 
-      <div className="mt-3 flex items-center gap-3 text-sm text-gray-600">
+      <div className="mt-3 flex items-center gap-2.5 text-xs text-gray-500">
+        <Badge tone={event.status === "recruiting" ? "recruiting" : "completed"}>
+          {event.status === "recruiting" ? "募集中" : "終了"}
+        </Badge>
         <span>{formatParticipants(event)}</span>
-        <span>{event.status === "recruiting" ? "募集中" : "終了"}</span>
       </div>
     </li>
   );
