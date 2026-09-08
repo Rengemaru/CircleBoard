@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { fetchSignage } from "../api/signage";
+import { formatCountdownDays } from "../lib/countdown";
 import type { SignageData, SignageEvent, SignageProject } from "../types/signage";
 
 // 部室ディスプレイ用の全画面ビュー(1920x1080 / 16:9)。
@@ -175,7 +176,7 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
             className="font-bold text-[#fcd34d]"
             style={{ fontSize: hero ? "5.6vw" : "2.7vw", lineHeight: 1 }}
           >
-            あと{event.days_until}日
+            {formatCountdownDays(event.days_until)}
           </span>
         </div>
         <div className="mt-[0.6em] text-[1.05vw] text-[#9aa0ae]">
