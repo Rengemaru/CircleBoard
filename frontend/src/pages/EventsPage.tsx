@@ -3,7 +3,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   AnchorButton,
   Base,
-  Button,
   Chip,
   Cluster,
   PageHeading,
@@ -12,6 +11,7 @@ import {
   Text,
 } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
+import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { Note } from "../components/ui/Note";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
@@ -107,20 +107,20 @@ export function EventsPage() {
           )}
 
           {tags.length > 0 && (
-            <Cluster gap="XS" className="border-b border-gray-200 p-3">
-              <TagFilter active={selectedTagId === null} onClick={() => selectTag(null)}>
+            <FilterRow label="TAG">
+              <FilterButton active={selectedTagId === null} onClick={() => selectTag(null)}>
                 すべて
-              </TagFilter>
+              </FilterButton>
               {tags.map((tag) => (
-                <TagFilter
+                <FilterButton
                   key={tag.id}
                   active={selectedTagId === tag.id}
                   onClick={() => selectTag(tag.id)}
                 >
                   {tag.name}
-                </TagFilter>
+                </FilterButton>
               ))}
-            </Cluster>
+            </FilterRow>
           )}
 
           {error !== null ? (
@@ -146,24 +146,6 @@ export function EventsPage() {
         </Base>
       </Stack>
     </MemberPage>
-  );
-}
-
-// 絞り込みは「リストのデータを変えない一時的な操作」なので一時操作エリアに置く。
-// 選択中かどうかを variant の差で示す
-function TagFilter({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <Button size="S" variant={active ? "primary" : "secondary"} onClick={onClick}>
-      {children}
-    </Button>
   );
 }
 
