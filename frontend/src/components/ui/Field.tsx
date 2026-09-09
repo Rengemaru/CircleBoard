@@ -3,8 +3,11 @@
 // input を Field の中に閉じ込めず children で受けるのは、type や
 // onChange をラッパー越しに渡すと、どの属性が通るのかが読めなくなるため。
 // 入力欄そのものは呼び出し側が素の <input> を書き、見た目だけ INPUT_CLASS を共有する。
+// focus:outline-none でブラウザ標準のリングを消したまま、代わりが枠線の色変化
+// だけだった。キーボードでいまどこにいるのかを追えない(Issue #57)。
+// focus-visible にしているのは、マウスで押したときにリングを出さないため
 export const INPUT_CLASS =
-  "w-full rounded-[3px] border-[1.5px] border-gray-300 px-3 py-2 text-[13px] focus:border-gray-900 focus:outline-none";
+  "w-full rounded-[3px] border-[1.5px] border-gray-300 px-3 py-2 text-[13px] focus:border-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-1";
 
 export function Field({
   label,

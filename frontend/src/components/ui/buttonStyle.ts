@@ -24,5 +24,10 @@ export function buttonClassName(
   variant: ButtonVariant = "default",
   size: ButtonSize = "md",
 ): string {
-  return `rounded border-[1.5px] font-semibold disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]}`;
+  // フォーカスの指定が無く、キーボードでどこにいるか分からなかった(Issue #57)。
+  // ring-offset で要素の外側に出すので、隣の要素と重なっても四辺が見える
+  const focus =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-1";
+
+  return `rounded border-[1.5px] font-semibold disabled:opacity-40 ${focus} ${VARIANT[variant]} ${SIZE[size]}`;
 }
