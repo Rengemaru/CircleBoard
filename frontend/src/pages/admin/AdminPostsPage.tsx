@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, Td, Th } from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { INPUT_CLASS } from "../../components/ui/Field";
@@ -161,8 +162,10 @@ function PostList() {
         </div>
 
         {/* 列が多い表は横に溢れる。ページ全体を横スクロールさせない */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        {/* Table は既定で reel が有効で、溢れるときだけ表自身が横スクロールする。
+            ページ全体を横スクロールさせないのは今までと同じ */}
+        <div>
+          <Table>
             <thead>
               <tr>
                 <Th>企画名</Th>
@@ -188,7 +191,7 @@ function PostList() {
                 />
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
 
         {visible.length === 0 && (
@@ -280,22 +283,6 @@ function PostRow({
         )}
       </Td>
     </tr>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
-      {children}
-    </th>
-  );
-}
-
-function Td({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <td className={`border-b border-gray-100 px-4 py-3 align-middle text-[13px] ${className}`}>
-      {children}
-    </td>
   );
 }
 
