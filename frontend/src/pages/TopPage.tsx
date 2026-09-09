@@ -112,18 +112,24 @@ function SpotlightSection({
                 <Badge tone="pinned">📌 ピン留め</Badge>
               </div>
             )}
-            {/* 開催の近さがこの枠で一番効く情報なので、数字を大きく置く。
-                ただし 28px は ver2 の .stat-value（ダッシュボードの統計値）から
-                借りた値で、wireframe-member.html の .cd は 17px。
-                日数だけが 1.6 倍に膨らみ、13.5px のタイトルを埋もれさせていた。
-                ワイヤーフレームの値に戻す(Issue #59) */}
-            <div className="text-[17px] leading-none font-bold">
+            {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
+                ではなく「あと何日か」になっていた。28px は ver2 の .stat-value
+                （ダッシュボードの統計値）から借りた値で、ワイヤーフレームの
+                .cd は 17px。
+
+                大小関係は smarthr-ui へ移行済みの /events に揃える。
+                あちらは日数 14px < タイトル 16px で、識別のための名前を主に
+                している(smarthr-list.mdx)。兄弟画面で逆になっていると、
+                一覧から詳細へ移るたびに視線の置き場所が変わる。
+                ワイヤーフレームは日数を大きくしているが、/events は Phase 8 で
+                既にその配分を離れており、そちらに合わせる(Issue #59) */}
+            <div className="text-sm leading-none font-bold text-gray-900">
               {formatCountdown(event.starts_at)}
             </div>
             <div className="mt-2 text-xs text-gray-500">
               {formatDate(event.starts_at)} ・ {event.location}
             </div>
-            <h3 className="mt-1 text-sm font-bold">
+            <h3 className="mt-1 text-base font-bold">
               <Link to={`/events/${event.id}`} className="hover:underline">
                 {event.title}
               </Link>
