@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Table, Td, Th } from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ErrorNote } from "../../components/ui/ErrorNote";
@@ -141,8 +142,9 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
 
   return (
     <Panel title="最近の企画アクティビティ" className="min-w-0">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      {/* Table は既定で reel が有効で、溢れるときだけ表自身が横スクロールする */}
+      <div>
+        <Table>
           <thead>
             <tr>
               <Th>企画名</Th>
@@ -170,7 +172,7 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </div>
     </Panel>
   );
@@ -220,21 +222,5 @@ function QuickActions() {
         </Button>
       </div>
     </Panel>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
-      {children}
-    </th>
-  );
-}
-
-function Td({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <td className={`border-b border-gray-100 px-3 py-3 align-middle text-[13px] ${className}`}>
-      {children}
-    </td>
   );
 }
