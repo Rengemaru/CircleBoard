@@ -1,5 +1,6 @@
 import { SiteHeader } from "../components/SiteHeader";
 import { LinkButton } from "../components/ui/LinkButton";
+import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
@@ -12,11 +13,11 @@ export function NotFoundPage() {
     <>
       <SiteHeader user={user} sessionFailed={failed} />
       <main className="mx-auto max-w-3xl px-6 py-6">
+        {/* h1 を自前で書くと document.title が変わらず、SPA では
+            前に開いていた画面のタブ名が残る */}
+        <PageHeading title="ページが見つかりません" />
         <Panel>
-          <h1 className="text-base font-bold">ページが見つかりません</h1>
-          <p className="mt-2 text-[13px] text-gray-700">
-            URLが変わったか、削除された可能性があります。
-          </p>
+          <p className="text-[13px] text-gray-700">URLが変わったか、削除された可能性があります。</p>
           <LinkButton to="/" size="sm" className="mt-4">
             トップへ戻る
           </LinkButton>
