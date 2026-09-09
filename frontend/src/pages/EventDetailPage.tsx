@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -9,6 +9,7 @@ import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { formatCountdown } from "../lib/countdown";
+import { loginPathFrom } from "../lib/redirectTo";
 import type { EventDetail } from "../types/event";
 
 // イベント詳細(wireframes/wireframe-member.html ③)。ゲスト可だが表示内容が変わる。
@@ -181,10 +182,13 @@ function ParticipationButton({
   onJoin: () => void;
   onCancel: () => void;
 }) {
-  // 未ログイン時のラベルは「ログインして参加」→ /login へ(ワイヤーフレーム ③)
+  const location = useLocation();
+
+  // 未ログイン時のラベルは「ログインして参加」→ /login へ(ワイヤーフレーム ③)。
+  // ログイン後はこのイベントに戻す(Issue #37)
   if (!loggedIn) {
     return (
-      <Link to="/login">
+      <Link to={loginPathFrom(location.pathname + location.search)}>
         <Button variant="primary">ログインして参加</Button>
       </Link>
     );
