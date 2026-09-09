@@ -138,8 +138,15 @@ function UserList({ currentUserId }: { currentUserId: number }) {
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5">
           <h2 className="text-sm font-bold">
             メンバー一覧
-            <span className="ml-2 text-xs font-normal text-gray-500">{visible.length}件</span>
+            {/* 絞り込み後の件数だけだと、全体が何件なのか分からず、
+                何を隠しているのかが把握できない(Issue #63) */}
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              {formatCount(visible.length, users.length)}
+            </span>
           </h2>
+          {/* 卒業年度の新しい順(api/admin/users_controller.rb:20)。
+              書かないと、五十音順でない一覧が「順不同」に見える */}
+          <span className="text-xs text-gray-500">卒業年度が新しい順</span>
         </div>
 
         {/* 列が多い表は横に溢れる。ページ全体を横スクロールさせない */}
@@ -329,6 +336,12 @@ function matchesFilter(user: AdminUserRow, filter: Filter): boolean {
     case "active":
       return !user.graduated && !user.suspended;
   }
+}
+
+// 絞り込んでいるときだけ「N件 / 全M件」にする。
+// 絞り込んでいないのに「4件 / 全4件」と出すのは冗長
+function formatCount(visible: number, total: number): string {
+  return visible === total ? `${total}件` : `${visible}件 / 全${total}件`;
 }
 
 function toMessage(error: unknown): string {
