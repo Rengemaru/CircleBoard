@@ -9,35 +9,52 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // ナビゲーションは一切置かない。ヘッダー・フッター・リンクも表示しない
 // (wireframes/wireframe-signage.html「共通仕様」)。
 // 視認距離2〜3mを想定し、最小フォントは24px相当。
-// 60秒ごとにページごと読み込み直す(wireframe-signage.html「共通仕様」)。
+// 60秒ごとに更新する(wireframe-signage.html「共通仕様」)。
 // WebSocket は不採用。1台のディスプレイが1分遅れて更新されることに実害は無く、
 // 常時接続を維持する仕組みを持つと、切れたときに気づけない方が問題になる。
-const RELOAD_INTERVAL_SECONDS = 60;
-
-function useAutoReload() {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      window.location.reload();
-    }, RELOAD_INTERVAL_SECONDS * 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-}
+//
+// window.location.reload() でページごと読み直していたが、その瞬間に
+// サーバーが落ちているとブラウザのエラーページになり、誰も操作しない
+// 端末なので自力で復帰できなかった。データだけ取り直す(Issue #47)。
+const REFRESH_INTERVAL_SECONDS = 60;
 
 export function SignagePage() {
-  useAutoReload();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [data, setData] = useState<SignageData | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    fetchSignage(token)
-      .then(setData)
-      .catch(() => setFailed(true));
+    // アンマウント後に setState しないための番人。
+    // トークンを変えたときに古い応答が届くのも防ぐ
+    let cancelled = false;
+
+    function refresh() {
+      fetchSignage(token)
+        .then((next) => {
+          if (cancelled) return;
+          setData(next);
+          setFailed(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setFailed(true);
+        });
+    }
+
+    refresh();
+    const timer = setInterval(refresh, REFRESH_INTERVAL_SECONDS * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [token]);
 
-  if (failed) {
+  // 一度でも取得できていれば、そのあと失敗しても画面を捨てない。
+  // 部室のディスプレイは誰も操作しないので、消すと戻す人がいない。
+  // 表示が古いことを伝えるのは Issue #48 で扱う
+  if (failed && data === null) {
     return (
       <Screen>
         <CenteredMessage>表示できません</CenteredMessage>
