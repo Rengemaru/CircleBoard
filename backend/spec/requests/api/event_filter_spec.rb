@@ -2,7 +2,7 @@ require "rails_helper"
 
 # イベント一覧の絞り込み。
 # ワイヤーフレーム画面②「既定は status=recruiting のみ表示。終了イベントは
-# 表示しない」「絞り込みは ?tag_id= で行い、URLで共有できる状態にする」に対応する。
+# 表示しない」「絞り込みは ?tag_ids= で行い、URLで共有できる状態にする」に対応する。
 RSpec.describe "GET /api/events の絞り込み", type: :request do
   let!(:hackathon) { create(:event, title: "ハッカソン", status: :recruiting) }
   let!(:lt) { create(:event, title: "LT会", status: :recruiting) }
@@ -58,10 +58,10 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
       expect(titles).not_to include("終わった会")
     end
 
-    it "tag_id と併用しても返さない" do
+    it "tag_ids と併用しても返さない" do
       past.tags = [ tag ]
 
-      get "/api/events", params: { tag_id: tag.id }
+      get "/api/events", params: { tag_ids: tag.id }
 
       expect(titles).to be_empty
     end
@@ -100,17 +100,56 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
     end
   end
 
-  describe "tag_id" do
+  describe "tag_ids" do
     before { hackathon.tags = [ tag ] }
 
     it "指定したタグを持つイベントだけを返す" do
-      get "/api/events", params: { tag_id: tag.id }
+      get "/api/events", params: { tag_ids: tag.id }
+
+      expect(titles).to eq([ "ハッカソン" ])
+    end
+
+    # 複数指定は OR。AND にするとタグを足すほど0件に近づく
+    it "複数指定したときは、どれか1つでも持つイベントを返す" do
+      other = create(:tag, name: "LT")
+      lt = create(:event, title: "LT会", starts_at: 5.days.from_now, tags: [ other ])
+
+      get "/api/events", params: { tag_ids: "#{tag.id},#{other.id}" }
+
+      expect(titles).to contain_exactly("ハッカソン", lt.title)
+    end
+
+    # 2つのタグが付いたイベントは join で2行になる。distinct が要る
+    it "複数のタグを持つイベントが重複しない" do
+      other = create(:tag, name: "LT")
+      hackathon.tags = [ tag, other ]
+
+      get "/api/events", params: { tag_ids: "#{tag.id},#{other.id}" }
+
+      expect(titles).to eq([ "ハッカソン" ])
+    end
+
+    it "空のときは絞り込まない" do
+      get "/api/events", params: { tag_ids: "" }
+
+      expect(titles).to include("ハッカソン")
+    end
+
+    # URLを手で書き換えられてもエラーにしない
+    it "数字でない値は無視する" do
+      get "/api/events", params: { tag_ids: "abc" }
+
+      expect(titles).to include("ハッカソン")
+    end
+
+    it "数字でない値が混ざっていても、数字の分だけで絞る" do
+      get "/api/events", params: { tag_ids: "abc,#{tag.id}" }
 
       expect(titles).to eq([ "ハッカソン" ])
     end
 
     it "存在しないタグIDでは0件になる" do
-      get "/api/events", params: { tag_id: 999_999 }
+      get "/api/events", params: { tag_ids: 999_999 }
 
       expect(titles).to be_empty
     end
@@ -118,16 +157,16 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
     it "status と併用できる" do
       finished.tags = [ tag ]
 
-      get "/api/events", params: { tag_id: tag.id, status: "completed" }
+      get "/api/events", params: { tag_ids: tag.id, status: "completed" }
 
       expect(titles).to eq([ "終了した会" ])
     end
 
     # 論理削除済みは絞り込みの結果にも出てはいけない
-    it "論理削除済みは tag_id で絞っても出ない" do
+    it "論理削除済みは tag_ids で絞っても出ない" do
       hackathon.trashed!
 
-      get "/api/events", params: { tag_id: tag.id }
+      get "/api/events", params: { tag_ids: tag.id }
 
       expect(titles).to be_empty
     end
