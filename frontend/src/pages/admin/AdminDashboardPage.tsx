@@ -5,9 +5,6 @@ import { Button } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
-// 独自に「残N日 / 本日」を書いていたが、開催日が過去でも「本日」と出ていた。
-// countdown.ts が「同じ表示は1か所にまとめる」と決めているのに、
-// この画面だけそこを通っていなかった(Issue #62)
 import { formatCountdownDays } from "../../lib/countdown";
 import { AdminLayout } from "./AdminLayout";
 
@@ -63,6 +60,8 @@ function DashboardBody() {
         <StatCard
           label="今月のイベント"
           value={stats.events_this_month_count}
+          // 日数の書式は countdown.ts に集約する。ここで自前に書くと
+          // 他の画面と言い回しが割れる
           sub={
             stats.next_event === null
               ? "開催予定なし"
