@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
+import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
@@ -273,11 +274,7 @@ function UserRow({
       </Td>
       <Td>
         {/* 権限。停止中でも卒業生でも、その人が管理者であることは変わらない */}
-        {user.role === "admin" ? (
-          <Badge tone="admin">管理者</Badge>
-        ) : (
-          <span className="text-gray-400">—</span>
-        )}
+        {user.role === "admin" ? <Chip>管理者</Chip> : <span className="text-gray-400">—</span>}
       </Td>
       <Td>
         {/* 状態。停止は解除できるので卒業より前に見せる */}

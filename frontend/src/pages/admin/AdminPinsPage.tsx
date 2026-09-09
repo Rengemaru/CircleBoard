@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge } from "../../components/ui/Badge";
+import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
@@ -101,7 +101,7 @@ function PinPicker() {
             <div className="flex-1">
               <div className="flex items-center gap-2 text-[13px] font-semibold">
                 {pinned.title}
-                <Badge tone="pinned">📌 ピン留め</Badge>
+                <Chip>📌 ピン留め</Chip>
               </div>
               <div className="text-[11px] text-gray-500">
                 開催：{formatDate(pinned.starts_at)} ・ 参加：{pinned.participants_count}名
