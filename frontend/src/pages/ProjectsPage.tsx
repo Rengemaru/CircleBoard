@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  AnchorButton,
+  Base,
+  Chip,
+  Cluster,
+  PageHeading,
+  Stack,
+  StatusLabel,
+  Text,
+} from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
-import { Badge } from "../components/ui/Badge";
-import { LinkButton } from "../components/ui/LinkButton";
-import { Chip, FilterChip } from "../components/ui/Chip";
+import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { Note } from "../components/ui/Note";
-import { PageHeading } from "../components/ui/PageHeading";
 import { fetchProjects } from "../api/projects";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -106,7 +113,7 @@ export function ProjectsPage() {
   if (user === null) {
     return (
       <MemberPage user={null}>
-        <PageHeading title="プロジェクト" />
+        <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
         <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -114,111 +121,137 @@ export function ProjectsPage() {
 
   return (
     <MemberPage user={user}>
-      <PageHeading
-        title="プロジェクト"
-        subtitle="継続的に成果物を作る企画です。途中からでも参加できます"
-        action={
-          <LinkButton to="/create?kind=project" variant="primary" size="sm">
-            ＋ プロジェクトを作成
-          </LinkButton>
-        }
-      />
+      <Stack gap="M">
+        <Cluster align="center" justify="space-between">
+          <Stack gap="XXS">
+            {/* PageHeading は autoPageTitle が既定 true で、suffix が
+                'SmartHR（スマートHR）' 固定になっている。必ず差し替える */}
+            <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
+            <Text size="S" color="TEXT_GREY" leading="TIGHT">
+              継続的に成果物を作る企画です。途中からでも参加できます
+            </Text>
+          </Stack>
+          <AnchorButton elementAs={Link} to="/create?kind=project" variant="primary">
+            プロジェクトを作成
+          </AnchorButton>
+        </Cluster>
 
-      <FilterRow label="STATUS">
-        {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
-          <FilterChip
-            key={key}
-            active={status === key}
-            onClick={() => updateParams({ status: key })}
-          >
-            {STATUS_LABEL[key]}
-          </FilterChip>
-        ))}
-      </FilterRow>
-
-      {tagsError && (
-        <p className="mb-3 text-[13px] text-gray-500">
-          タグを読み込めませんでした。ページを再読み込みしてください。
-        </p>
-      )}
-
-      {tags.length > 0 && (
-        <FilterRow label="TAG">
-          <FilterChip active={selectedTagId === null} onClick={() => updateParams({ tagId: null })}>
-            すべて
-          </FilterChip>
-          {tags.map((tag) => (
-            <FilterChip
-              key={tag.id}
-              active={selectedTagId === tag.id}
-              onClick={() => updateParams({ tagId: tag.id })}
-            >
-              {tag.name}
-            </FilterChip>
-          ))}
-        </FilterRow>
-      )}
-
-      <div className="mt-5">
-        {error !== null ? (
-          <Note tone="danger">{error}</Note>
-        ) : projects === null ? (
-          <p className="text-[13px] text-gray-500">読み込み中…</p>
-        ) : projects.length === 0 ? (
-          <p className="text-[13px] text-gray-500">
-            {/* 一覧は募集中と進行中の両方を出す。「募集中はありません」だと、
-                進行中があるのに隠れていると誤読される(Issue #53) */}
-            {status === "all" && selectedTagId === null
-              ? "参加できるプロジェクトはありません。"
-              : "条件に合うプロジェクトはありません。条件を変えて試してください。"}
-          </p>
-        ) : (
-          <ul className="space-y-4">
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+        {/* リスト操作エリア（作成）は Base の外、一時操作エリア（絞り込み）は
+            Base の中の上部。「よくあるリスト」パターン(smarthr-list.mdx) */}
+        <Base overflow="hidden">
+          <FilterRow label="STATUS">
+            {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
+              <FilterButton
+                key={key}
+                active={status === key}
+                onClick={() => updateParams({ status: key })}
+              >
+                {STATUS_LABEL[key]}
+              </FilterButton>
             ))}
-          </ul>
-        )}
-      </div>
+          </FilterRow>
+
+          {tagsError && (
+            <div className="border-b border-gray-200 p-3">
+              <Text size="S" color="TEXT_GREY">
+                タグを読み込めませんでした。ページを再読み込みしてください。
+              </Text>
+            </div>
+          )}
+
+          {tags.length > 0 && (
+            <FilterRow label="TAG">
+              <FilterButton
+                active={selectedTagId === null}
+                onClick={() => updateParams({ tagId: null })}
+              >
+                すべて
+              </FilterButton>
+              {tags.map((tag) => (
+                <FilterButton
+                  key={tag.id}
+                  active={selectedTagId === tag.id}
+                  onClick={() => updateParams({ tagId: tag.id })}
+                >
+                  {tag.name}
+                </FilterButton>
+              ))}
+            </FilterRow>
+          )}
+
+          {error !== null ? (
+            <div className="p-4">
+              <Note tone="danger">{error}</Note>
+            </div>
+          ) : projects === null ? (
+            <EmptyRow>読み込み中…</EmptyRow>
+          ) : projects.length === 0 ? (
+            <EmptyRow>
+              {/* 一覧は募集中と進行中の両方を出す。「募集中はありません」だと、
+                  進行中があるのに隠れていると誤読される(Issue #53) */}
+              {status === "all" && selectedTagId === null
+                ? "参加できるプロジェクトはありません。"
+                : "条件に合うプロジェクトはありません。条件を変えて試してください。"}
+            </EmptyRow>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {projects.map((project) => (
+                <ProjectRow key={project.id} project={project} />
+              ))}
+            </ul>
+          )}
+        </Base>
+      </Stack>
     </MemberPage>
   );
 }
 
-function ProjectCard({ project }: { project: ProjectSummary }) {
+function EmptyRow({ children }: { children: string }) {
   return (
-    <li className="rounded border border-gray-200 bg-white p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
-          {project.status === "recruiting" ? "募集中" : "進行中"}
-        </Badge>
-        {project.tags.map((tag) => (
-          <Chip key={tag.id}>{tag.name}</Chip>
-        ))}
-      </div>
-      <h2 className="mt-2 text-sm font-bold">
-        <Link to={`/projects/${project.id}`} className="hover:underline">
-          {project.title}
-        </Link>
-      </h2>
-      <p className="mt-1.5 line-clamp-2 text-[13px] text-gray-700">{project.description}</p>
-      <div className="mt-2.5 text-xs text-gray-500">
-        {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
-        {formatMembers(project)}
-      </div>
-    </li>
+    <div className="p-6">
+      <Text size="S" color="TEXT_GREY">
+        {children}
+      </Text>
+    </div>
   );
 }
 
-// 画面④は STATUS と TAG の2行に分かれている。ラベルを付けて、
-// どちらの条件を触っているのかを取り違えないようにする
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+function ProjectRow({ project }: { project: ProjectSummary }) {
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-2">
-      <span className="w-14 shrink-0 font-mono text-[10px] tracking-wider text-gray-400">
-        {label}
-      </span>
-      {children}
-    </div>
+    <li className="p-4">
+      <Stack gap="XXS">
+        <Cluster align="center" gap="XS">
+          {/* オブジェクトのライフサイクル上の状態は1つだけ StatusLabel にする */}
+          <StatusLabel type={project.status === "recruiting" ? "blue" : "green"}>
+            {project.status === "recruiting" ? "募集中" : "進行中"}
+          </StatusLabel>
+          <Text size="S" color="TEXT_GREY" leading="TIGHT">
+            {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
+            {formatMembers(project)}
+          </Text>
+        </Cluster>
+
+        <Text size="M" leading="NORMAL">
+          <Link to={`/projects/${project.id}`} className="font-bold hover:underline">
+            {project.title}
+          </Link>
+        </Text>
+
+        {project.tags.length > 0 && (
+          <ul className="flex flex-wrap gap-1">
+            {project.tags.map((tag) => (
+              <li key={tag.id}>
+                <Chip size="S">{tag.name}</Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
+          {project.description}
+        </Text>
+      </Stack>
+    </li>
   );
 }
 
