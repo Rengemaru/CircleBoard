@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Button } from "../../components/ui/Button";
+import { LinkButton } from "../../components/ui/LinkButton";
 import { fetchCurrentUser, type CurrentUser } from "../../api/session";
+import { loginPathFrom } from "../../lib/redirectTo";
 
 type Props = {
   title: string;
@@ -20,19 +21,32 @@ type Props = {
 export function AdminLayout({ title, subtitle, action, children }: Props) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [checked, setChecked] = useState(false);
+  // /api/session は未ログインでも 200 + null を返す(docs/api-spec.md §1)ので、
+  // 例外が飛んだときは「未ログイン」ではなく「確かめられなかった」。
+  // ここを未ログイン扱いにすると、通信が切れただけでログインを促すことになる(Issue #72)
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     fetchCurrentUser()
       .then(setUser)
-      .catch(() => setUser(null))
+      .catch(() => setFailed(true))
       .finally(() => setChecked(true));
   }, []);
 
   if (!checked) {
     return <Notice>読み込み中…</Notice>;
   }
+  if (failed) {
+    return (
+      <Notice>
+        ログイン状態を確認できませんでした。通信を確認して、ページを再読み込みしてください。
+      </Notice>
+    );
+  }
   if (user === null) {
-    return <Notice>この画面を見るにはログインが必要です。</Notice>;
+    // 「見えません」で終わらせず、次に何をすればよいかを置く。
+    // member 側の LoginRequired と同じ形に揃える(Issue #72)
+    return <Notice login>この画面を見るにはログインが必要です。</Notice>;
   }
   if (user.role !== "admin") {
     return <Notice>管理者だけが使える画面です。</Notice>;
@@ -145,15 +159,27 @@ function NavItem({
 
 // 権限が無い / 読み込み中は、サイドバーごと出さない。
 // 管理画面の構造そのものを、入れない人に見せる必要がない
-function Notice({ children }: { children: React.ReactNode }) {
+function Notice({ login = false, children }: { login?: boolean; children: React.ReactNode }) {
+  // ログインしたら、いま開こうとしていた管理画面に戻す(Issue #37)
+  const location = useLocation();
+
   return (
     <main className="mx-auto max-w-4xl p-6">
       <p className="rounded border border-gray-200 bg-gray-50 p-4 text-gray-700">{children}</p>
-      <Link to="/" className="mt-4 inline-block">
-        <Button size="sm" variant="ghost">
+      <div className="mt-4 flex gap-2">
+        {login && (
+          <LinkButton
+            to={loginPathFrom(location.pathname + location.search)}
+            size="sm"
+            variant="primary"
+          >
+            ログイン
+          </LinkButton>
+        )}
+        <LinkButton to="/" size="sm" variant="ghost">
           ← サイトに戻る
-        </Button>
-      </Link>
+        </LinkButton>
+      </div>
     </main>
   );
 }

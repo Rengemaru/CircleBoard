@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { Note } from "../../components/ui/Note";
+import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Panel } from "../../components/ui/Panel";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
 import { formatCountdownDays } from "../../lib/countdown";
@@ -22,7 +22,9 @@ export function AdminDashboardPage() {
 
 function DashboardBody() {
   const [data, setData] = useState<Dashboard | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
+  // 表示側(ErrorNote)で判定するため(Issue #72)
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     fetchDashboard()
@@ -30,13 +32,11 @@ function DashboardBody() {
         setData(result);
         setError(null);
       })
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "読み込みに失敗しました"),
-      );
+      .catch((e: unknown) => setError(e));
   }, []);
 
   if (error !== null) {
-    return <Note tone="danger">{error}</Note>;
+    return <ErrorNote error={error} fallback="読み込みに失敗しました" />;
   }
   if (data === null) {
     return <p className="text-gray-500">読み込み中…</p>;

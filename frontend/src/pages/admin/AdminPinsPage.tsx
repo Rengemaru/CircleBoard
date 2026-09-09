@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { fetchAdminEvents, pinEvent, unpinEvent, type AdminEventRow } from "../../api/admin";
@@ -25,7 +26,9 @@ export function AdminPinsPage() {
 
 function PinPicker() {
   const [events, setEvents] = useState<AdminEventRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
+  // 表示側(ErrorNote)で判定するため(Issue #72)
+  const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   // ラジオで選んでから「ピン留めを保存」で確定する(ワイヤーフレーム⑥)。
@@ -39,7 +42,7 @@ function PinPicker() {
         setSelectedId(rows.find((e) => e.pinned)?.id ?? null);
         setError(null);
       })
-      .catch((e: unknown) => setError(toMessage(e)));
+      .catch((e: unknown) => setError(e));
   }
 
   useEffect(() => {
@@ -59,14 +62,14 @@ function PinPicker() {
       setSuccess(message);
       load();
     } catch (e: unknown) {
-      setError(toMessage(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
   }
 
   if (error !== null && events === null) {
-    return <Note tone="danger">{error}</Note>;
+    return <ErrorNote error={error} fallback="操作に失敗しました" />;
   }
   if (events === null) {
     return <p className="text-gray-500">読み込み中…</p>;
@@ -82,7 +85,7 @@ function PinPicker() {
         ピン留めしない場合は4枠すべて自動選出されます。
       </Note>
 
-      {error !== null && <Note tone="danger">{error}</Note>}
+      {error !== null && <ErrorNote error={error} fallback="操作に失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
 
       {/* 解除ボタンをここに置いていたが、押した瞬間に確定してしまい、
@@ -248,8 +251,4 @@ function formatDate(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "操作に失敗しました";
 }
