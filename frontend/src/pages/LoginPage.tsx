@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
-import { Field, INPUT_CLASS } from "../components/ui/Field";
+import { FormControl, Input, Stack } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
 import { Panel } from "../components/ui/Panel";
 import { login } from "../api/session";
@@ -50,27 +50,33 @@ export function LoginPage() {
         <form onSubmit={submit}>
           {error !== null && <Note tone="danger">{error}</Note>}
 
-          <Field label="メールアドレス" required>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-              className={INPUT_CLASS}
-            />
-          </Field>
+          {/* 必須の印は付けない。2項目しかなく両方とも必須であることが
+              自明な画面では、印が並ぶだけで情報が増えない
+              (SmartHR「フォーム入力が極めて少なく、すべて必須であることが
+              自明な場合は必須ステータスラベルの省略を検討する」) */}
+          <Stack gap={1.25} className="mb-4">
+            <FormControl label="メールアドレス">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                width="100%"
+              />
+            </FormControl>
 
-          <Field label="パスワード" required>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className={INPUT_CLASS}
-            />
-          </Field>
+            <FormControl label="パスワード">
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                width="100%"
+              />
+            </FormControl>
+          </Stack>
 
           <Button
             type="submit"
