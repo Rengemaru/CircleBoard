@@ -1,4 +1,11 @@
-// wireframe-admin-ver2.html の .admin-panel / .admin-panel-title に対応する。
+import { Cluster, Heading, Panel as ShrPanel, Section } from "smarthr-ui";
+
+// 白い枠で1つの塊を囲む箱(docs/instructions.md Phase 8-4)。
+//
+// 中身は smarthr-ui の Panel（＝Base に余白と角丸を付けたもの）。
+// 見出しを Section で囲んでいるのは、smarthr-ui が Heading を
+// SectioningContent の中に置くことを求めているため。見出しレベルを
+// 自分で h2 / h3 と決めずに、入れ子の深さから決まる形にできる。
 export function Panel({
   title,
   action,
@@ -12,14 +19,20 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`mb-4 rounded border border-gray-200 bg-white p-5 ${className}`}>
-      {title !== undefined && (
-        <h2 className="mb-3.5 flex items-center justify-between border-b border-gray-200 pb-2.5 text-sm font-bold">
-          {title}
-          {action}
-        </h2>
-      )}
-      {children}
-    </section>
+    <Section className={`mb-4 block ${className}`}>
+      <ShrPanel padding={1.25}>
+        {title !== undefined && (
+          <Cluster
+            align="center"
+            justify="space-between"
+            className="mb-3.5 border-b border-gray-200 pb-2.5"
+          >
+            <Heading type="blockTitle">{title}</Heading>
+            {action}
+          </Cluster>
+        )}
+        {children}
+      </ShrPanel>
+    </Section>
   );
 }
