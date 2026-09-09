@@ -4,6 +4,7 @@ import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
 import { FormControl, Input, Stack } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { login } from "../api/session";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -46,7 +47,11 @@ export function LoginPage() {
 
   return (
     <MemberPage user={user} width="narrow" sessionFailed={failed}>
-      <Panel title="ログイン">
+      {/* 画面名は PageHeading で出す。Panel の title は見出しに見えるが
+          h1 ではなく、document.title も書き換えない。SPA なので前の画面の
+          タブ名が残ったままになる */}
+      <PageHeading title="ログイン" />
+      <Panel>
         <form onSubmit={submit}>
           {error !== null && <Note tone="danger">{error}</Note>}
 
