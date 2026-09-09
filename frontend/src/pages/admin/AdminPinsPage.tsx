@@ -98,7 +98,7 @@ function PinPicker() {
             <div className="flex-1">
               <div className="flex items-center gap-2 text-[13px] font-semibold">
                 {pinned.title}
-                <Badge tone="pinned">📌 ピン留め中</Badge>
+                <Badge tone="pinned">📌 ピン留め</Badge>
               </div>
               <div className="text-[11px] text-gray-500">
                 開催：{formatDate(pinned.starts_at)} ・ 参加：{pinned.participants_count}名
