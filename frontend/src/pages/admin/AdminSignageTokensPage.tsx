@@ -5,7 +5,9 @@ import { Field, INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
+import { Section } from "smarthr-ui";
 import { Panel } from "../../components/ui/Panel";
+import { SectionHeading } from "../../components/ui/SectionHeading";
 import {
   createSignageToken,
   fetchSignageTokens,
@@ -169,17 +171,24 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       {error !== null && <ErrorNote error={error} fallback="操作に失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
 
-      <SectionHeading>有効なトークン</SectionHeading>
-      {active.length === 0 ? (
-        <p className="mb-5 text-[13px] text-gray-500">有効なトークンがありません。</p>
-      ) : (
-        active.map((token) => (
-          <TokenCard key={token.id} token={token} busy={busy} onRevoke={() => setRevoking(token)} />
-        ))
-      )}
+      <Section className="block">
+        <SectionHeading>有効なトークン</SectionHeading>
+        {active.length === 0 ? (
+          <p className="mb-5 text-[13px] text-gray-500">有効なトークンがありません。</p>
+        ) : (
+          active.map((token) => (
+            <TokenCard
+              key={token.id}
+              token={token}
+              busy={busy}
+              onRevoke={() => setRevoking(token)}
+            />
+          ))
+        )}
+      </Section>
 
       {revoked.length > 0 && (
-        <>
+        <Section className="block">
           <SectionHeading>無効化済み</SectionHeading>
           {revoked.map((token) => (
             <TokenCard key={token.id} token={token} busy={busy} onRevoke={null} />
@@ -187,7 +196,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
           <p className="text-xs text-gray-500">
             無効にした端末も一覧に残ります。どの端末をいつ止めたかを追えるようにするためです。
           </p>
-        </>
+        </Section>
       )}
 
       {revoking !== null && (
@@ -264,14 +273,6 @@ function TokenCard({
         )}
       </span>
     </div>
-  );
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 border-b-2 border-gray-200 pb-1.5 text-[13px] font-bold text-gray-700">
-      {children}
-    </h2>
   );
 }
 

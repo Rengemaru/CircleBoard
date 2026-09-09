@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Section } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
@@ -88,10 +89,10 @@ function SpotlightSection({
   // 出すと同じ文言が2回並ぶ
   if (error !== null) {
     return (
-      <section>
+      <Section>
         <SectionHeading>注目イベント</SectionHeading>
         <Note tone="danger">{error}</Note>
-      </section>
+      </Section>
     );
   }
 
@@ -102,15 +103,15 @@ function SpotlightSection({
   const spotlight = events.slice(0, SPOTLIGHT_LIMIT);
   if (spotlight.length === 0) {
     return (
-      <section>
+      <Section>
         <SectionHeading>注目イベント</SectionHeading>
         <p className="text-[13px] text-gray-500">いま募集中のイベントはありません。</p>
-      </section>
+      </Section>
     );
   }
 
   return (
-    <section>
+    <Section>
       <SectionHeading>注目イベント</SectionHeading>
       <ul className={spotlight.length === 1 ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         {spotlight.map((event) => (
@@ -154,7 +155,7 @@ function SpotlightSection({
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
@@ -172,7 +173,7 @@ function ProjectSection({
   sessionFailed: boolean;
 }) {
   return (
-    <section>
+    <Section>
       <SectionHeading link="/projects">プロジェクト</SectionHeading>
       {sessionFailed ? (
         <SessionUnavailable />
@@ -203,7 +204,7 @@ function ProjectSection({
           ))}
         </ListPanel>
       )}
-    </section>
+    </Section>
   );
 }
 
@@ -219,7 +220,7 @@ function EventListSection({
   if (events === null || events.length === 0) return null;
 
   return (
-    <section>
+    <Section>
       <SectionHeading link="/events">イベント</SectionHeading>
       <ListPanel>
         {events.slice(0, EVENT_LIST_LIMIT).map((event) => (
@@ -232,7 +233,7 @@ function EventListSection({
           </li>
         ))}
       </ListPanel>
-    </section>
+    </Section>
   );
 }
 
