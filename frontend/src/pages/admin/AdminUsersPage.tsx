@@ -180,25 +180,30 @@ function UserList({ currentUserId }: { currentUserId: number }) {
         で対応します(CLAUDE.md §10)。
       </Note>
 
+      {/* ⚠️ は取り消せない操作にだけ付ける。停止や企画の削除は元に戻せるので付けない。
+          可逆・不可逆の両方に付けると、記号として何も伝えなくなる(Issue #41) */}
       {deleting !== null && (
         <Modal
-          title="⚠️ メンバーを削除しますか？"
-          confirmLabel="削除する"
+          title="⚠️ このアカウントを完全に削除しますか？"
+          confirmLabel="完全に削除する"
           busy={busy}
           onCancel={() => setDeleting(null)}
           onConfirm={() => run(() => deleteUser(deleting.id))}
         >
           <p>
-            <strong>{deleting.name}</strong>（{deleting.email}）を削除します。
+            <strong>{deleting.name}</strong>（{deleting.email}）のアカウントを削除します。
             <br />
-            この操作は取り消せません。過去の参加履歴は名前が空欄のまま残ります。
+            <strong>取り消せません。</strong>
+            企画一覧の「削除」とは違い、この画面から戻すことはできません。
+            <br />
+            過去の参加履歴は名前が空欄のまま残ります。
           </p>
         </Modal>
       )}
 
       {suspending !== null && (
         <Modal
-          title="⚠️ アカウントを停止しますか？"
+          title="アカウントを停止しますか？"
           confirmLabel="停止する"
           busy={busy}
           onCancel={() => setSuspending(null)}
@@ -232,11 +237,7 @@ function UserRow({
   busy: boolean;
 }) {
   return (
-    <tr
-      className={
-        user.suspended ? "bg-red-50" : user.graduated ? "opacity-65" : ""
-      }
-    >
+    <tr className={user.suspended ? "bg-red-50" : user.graduated ? "opacity-65" : ""}>
       <Td>
         <span className={isSelf ? "font-bold" : ""}>{user.name}</span>
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}
@@ -273,7 +274,7 @@ function UserRow({
               </Button>
             )}
             <Button variant="danger" size="xs" onClick={onDelete} disabled={busy}>
-              削除
+              完全に削除
             </Button>
           </span>
         )}

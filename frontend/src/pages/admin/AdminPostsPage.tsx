@@ -187,16 +187,19 @@ function PostList() {
 
       {trashing !== null && (
         <Modal
-          title="⚠️ 企画を削除しますか？"
+          title="この企画を削除しますか？"
           confirmLabel="削除する"
           busy={busy}
           onCancel={() => setTrashing(null)}
           onConfirm={() => run(() => trashPost(trashing.kind, trashing.id))}
         >
           <p>
-            <strong>{trashing.title}</strong>（{KIND_LABEL[trashing.kind]}）を削除します。
+            {/* 折り返すと JSX が改行を空白にしてしまうので、文はつなげて書く */}
+            <strong>{trashing.title}</strong>（{KIND_LABEL[trashing.kind]}
+            ）を一覧とサイネージから消します。
             <br />
-            参加者{trashing.participants_count}名の記録は残り、この画面から復旧できます。
+            <strong>あとからこの画面の「復旧」で元に戻せます。</strong>
+            参加者{trashing.participants_count}名の記録も残ります。
           </p>
         </Modal>
       )}
