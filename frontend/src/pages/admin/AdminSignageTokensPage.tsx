@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
-import { Field, INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
-import { Section } from "smarthr-ui";
+import { FormControl, Input, Section, StatusLabel } from "smarthr-ui";
 import { Panel } from "../../components/ui/Panel";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import {
@@ -144,15 +143,16 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       {issuing && (
         <Panel title="トークンを発行する">
           <form onSubmit={issue}>
-            <Field label="ディスプレイ名（管理用）" required>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="例：部室メインディスプレイ"
-                className={INPUT_CLASS}
-              />
-            </Field>
+            {/* placeholder ではなく exampleMessage に置く。入力を始めると
+                消える手がかりに頼らない(smarthr-ui は placeholder を非推奨) */}
+            <FormControl
+              label="ディスプレイ名（管理用）"
+              statusLabels={<StatusLabel type="red">必須</StatusLabel>}
+              exampleMessage="部室メインディスプレイ"
+              className="mb-4"
+            >
+              <Input value={name} onChange={(e) => setName(e.target.value)} required width="100%" />
+            </FormControl>
             <Note>
               発行するとランダムな32文字のトークンが生成されます。URLをディスプレイのブラウザに設定してください。
             </Note>
