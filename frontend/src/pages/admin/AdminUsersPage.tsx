@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Table, Td, Th } from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
@@ -153,9 +154,10 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           <span className="text-xs text-gray-500">卒業年度が新しい順</span>
         </div>
 
-        {/* 列が多い表は横に溢れる。ページ全体を横スクロールさせない */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        {/* Table は既定で reel が有効で、横に溢れるときだけ自分でスクロールさせる。
+            ページ全体が横スクロールしないのは今までと同じ */}
+        <div>
+          <Table>
             <thead>
               <tr>
                 <Th>名前</Th>
@@ -183,7 +185,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                 />
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
 
         {visible.length === 0 && (
@@ -309,22 +311,6 @@ function UserRow({
         )}
       </Td>
     </tr>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
-      {children}
-    </th>
-  );
-}
-
-function Td({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <td className={`border-b border-gray-100 px-4 py-3 align-middle text-[13px] ${className}`}>
-      {children}
-    </td>
   );
 }
 
