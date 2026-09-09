@@ -1,8 +1,15 @@
-// wireframe-admin-ver2.html の .admin-topbar-title / .admin-topbar-sub に対応する。
+import { Cluster, PageHeading as ShrPageHeading } from "smarthr-ui";
+
+// 画面の先頭に置く「画面名 + その画面で何ができるか」(docs/instructions.md Phase 8-4)。
 //
-// 管理画面ではトップバーが持っている「画面名 + その画面で何ができるか」を、
-// メンバー画面では本文の先頭に置く。member 用のワイヤーフレームは無いので、
-// 管理画面と同じ字送り・同じ大きさを使う(docs/instructions.md T7-5)。
+// smarthr-ui の PageHeading は h1 を出すと同時に、autoPageTitle で
+// document.title も書き換える。ブラウザのタブと履歴に画面名が残るので、
+// 自前の h1 に戻すとタブが全部「CircleBoard」になる。
+//
+// suffix をここに固定しているのは、画面ごとに書くと1つだけ書き忘れても
+// 誰も気づかないため。実際 /create と /legal は suffix 無しだった。
+const PAGE_TITLE_SUFFIX = "CircleBoard";
+
 export function PageHeading({
   title,
   subtitle,
@@ -14,12 +21,14 @@ export function PageHeading({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <Cluster align="center" justify="space-between" className="mb-5">
       <div>
-        <h1 className="text-base font-bold">{title}</h1>
+        <ShrPageHeading size="L" pageTitleSuffix={PAGE_TITLE_SUFFIX}>
+          {title}
+        </ShrPageHeading>
         {subtitle !== undefined && <p className="mt-px text-xs text-gray-500">{subtitle}</p>}
       </div>
       {action}
-    </div>
+    </Cluster>
   );
 }

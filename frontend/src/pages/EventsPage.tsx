@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  AnchorButton,
-  Base,
-  Chip,
-  Cluster,
-  PageHeading,
-  Stack,
-  StatusLabel,
-  Text,
-} from "smarthr-ui";
+import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
+import { PageHeading } from "../components/ui/PageHeading";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { Note } from "../components/ui/Note";
 import { fetchEvents } from "../api/events";
@@ -87,10 +79,7 @@ export function EventsPage() {
       <Stack gap="M">
         <Cluster align="center" justify="space-between">
           <Stack gap="XXS">
-            {/* PageHeading は autoPageTitle が既定 true で、suffix が
-                'SmartHR（スマートHR）' 固定になっている。そのままだと
-                タブのタイトルに他社の社名が入るので、必ず差し替える */}
-            <PageHeading pageTitleSuffix="CircleBoard">イベント</PageHeading>
+            <PageHeading title="イベント" />
             <Text size="S" color="TEXT_GREY" leading="TIGHT">
               単発の企画です。閲覧はログインなしでもできます
             </Text>

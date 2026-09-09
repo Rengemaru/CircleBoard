@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  AnchorButton,
-  Base,
-  Chip,
-  Cluster,
-  PageHeading,
-  Stack,
-  StatusLabel,
-  Text,
-} from "smarthr-ui";
+import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
+import { PageHeading } from "../components/ui/PageHeading";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { Note } from "../components/ui/Note";
 import { fetchProjects } from "../api/projects";
@@ -125,7 +117,7 @@ export function ProjectsPage() {
   if (failed) {
     return (
       <MemberPage user={null} sessionFailed>
-        <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
+        <PageHeading title="プロジェクト" />
         <SessionUnavailable />
       </MemberPage>
     );
@@ -135,7 +127,7 @@ export function ProjectsPage() {
   if (user === null) {
     return (
       <MemberPage user={null}>
-        <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
+        <PageHeading title="プロジェクト" />
         <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -146,9 +138,7 @@ export function ProjectsPage() {
       <Stack gap="M">
         <Cluster align="center" justify="space-between">
           <Stack gap="XXS">
-            {/* PageHeading は autoPageTitle が既定 true で、suffix が
-                'SmartHR（スマートHR）' 固定になっている。必ず差し替える */}
-            <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
+            <PageHeading title="プロジェクト" />
             <Text size="S" color="TEXT_GREY" leading="TIGHT">
               継続的に成果物を作る企画です。途中からでも参加できます
             </Text>
