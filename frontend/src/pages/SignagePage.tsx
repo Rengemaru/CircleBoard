@@ -19,6 +19,13 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // 端末なので自力で復帰できなかった。データだけ取り直す(Issue #47)。
 const REFRESH_INTERVAL_SECONDS = 60;
 
+// 視認距離2〜3mで読める文字の下限。1920px 幅で約25px にあたり、
+// ファイル冒頭の「最小フォントは24px相当」を満たす。
+//
+// className に書くと Tailwind の任意値がリテラルになり、下回っていても
+// レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
+const MIN_FONT_SIZE = "1.3vw";
+
 // 失敗の種類。部室に入った人が最初に打つ手が変わるので分ける
 type Failure = "invalid_token" | "offline";
 
@@ -136,7 +143,9 @@ function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failu
     <header className="flex items-end justify-between border-b border-[#2b2e3c] pb-[1.1%]">
       <div>
         <div className="text-[2.1vw] font-bold tracking-tight">CircleBoard</div>
-        <div className="mt-1 text-[1.05vw] text-[#5d6474]">情報系学生サークル</div>
+        <div className="mt-1 text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+          情報系学生サークル
+        </div>
       </div>
       <div className="flex items-end gap-[2vw]">
         <FetchStatus fetchedAt={fetchedAt} failure={failure} />
@@ -152,7 +161,7 @@ function FetchStatus({ fetchedAt, failure }: { fetchedAt: Date | null; failure: 
   if (fetchedAt === null) return null;
 
   return (
-    <div className="max-w-[26vw] text-right text-[1.05vw] leading-snug">
+    <div className="max-w-[26vw] text-right leading-snug" style={{ fontSize: MIN_FONT_SIZE }}>
       <div className="text-[#5d6474]">最終更新 {formatClock(fetchedAt)}</div>
       {failure !== null && (
         // 更新できていないことは、色だけでなく文言でも伝える
@@ -179,14 +188,19 @@ function Clock() {
       <div className="font-mono text-[3.1vw] font-bold leading-none tracking-tight">
         {formatClock(now)}
       </div>
-      <div className="mt-[0.35em] text-[1.05vw] text-[#5d6474]">{formatToday(now)}</div>
+      <div className="mt-[0.35em] text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+        {formatToday(now)}
+      </div>
     </div>
   );
 }
 
 function SectionTitle({ label, count, color }: { label: string; count: number; color: string }) {
   return (
-    <div className="mb-[0.9%] flex items-center gap-[0.7em] text-[1.25vw] font-bold tracking-[0.08em] text-[#9aa0ae]">
+    <div
+      className="mb-[0.9%] flex items-center gap-[0.7em] font-bold tracking-[0.08em] text-[#9aa0ae]"
+      style={{ fontSize: MIN_FONT_SIZE }}
+    >
       <span className="h-[1.15em] w-[0.35em]" style={{ backgroundColor: color }} />
       {label}
       <span className="ml-auto font-normal text-[#5d6474]">{count}</span>
@@ -225,7 +239,10 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
       <div className="min-w-0">
         <div className="flex items-baseline gap-[1em]">
           {event.pinned && (
-            <span className="rounded bg-[#fcd34d] px-2 py-0.5 text-[0.9vw] font-bold text-[#0f0f15]">
+            <span
+              className="rounded bg-[#fcd34d] px-2 py-0.5 font-bold text-[#0f0f15]"
+              style={{ fontSize: MIN_FONT_SIZE }}
+            >
               注目
             </span>
           )}
@@ -236,7 +253,7 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
             {formatCountdownDays(event.days_until)}
           </span>
         </div>
-        <div className="mt-[0.6em] text-[1.05vw] text-[#9aa0ae]">
+        <div className="mt-[0.6em] text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
           {formatStartsAt(event.starts_at)} ・ {event.location}
         </div>
         <h2
@@ -248,7 +265,11 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
         {event.tags.length > 0 && (
           <ul className="mt-[0.6em] flex flex-wrap gap-[0.5em]">
             {event.tags.map((tag) => (
-              <li key={tag.id} className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em] text-[0.95vw]">
+              <li
+                key={tag.id}
+                className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
+                style={{ fontSize: MIN_FONT_SIZE }}
+              >
                 {tag.name}
               </li>
             ))}
@@ -280,8 +301,9 @@ function ProjectCard({ project }: { project: SignageProject }) {
     <article className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03] p-[1.5%]">
       <div className="min-w-0">
         <span
-          className="rounded px-[0.6em] py-[0.2em] text-[0.95vw] font-bold"
+          className="rounded px-[0.6em] py-[0.2em] font-bold"
           style={{
+            fontSize: MIN_FONT_SIZE,
             backgroundColor: project.status === "recruiting" ? "#4ade80" : "#5eb3f5",
             color: "#0f0f15",
           }}
@@ -290,11 +312,13 @@ function ProjectCard({ project }: { project: SignageProject }) {
         </span>
         <h2 className="mt-[0.4em] truncate text-[1.5vw] font-bold">{project.title}</h2>
         {project.meeting_schedule !== null && (
-          <div className="mt-[0.3em] truncate text-[1vw] text-[#9aa0ae]">
+          <div className="mt-[0.3em] truncate text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
             {project.meeting_schedule}
           </div>
         )}
-        <div className="mt-[0.3em] text-[1vw] text-[#9aa0ae]">{formatMembers(project)}</div>
+        <div className="mt-[0.3em] text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
+          {formatMembers(project)}
+        </div>
       </div>
       <QRCodeSVG value={project.detail_url} size={90} bgColor="#f2f3f7" level="M" />
     </article>
