@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Section } from "smarthr-ui";
+import { Base, Cluster, Heading, Section, Stack, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
@@ -115,13 +115,14 @@ function SpotlightSection({
       <SectionHeading>注目イベント</SectionHeading>
       <ul className={spotlight.length === 1 ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         {spotlight.map((event) => (
-          <li key={event.id} className="rounded border border-gray-200 bg-white p-5">
-            {event.pinned && (
-              <div className="mb-2">
-                <Chip>📌 ピン留め</Chip>
-              </div>
-            )}
-            {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
+          <Base as="li" key={event.id} padding={1.25}>
+            <Stack gap="XXS">
+              {event.pinned && (
+                <Cluster gap="XS">
+                  <Chip>📌 ピン留め</Chip>
+                </Cluster>
+              )}
+              {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
                 ではなく「あと何日か」になっていた。28px は ver2 の .stat-value
                 （ダッシュボードの統計値）から借りた値で、ワイヤーフレームの
                 .cd は 17px。
@@ -132,27 +133,28 @@ function SpotlightSection({
                 一覧から詳細へ移るたびに視線の置き場所が変わる。
                 ワイヤーフレームは日数を大きくしているが、/events は Phase 8 で
                 既にその配分を離れており、そちらに合わせる(Issue #59) */}
-            <div className="text-sm leading-none font-bold text-gray-900">
-              {formatCountdown(event.starts_at)}
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              {formatDate(event.starts_at)} ・ {event.location}
-            </div>
-            <h3 className="mt-1 text-base font-bold">
-              <Link to={`/events/${event.id}`} className="hover:underline">
-                {event.title}
-              </Link>
-            </h3>
-            {event.tags.length > 0 && (
-              <ul className="mt-2.5 flex flex-wrap gap-1.5">
-                {event.tags.map((tag) => (
-                  <li key={tag.id}>
-                    <Chip>{tag.name}</Chip>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
+              <Text size="S" weight="bold">
+                {formatCountdown(event.starts_at)}
+              </Text>
+              <Text size="S" color="TEXT_GREY">
+                {formatDate(event.starts_at)} ・ {event.location}
+              </Text>
+              <Heading type="subBlockTitle">
+                <TextLink elementAs={Link} to={`/events/${event.id}`}>
+                  {event.title}
+                </TextLink>
+              </Heading>
+              {event.tags.length > 0 && (
+                <Cluster gap="XXS" as="ul">
+                  {event.tags.map((tag) => (
+                    <li key={tag.id}>
+                      <Chip>{tag.name}</Chip>
+                    </li>
+                  ))}
+                </Cluster>
+              )}
+            </Stack>
+          </Base>
         ))}
       </ul>
     </Section>
@@ -182,24 +184,29 @@ function ProjectSection({
       ) : error !== null ? (
         <Note tone="danger">{error}</Note>
       ) : projects === null ? (
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
       ) : projects.length === 0 ? (
         // 一覧と同じく募集中と進行中の両方を出すので、募集中だけを否定しない(Issue #53)
-        <p className="text-[13px] text-gray-500">参加できるプロジェクトはありません。</p>
+        <Text size="S" color="TEXT_GREY">
+          参加できるプロジェクトはありません。
+        </Text>
       ) : (
         <ListPanel>
           {projects.slice(0, 3).map((project) => (
-            <li key={project.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
-              <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
-                {project.status === "recruiting" ? "募集中" : "進行中"}
-              </Badge>
-              <Link
-                to={`/projects/${project.id}`}
-                className="text-[13px] font-bold hover:underline"
-              >
-                {project.title}
-              </Link>
-              <span className="ml-auto text-xs text-gray-500">{formatProjectMeta(project)}</span>
+            <li key={project.id} className="px-4 py-3">
+              <Cluster align="center" gap="XS">
+                <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
+                  {project.status === "recruiting" ? "募集中" : "進行中"}
+                </Badge>
+                <TextLink elementAs={Link} to={`/projects/${project.id}`} size="S">
+                  {project.title}
+                </TextLink>
+                <Text size="S" color="TEXT_GREY" className="ml-auto">
+                  {formatProjectMeta(project)}
+                </Text>
+              </Cluster>
             </li>
           ))}
         </ListPanel>
@@ -224,12 +231,18 @@ function EventListSection({
       <SectionHeading link="/events">イベント</SectionHeading>
       <ListPanel>
         {events.slice(0, EVENT_LIST_LIMIT).map((event) => (
-          <li key={event.id} className="flex items-baseline gap-3 px-4 py-3 text-[13px]">
-            <span className="shrink-0 text-xs text-gray-500">{formatDate(event.starts_at)}</span>
-            <Link to={`/events/${event.id}`} className="truncate font-bold hover:underline">
-              {event.title}
-            </Link>
-            <span className="ml-auto shrink-0 text-xs text-gray-500">{formatCapacity(event)}</span>
+          <li key={event.id} className="px-4 py-3">
+            <Cluster align="center" gap="XS">
+              <Text size="S" color="TEXT_GREY" className="shrink-0">
+                {formatDate(event.starts_at)}
+              </Text>
+              <TextLink elementAs={Link} to={`/events/${event.id}`} size="S">
+                {event.title}
+              </TextLink>
+              <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
+                {formatCapacity(event)}
+              </Text>
+            </Cluster>
           </li>
         ))}
       </ListPanel>
