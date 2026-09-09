@@ -243,15 +243,19 @@ function PostRow({
       <Td>{post.trashed ? <s>{post.title}</s> : <strong>{post.title}</strong>}</Td>
       <Td className="text-gray-500">{KIND_LABEL[post.kind]}</Td>
       <Td>
-        {post.trashed ? (
-          <Badge tone="trashed">削除済み</Badge>
-        ) : post.status === "recruiting" ? (
-          <Badge tone="recruiting">募集中</Badge>
-        ) : post.status === "in_progress" ? (
-          <Badge tone="inprogress">進行中</Badge>
-        ) : (
-          <Badge tone="completed">終了</Badge>
-        )}
+        {/* 削除済みでも元のステータスを併記する。出さないと「復旧」を押したとき
+            募集中に戻るのか終了に戻るのかが押す前に分からない(Issue #65)。
+            削除は状態を書き換えないので、trashed と status は別の軸 */}
+        <span className="flex flex-wrap items-center gap-1">
+          {post.trashed && <Badge tone="trashed">削除済み</Badge>}
+          {post.status === "recruiting" ? (
+            <Badge tone="recruiting">募集中</Badge>
+          ) : post.status === "in_progress" ? (
+            <Badge tone="inprogress">進行中</Badge>
+          ) : (
+            <Badge tone="completed">終了</Badge>
+          )}
+        </span>
       </Td>
       {/* 退会したメンバーの企画は owner が null で残る(ON DELETE SET NULL) */}
       <Td className="text-gray-500">{post.owner_name ?? "（退会済み）"}</Td>
