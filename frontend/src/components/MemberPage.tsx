@@ -11,15 +11,18 @@ import type { CurrentUser } from "../api/session";
 export function MemberPage({
   user,
   width = "wide",
+  sessionFailed = false,
   children,
 }: {
   user: CurrentUser | null;
   width?: "wide" | "narrow";
+  // ログイン状態を確かめられなかったとき。未ログインとは区別する(Issue #72)
+  sessionFailed?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <>
-      <SiteHeader user={user} />
+      <SiteHeader user={user} sessionFailed={sessionFailed} />
       <main className={`mx-auto px-6 py-6 ${width === "narrow" ? "max-w-md" : "max-w-3xl"}`}>
         {children}
       </main>

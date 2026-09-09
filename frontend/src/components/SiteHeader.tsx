@@ -10,7 +10,13 @@ import { loginPathFrom } from "../lib/redirectTo";
 // 見た目は wireframes/wireframe-admin-ver2.html の .admin-topbar に合わせている。
 // member 用の新しいワイヤーフレームは無いので、管理画面と同じ寸法・色・字送りを
 // 使うことで「同じプロダクトの画面」に見せる(docs/instructions.md Phase 7 T7-5)。
-export function SiteHeader({ user }: { user: CurrentUser | null }) {
+export function SiteHeader({
+  user,
+  sessionFailed = false,
+}: {
+  user: CurrentUser | null;
+  sessionFailed?: boolean;
+}) {
   // ログインしたら、いま見ていた画面に戻す(Issue #37)
   const location = useLocation();
 
@@ -26,7 +32,10 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
           <NavLink to="/events">イベント</NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-3 text-[13px]">
-          {user === null ? (
+          {/* ログイン状態が分からないときは、ログインボタンも名前も出さない。
+              本文が「確認できませんでした」と言っている横で「ログイン」を出すと、
+              ログアウトされたのだと読めてしまう(Issue #72) */}
+          {sessionFailed ? null : user === null ? (
             <LinkButton to={loginPathFrom(location.pathname + location.search)} size="sm">
               ログイン
             </LinkButton>

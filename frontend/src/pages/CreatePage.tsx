@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
+import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
 import { FilterChip } from "../components/ui/Chip";
@@ -47,7 +48,7 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 export function CreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, loading } = useCurrentUser();
+  const { user, loading, failed } = useCurrentUser();
   // どちらを作りに来たかは呼び出し元のボタンが決める。一覧の「プロジェクトを
   // 作成」から来た人にイベントのフォームを出さない(Issue #38)
   const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
@@ -133,6 +134,15 @@ export function CreatePage() {
   // 作成ボタンは未ログインでも見せてよいが、押下時は /login へ。
   // ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
   // (wireframe-member.html ②の注記)。API側は必ず401を返す
+  // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
+  if (failed) {
+    return (
+      <MemberPage user={null} sessionFailed>
+        <SessionUnavailable />
+      </MemberPage>
+    );
+  }
+
   if (user === null) {
     return (
       <MemberPage user={null}>

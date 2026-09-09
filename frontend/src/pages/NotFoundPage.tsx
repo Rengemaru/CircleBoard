@@ -6,11 +6,11 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 // 定義していないURLを開いたとき。SPAなのでサーバーは200を返し、
 // 何も出さないと真っ白な画面になる。行き先を示す
 export function NotFoundPage() {
-  const { user } = useCurrentUser();
+  const { user, failed } = useCurrentUser();
 
   return (
     <>
-      <SiteHeader user={user} />
+      <SiteHeader user={user} sessionFailed={failed} />
       <main className="mx-auto max-w-3xl px-6 py-6">
         <Panel>
           <h1 className="text-base font-bold">ページが見つかりません</h1>
