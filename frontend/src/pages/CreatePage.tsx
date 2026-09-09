@@ -52,6 +52,7 @@ export function CreatePage() {
   // 作成」から来た人にイベントのフォームを出さない(Issue #38)
   const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
   const [tags, setTags] = useState<Tag[]>([]);
+  const [tagsError, setTagsError] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -64,9 +65,11 @@ export function CreatePage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // 失敗を空配列に倒すと「選べるタグがありません。」と断定してしまう。
+    // 実際は通信できていないだけかもしれない(Issue #52)
     fetchTags()
       .then(setTags)
-      .catch(() => setTags([]));
+      .catch(() => setTagsError(true));
   }, []);
 
   async function submit(event: React.FormEvent) {
@@ -249,7 +252,11 @@ export function CreatePage() {
 
         {/* タグは既存のものから選ぶ。作成APIは無い(docs/api-spec.md §4) */}
         <Panel title="タグ">
-          {tags.length === 0 ? (
+          {tagsError ? (
+            <p className="text-[13px] text-gray-500">
+              タグを読み込めませんでした。ページを再読み込みしてください。
+            </p>
+          ) : tags.length === 0 ? (
             <p className="text-[13px] text-gray-500">選べるタグがありません。</p>
           ) : (
             <div className="flex flex-wrap gap-2">
