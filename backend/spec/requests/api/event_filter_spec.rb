@@ -142,6 +142,33 @@ RSpec.describe "GET /api/events の絞り込み", type: :request do
       expect(titles).to include("ハッカソン")
     end
 
+    # Integer("010") は基数を省くと8進数として 8 になる。フロントの
+    # Number("010") は 10 なので、押したタグと違う結果が返る
+    it "先頭にゼロが付いていても10進数として読む" do
+      other = create(:tag, name: "10番目のタグ")
+      lt = create(:event, title: "ゼロ埋めの会", starts_at: 5.days.from_now, tags: [ other ])
+
+      get "/api/events", params: { tag_ids: format("%03d", other.id) }
+
+      expect(titles).to eq([ lt.title ])
+    end
+
+    # 桁の大きい値を渡しても 500 にしない
+    # (docs/api-spec.md「URLを手で書き換えられてもエラーにせず」)
+    it "bigint を超える値でもエラーにならない" do
+      get "/api/events", params: { tag_ids: "99999999999999999999" }
+
+      expect(response).to have_http_status(:ok)
+      expect(titles).to be_empty
+    end
+
+    it "負の値でもエラーにならない" do
+      get "/api/events", params: { tag_ids: "-1" }
+
+      expect(response).to have_http_status(:ok)
+      expect(titles).to be_empty
+    end
+
     it "数字でない値が混ざっていても、数字の分だけで絞る" do
       get "/api/events", params: { tag_ids: "abc,#{tag.id}" }
 
