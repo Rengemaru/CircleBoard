@@ -239,7 +239,9 @@ function PostRow({
   busy: boolean;
 }) {
   return (
-    <tr className={post.trashed ? "bg-gray-50 opacity-65" : ""}>
+    // 削除済みは背景で示す。opacity を下げると文字が読めなくなる(Issue #68)。
+    // 削除済みバッジと打ち消し線でも分かるので、色だけに頼っていない
+    <tr className={post.trashed ? "bg-gray-100" : ""}>
       <Td>{post.trashed ? <s>{post.title}</s> : <strong>{post.title}</strong>}</Td>
       <Td className="text-gray-500">{KIND_LABEL[post.kind]}</Td>
       <Td>
