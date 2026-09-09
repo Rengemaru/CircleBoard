@@ -41,6 +41,9 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
   const [success, setSuccess] = useState<string | null>(null);
   // 無効化は取り消せないので、他の破壊的操作と同じく確認を挟む(Issue #39)
   const [revoking, setRevoking] = useState<SignageTokenRow | null>(null);
+  // いま発行したトークン。この画面の目的は発行したURLを端末に設定することなので、
+  // 同じ見た目のカードが1枚増えるだけでは、どれが新しいのか分からない(Issue #67)
+  const [issued, setIssued] = useState<SignageTokenRow | null>(null);
 
   // 再読み込みに成功したらエラーを消す。消さないと、通信が直ったあとも
   // 赤い帯が残り続け、失敗したのか成功したのかが判別できない(Issue #44)
@@ -64,8 +67,8 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
     setError(null);
     setSuccess(null);
     try {
-      await createSignageToken(name);
-      setSuccess(`${name} のトークンを発行しました`);
+      const created = await createSignageToken(name);
+      setIssued(created);
       setName("");
       onCloseForm();
       load();
@@ -107,6 +110,31 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       <Note>
         各ディスプレイに固有のトークン付きURLを設定します。漏洩時は該当トークンのみ無効化してください。
       </Note>
+
+      {issued !== null && (
+        <Panel
+          title="トークンを発行しました"
+          action={
+            <Button variant="ghost" size="xs" onClick={() => setIssued(null)}>
+              閉じる
+            </Button>
+          }
+        >
+          <dl className="mb-3 space-y-2 text-[13px]">
+            <div className="flex gap-4">
+              <dt className="w-24 shrink-0 text-gray-500">ディスプレイ名</dt>
+              <dd className="font-semibold">{issued.name}</dd>
+            </div>
+            <div className="flex gap-4">
+              <dt className="w-24 shrink-0 text-gray-500">URL</dt>
+              <dd className="min-w-0 break-all font-mono text-[11px]">{issued.url}</dd>
+            </div>
+          </dl>
+          {/* 手で書き写すと打ち間違える。そのまま端末に貼れる形でコピーする
+              (AdminUserCreatePage の IssuedNotice と同じ形) */}
+          <CopyButton text={issued.url} label="URLをコピー" />
+        </Panel>
+      )}
 
       {issuing && (
         <Panel title="トークンを発行する">
@@ -241,11 +269,15 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+// 同じ端末名で作り直したとき、日付だけだとどちらが新しいか分からない。
+// 分まで出す(Issue #67)
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
