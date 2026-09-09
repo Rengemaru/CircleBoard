@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  AnchorButton,
+  Base,
+  Button,
+  Chip,
+  Cluster,
+  PageHeading,
+  Stack,
+  StatusLabel,
+  Text,
+} from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
-import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
-import { Chip, FilterChip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
-import { PageHeading } from "../components/ui/PageHeading";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -16,6 +23,12 @@ import type { EventSummary, Tag } from "../types/event";
 //
 // 既定は募集中のみ・開催日の近い順。終了イベントは表示しない
 // （「過去の企画」セクションは MVP 対象外。CLAUDE.md §10）。
+//
+// 画面の構成は smarthr-ui の「よくあるリスト」パターンに合わせている
+// (docs/instructions.md Phase 8):
+//   - リスト操作エリア（作成ボタン）は Base の外・見出しの右
+//   - 一時操作エリア（タグの絞り込み）は Base の中の上部
+//   - オブジェクト名は Text size="M"、付随情報は size="S" color="TEXT_GREY"
 export function EventsPage() {
   const { user } = useCurrentUser();
   // 絞り込みは ?tag_id= で行い、URLで共有できる状態にする（画面②の注記）。
@@ -62,96 +75,143 @@ export function EventsPage() {
 
   return (
     <MemberPage user={user}>
-      <PageHeading
-        title="イベント"
-        subtitle="単発の企画です。閲覧はログインなしでもできます"
-        action={
-          /* 作成ボタンは未ログインでも表示してよい。押下時は /login へ。
-             ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
-             （画面②の注記）。API側は必ず401を返す */
-          <Link to="/create">
-            <Button variant="primary" size="sm">
-              ＋ イベントを作成
-            </Button>
-          </Link>
-        }
-      />
+      <Stack gap="M">
+        <Cluster align="center" justify="space-between">
+          <Stack gap="XXS">
+            {/* PageHeading は autoPageTitle が既定 true で、suffix が
+                'SmartHR（スマートHR）' 固定になっている。そのままだと
+                タブのタイトルに他社の社名が入るので、必ず差し替える */}
+            <PageHeading pageTitleSuffix="CircleBoard">イベント</PageHeading>
+            <Text size="S" color="TEXT_GREY" leading="TIGHT">
+              単発の企画です。閲覧はログインなしでもできます
+            </Text>
+          </Stack>
+          {/* 作成ボタンは未ログインでも表示してよい。押下時は /login へ。
+              ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
+              （画面②の注記）。API側は必ず401を返す */}
+          <AnchorButton elementAs={Link} to="/create" variant="primary">
+            イベントを作成
+          </AnchorButton>
+        </Cluster>
 
-      {tags.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          <FilterChip active={selectedTagId === null} onClick={() => selectTag(null)}>
-            すべて
-          </FilterChip>
-          {tags.map((tag) => (
-            <FilterChip
-              key={tag.id}
-              active={selectedTagId === tag.id}
-              onClick={() => selectTag(tag.id)}
-            >
-              {tag.name}
-            </FilterChip>
-          ))}
-        </div>
-      )}
+        <Base overflow="hidden">
+          {tags.length > 0 && (
+            <Cluster gap="XS" className="border-b border-gray-200 p-3">
+              <TagFilter active={selectedTagId === null} onClick={() => selectTag(null)}>
+                すべて
+              </TagFilter>
+              {tags.map((tag) => (
+                <TagFilter
+                  key={tag.id}
+                  active={selectedTagId === tag.id}
+                  onClick={() => selectTag(tag.id)}
+                >
+                  {tag.name}
+                </TagFilter>
+              ))}
+            </Cluster>
+          )}
 
-      {error !== null ? (
-        <Note tone="danger">{error}</Note>
-      ) : events === null ? (
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
-      ) : events.length === 0 ? (
-        <p className="text-[13px] text-gray-500">
-          {selectedTagId === null
-            ? "開催予定のイベントはありません。"
-            : "このタグのイベントはありません。"}
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {events.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </ul>
-      )}
+          {error !== null ? (
+            <div className="p-4">
+              <Note tone="danger">{error}</Note>
+            </div>
+          ) : events === null ? (
+            <EmptyRow>読み込み中…</EmptyRow>
+          ) : events.length === 0 ? (
+            <EmptyRow>
+              {selectedTagId === null
+                ? "開催予定のイベントはありません。"
+                : "このタグのイベントはありません。"}
+            </EmptyRow>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {events.map((event) => (
+                <EventRow key={event.id} event={event} />
+              ))}
+            </ul>
+          )}
+        </Base>
+      </Stack>
     </MemberPage>
   );
 }
 
-function EventCard({ event }: { event: EventSummary }) {
-  const startsAt = new Date(event.starts_at);
-
+// 絞り込みは「リストのデータを変えない一時的な操作」なので一時操作エリアに置く。
+// 選択中かどうかを variant の差で示す
+function TagFilter({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: string;
+}) {
   return (
-    <li className="rounded border border-gray-200 bg-white p-5">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-        {/* 開催の近さが一覧で一番効く情報なので先頭に置く(ワイヤーフレーム②) */}
-        <span className="text-sm font-bold text-gray-900">{formatCountdown(event.starts_at)}</span>
-        <span>{formatDate(startsAt)}</span>
-        <span>{event.location}</span>
-        {event.pinned && <Badge tone="pinned">📌 ピン留め</Badge>}
-      </div>
+    <Button size="S" variant={active ? "primary" : "secondary"} onClick={onClick}>
+      {children}
+    </Button>
+  );
+}
 
-      <h2 className="mt-1.5 text-sm font-bold">
-        <Link to={`/events/${event.id}`} className="hover:underline">
-          {event.title}
-        </Link>
-      </h2>
+function EmptyRow({ children }: { children: string }) {
+  return (
+    <div className="p-6">
+      <Text size="S" color="TEXT_GREY">
+        {children}
+      </Text>
+    </div>
+  );
+}
 
-      {event.tags.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1.5">
-          {event.tags.map((tag) => (
-            <li key={tag.id}>
-              <Chip>{tag.name}</Chip>
-            </li>
-          ))}
-        </ul>
-      )}
+function EventRow({ event }: { event: EventSummary }) {
+  return (
+    <li className="p-4">
+      <Stack gap="XXS">
+        <Cluster align="center" gap="XS">
+          {/* 開催の近さが一覧で一番効く情報なので先頭に置く(ワイヤーフレーム②)。
+              日数はインスタンスごとに変わる値なので StatusLabel にはしない
+              （StatusLabel ガイド「インスタンスごとに異なる値を埋め込まない」） */}
+          <Text size="S" weight="bold" leading="TIGHT">
+            {formatCountdown(event.starts_at)}
+          </Text>
+          <Text size="S" color="TEXT_GREY" leading="TIGHT">
+            {formatDate(new Date(event.starts_at))} ・ {event.location}
+          </Text>
+          {event.pinned && <Chip size="S">📌 ピン留め</Chip>}
+        </Cluster>
 
-      <p className="mt-2.5 line-clamp-2 text-[13px] text-gray-700">{event.description}</p>
+        <Text size="M" leading="NORMAL">
+          <Link to={`/events/${event.id}`} className="font-bold hover:underline">
+            {event.title}
+          </Link>
+        </Text>
 
-      <div className="mt-3 flex items-center gap-2.5 text-xs text-gray-500">
-        <Badge tone={event.status === "recruiting" ? "recruiting" : "completed"}>
-          {event.status === "recruiting" ? "募集中" : "終了"}
-        </Badge>
-        <span>{formatParticipants(event)}</span>
-      </div>
+        {event.tags.length > 0 && (
+          <ul className="flex flex-wrap gap-1">
+            {event.tags.map((tag) => (
+              <li key={tag.id}>
+                <Chip size="S">{tag.name}</Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
+          {event.description}
+        </Text>
+
+        <Cluster align="center" gap="XS">
+          {/* オブジェクトのライフサイクル上の状態は1つだけ StatusLabel にする */}
+          <StatusLabel type={event.status === "recruiting" ? "blue" : "grey"}>
+            {event.status === "recruiting" ? "募集中" : "終了"}
+          </StatusLabel>
+          <Text size="S" color="TEXT_GREY" leading="TIGHT">
+            {formatParticipants(event)}
+          </Text>
+        </Cluster>
+      </Stack>
     </li>
   );
 }
