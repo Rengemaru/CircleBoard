@@ -269,11 +269,14 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
       <div className="min-w-0">
         <div className="flex items-baseline gap-[1em]">
           {event.pinned && (
+            // 見出しが「注目イベント」なので、バッジまで「注目」だと
+            // 4件全部が注目なのに1件だけ注目と付く形になり、何が違うのか伝わらない。
+            // 語は CLAUDE.md §9 の用語表と /events・/ に揃える(Issue #70)
             <span
               className="rounded bg-[#fcd34d] px-2 py-0.5 font-bold text-[#0f0f15]"
               style={{ fontSize: MIN_FONT_SIZE }}
             >
-              注目
+              📌 ピン留め
             </span>
           )}
           <span
