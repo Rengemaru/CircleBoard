@@ -26,6 +26,27 @@ const REFRESH_INTERVAL_SECONDS = 60;
 // レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
 const MIN_FONT_SIZE = "1.3vw";
 
+// QRの大きさ。1920px 幅を基準にして、画面幅で拡縮する。
+//
+// 固定pxのままだと、4Kのディスプレイでは文字だけ2倍になってQRは小さいまま
+// 残り、2〜3mからスマホで読めない。QRは寸法が読み取り距離を直接決める。
+// 逆に小さいモニタではQRがカードを圧迫する(Issue #50)
+const SIGNAGE_BASE_WIDTH = 1920;
+const QR_SIZE_AT_BASE = { hero: 220, event: 110, project: 90, empty: 200 } as const;
+
+function useQrSize(kind: keyof typeof QR_SIZE_AT_BASE): number {
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return Math.round((QR_SIZE_AT_BASE[kind] * viewportWidth) / SIGNAGE_BASE_WIDTH);
+}
+
 // 失敗の種類。部室に入った人が最初に打つ手が変わるので分ける
 type Failure = "invalid_token" | "offline";
 
@@ -234,6 +255,8 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
 }
 
 function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
+  const qrSize = useQrSize(hero ? "hero" : "event");
+
   return (
     <article className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#2b2e3c] bg-white/[0.03] p-[1.5%]">
       <div className="min-w-0">
@@ -278,7 +301,7 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
       </div>
       {/* QRはフロントで生成する。サーバー生成だと60秒ごとに無駄な処理が走る
           (wireframe-signage.html「QRコード」)。中身は detail_url */}
-      <QRCodeSVG value={event.detail_url} size={hero ? 220 : 110} bgColor="#f2f3f7" level="M" />
+      <QRCodeSVG value={event.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
     </article>
   );
 }
@@ -297,6 +320,8 @@ function ProjectSection({ projects }: { projects: SignageProject[] }) {
 }
 
 function ProjectCard({ project }: { project: SignageProject }) {
+  const qrSize = useQrSize("project");
+
   return (
     <article className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03] p-[1.5%]">
       <div className="min-w-0">
@@ -320,20 +345,22 @@ function ProjectCard({ project }: { project: SignageProject }) {
           {formatMembers(project)}
         </div>
       </div>
-      <QRCodeSVG value={project.detail_url} size={90} bgColor="#f2f3f7" level="M" />
+      <QRCodeSVG value={project.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
     </article>
   );
 }
 
 // イベント・プロジェクトとも0件のとき。真っ黒な画面を出さない
 function EmptyState() {
+  const qrSize = useQrSize("empty");
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[2vh]">
       <div className="text-[4vw] font-bold">CircleBoard</div>
       <p className="text-[2.4vw] text-[#9aa0ae]">いま募集中の企画はありません</p>
       <QRCodeSVG
         value={import.meta.env.VITE_PUBLIC_BASE_URL}
-        size={200}
+        size={qrSize}
         bgColor="#f2f3f7"
         level="M"
       />
