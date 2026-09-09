@@ -17,21 +17,30 @@ PR が**サブIssueの受け入れ基準を満たしているか**を判定す�
 1. `gh pr view <PR_NUMBER> --repo <REPO>` で PR 本文を読み、`Closes #N` を拾う
 2. `gh issue view N --repo <REPO>` でサブIssueの受け入れ基準を読む
 3. `gh pr diff <PR_NUMBER> --repo <REPO>` で差分を読む
-4. テストを実行する
+4. `tmp/review/` のテスト結果を読む（**自分では実行しない**）
 5. 受け入れ基準を1項目ずつ判定する
 6. 指摘をインラインコメントで残す
 7. PR コメントに要約を書く
 8. 構造化出力（後述）を返す
 
-## テストの実行
+## テストの結果を読む
 
-Ruby・Node・PostgreSQL は CI 側で用意済み。
+**自分でテストを実行しない。** CI が先に走らせて結果をファイルに置いている。
+Read で読むこと。
 
-```bash
-cd backend && bundle exec rspec
-cd frontend && npm run lint
-cd frontend && npm run typecheck
-```
+| ファイル | 内容 |
+|---|---|
+| `tmp/review/rspec.txt` | backend のテスト |
+| `tmp/review/rubocop.txt` | backend の Lint |
+| `tmp/review/lint.txt` | frontend の Lint |
+| `tmp/review/typecheck.txt` | frontend の型検査 |
+
+各ファイルの末尾に `exit_code` がある。0 以外なら失敗。
+変更のない側は「実行していない」と書いてある。その場合はその旨を報告し、
+失敗として扱わない。
+
+自分で実行させていたときは、1コマンドが1ターンになり、その往復のぶん
+時間とプランの利用枠を使っていた。読むだけにして判定に専念する。
 
 **結果を必ず報告する。** 「テストを実行した」ではなく、何本走って何本落ちたかを書く。
 落ちた場合は落ちた spec 名と失敗内容を書く。
@@ -51,7 +60,7 @@ cd frontend && npm run typecheck
 
 **frontend にはテストランナーが未導入**（Vitest は未インストール、テストファイル0件）。
 そのため frontend の変更については「新規ロジックに対応テストなし」を **high にしない**。
-`npm run lint` と `npm run typecheck` が通っていることを確認できればよい。
+`tmp/review/lint.txt` と `tmp/review/typecheck.txt` が通っていることを確認できればよい。
 
 backend（`backend/spec/**`）については、この免除は適用しない。
 
