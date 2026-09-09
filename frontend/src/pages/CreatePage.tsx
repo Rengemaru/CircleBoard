@@ -5,7 +5,7 @@ import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
 import { FilterChip } from "../components/ui/Chip";
-import { Field, INPUT_CLASS } from "../components/ui/Field";
+import { FormControl, Input, Stack, StatusLabel, Textarea } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
@@ -44,6 +44,11 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 【使う技術】
 
 【求めるメンバー】`;
+
+// 必須と任意はステータスラベルで示す。ラベルの文字に「（任意）」と
+// 混ぜると、必須の印だけ別の形になって2通りの書き方が並ぶ
+const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
+const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
 export function CreatePage() {
   const navigate = useNavigate();
@@ -193,84 +198,105 @@ export function CreatePage() {
         </Panel>
 
         <Panel title="内容">
-          <Field label="タイトル" required>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className={INPUT_CLASS}
-            />
-          </Field>
+          {/* 項目の間隔は Stack で決める。FormControl は自分では下余白を持たない */}
+          <Stack gap={1.25}>
+            <FormControl label="タイトル" statusLabels={REQUIRED}>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                width="100%"
+              />
+            </FormControl>
 
-          {/* テンプレートは placeholder として表示する。初期値として入れると、
+            {/* テンプレートは placeholder として表示する。初期値として入れると、
               消さずにそのまま送信されてしまう(wireframe-member.html ⑥の注記) */}
-          <Field label="概要" required hint="枠の中の見出しは目安です。書きやすい形で構いません">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={10}
-              placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
-              required
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          {kind === "event" ? (
-            <>
-              <Field label="開催場所" required>
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="部室A / オンライン（Zoom）"
-                  required
-                  className={INPUT_CLASS}
-                />
-              </Field>
-              <Field label="開催日時" required>
-                <input
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  required
-                  className={INPUT_CLASS}
-                />
-              </Field>
-            </>
-          ) : (
-            <Field label="MTGの予定（任意）">
-              <input
-                value={meetingSchedule}
-                onChange={(e) => setMeetingSchedule(e.target.value)}
-                placeholder="毎週水曜 19:00〜"
-                className={INPUT_CLASS}
+            <FormControl
+              label="概要"
+              statusLabels={REQUIRED}
+              helpMessage="枠の中の見出しは目安です。書きやすい形で構いません"
+            >
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={10}
+                placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
+                required
+                width="100%"
               />
-            </Field>
-          )}
+            </FormControl>
 
-          {/* 任意であることは（任意）で統一し、空欄にしたときの挙動は
-              hint に分ける。ラベルに混ぜると2通りの書き方になる(Issue #58) */}
-          <Field label="定員（任意）" hint="空欄にすると無制限になります">
-            <input
-              type="number"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </Field>
+            {kind === "event" ? (
+              <>
+                <FormControl
+                  label="開催場所"
+                  statusLabels={REQUIRED}
+                  exampleMessage="部室A / オンライン（Zoom）"
+                >
+                  <Input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    required
+                    width="100%"
+                  />
+                </FormControl>
+                <FormControl label="開催日時" statusLabels={REQUIRED}>
+                  <Input
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    required
+                    width="100%"
+                  />
+                </FormControl>
+              </>
+            ) : (
+              <FormControl
+                label="MTGの予定"
+                statusLabels={OPTIONAL}
+                exampleMessage="毎週水曜 19:00〜"
+              >
+                <Input
+                  value={meetingSchedule}
+                  onChange={(e) => setMeetingSchedule(e.target.value)}
+                  width="100%"
+                />
+              </FormControl>
+            )}
 
-          {/* 外部リンクはイベントのみ。projects テーブルに列を作っていない
+            {/* 任意であることはラベルの文字ではなくステータスラベルで示す。
+              空欄にしたときの挙動は helpMessage に分ける。
+              ラベルに混ぜると2通りの書き方になる(Issue #58) */}
+            <FormControl
+              label="定員"
+              statusLabels={OPTIONAL}
+              helpMessage="空欄にすると無制限になります"
+            >
+              <Input
+                type="number"
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                width="100%"
+              />
+            </FormControl>
+
+            {/* 外部リンクはイベントのみ。projects テーブルに列を作っていない
               (docs/er.md)。connpass や Google フォームへの導線に使う */}
-          {kind === "event" && (
-            <Field label="外部リンク（任意）">
-              <input
-                type="url"
-                value={externalUrl}
-                onChange={(e) => setExternalUrl(e.target.value)}
-                placeholder="https://connpass.com/event/xxxxx"
-                className={INPUT_CLASS}
-              />
-            </Field>
-          )}
+            {kind === "event" && (
+              <FormControl
+                label="外部リンク"
+                statusLabels={OPTIONAL}
+                exampleMessage="https://connpass.com/event/xxxxx"
+              >
+                <Input
+                  type="url"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  width="100%"
+                />
+              </FormControl>
+            )}
+          </Stack>
         </Panel>
 
         {/* タグは既存のものから選ぶ。作成APIは無い(docs/api-spec.md §4) */}
