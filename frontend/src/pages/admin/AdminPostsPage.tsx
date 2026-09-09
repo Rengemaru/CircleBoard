@@ -147,8 +147,14 @@ function PostList() {
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5">
           <h2 className="text-sm font-bold">
             企画一覧
-            <span className="ml-2 text-xs font-normal text-gray-500">{visible.length}件</span>
+            {/* 絞り込み後の件数だけだと、全体が何件なのか分からず、
+                何を隠しているのかが把握できない(Issue #63) */}
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              {formatCount(visible.length, posts.length)}
+            </span>
           </h2>
+          {/* 投稿日の新しい順(api/admin/posts_controller.rb:24) */}
+          <span className="text-xs text-gray-500">投稿日が新しい順</span>
         </div>
 
         {/* 列が多い表は横に溢れる。ページ全体を横スクロールさせない */}
@@ -311,6 +317,11 @@ function formatDate(value: string): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(value));
+}
+
+// 絞り込んでいるときだけ「N件 / 全M件」にする
+function formatCount(visible: number, total: number): string {
+  return visible === total ? `${total}件` : `${visible}件 / 全${total}件`;
 }
 
 function toMessage(error: unknown): string {
