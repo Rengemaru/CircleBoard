@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
+import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { LinkButton } from "../components/ui/LinkButton";
@@ -19,7 +20,7 @@ import type { EventDetail } from "../types/event";
 // (CLAUDE.md §3-2)。ここでは「キーが無い＝見せてよい情報ではない」として扱う。
 export function EventDetailPage() {
   const { id } = useParams();
-  const { user } = useCurrentUser();
+  const { user, failed } = useCurrentUser();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,14 +68,14 @@ export function EventDetailPage() {
 
   if (error !== null && event === null) {
     return (
-      <MemberPage user={user}>
+      <MemberPage user={user} sessionFailed={failed}>
         <Note tone="danger">{error}</Note>
       </MemberPage>
     );
   }
   if (event === null) {
     return (
-      <MemberPage user={user}>
+      <MemberPage user={user} sessionFailed={failed}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -83,7 +84,7 @@ export function EventDetailPage() {
   const full = event.capacity !== null && event.participants_count >= event.capacity;
 
   return (
-    <MemberPage user={user}>
+    <MemberPage user={user} sessionFailed={failed}>
       <Link to="/events" className="mb-3 inline-block text-xs text-gray-500 hover:text-gray-900">
         ← イベント一覧
       </Link>
@@ -162,6 +163,7 @@ export function EventDetailPage() {
       {error !== null && <Note tone="danger">{error}</Note>}
 
       <ParticipationButton
+        sessionFailed={failed}
         loggedIn={user !== null}
         joined={event.current_user_joined === true}
         full={full}
@@ -174,6 +176,7 @@ export function EventDetailPage() {
 }
 
 function ParticipationButton({
+  sessionFailed,
   loggedIn,
   joined,
   full,
@@ -181,6 +184,7 @@ function ParticipationButton({
   onJoin,
   onCancel,
 }: {
+  sessionFailed: boolean;
   loggedIn: boolean;
   joined: boolean;
   full: boolean;
@@ -189,6 +193,12 @@ function ParticipationButton({
   onCancel: () => void;
 }) {
   const location = useLocation();
+
+  // ログイン状態を確かめられていないときに「ログインして参加」を出すと、
+  // 参加済みの人にまで未ログインだと言うことになる。ここは判断を保留する(Issue #72)
+  if (sessionFailed) {
+    return <SessionUnavailable />;
+  }
 
   // 未ログイン時のラベルは「ログインして参加」→ /login へ(ワイヤーフレーム ③)。
   // ログイン後はこのイベントに戻す(Issue #37)
