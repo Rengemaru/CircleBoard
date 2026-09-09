@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
@@ -21,6 +21,12 @@ import type { Tag } from "../types/event";
 //   プロジェクト … 継続的にコミットして成果物を作る。ログイン必須
 type Kind = "event" | "project";
 
+// URL の ?kind= から種類を決める。想定外の値と未指定はイベントに倒す。
+// 種類は作成後に変えられないので、黙って別のものを作らないよう既定を1つに固定する
+function parseKind(value: string | null): Kind {
+  return value === "project" ? "project" : "event";
+}
+
 // 概要の書き出しに迷わないための雛形。value ではなく placeholder に入れる
 const EVENT_TEMPLATE = `【このイベントについて】
 
@@ -40,8 +46,11 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 
 export function CreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading } = useCurrentUser();
-  const [kind, setKind] = useState<Kind>("event");
+  // どちらを作りに来たかは呼び出し元のボタンが決める。一覧の「プロジェクトを
+  // 作成」から来た人にイベントのフォームを出さない(Issue #38)
+  const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [title, setTitle] = useState("");

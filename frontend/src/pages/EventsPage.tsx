@@ -89,7 +89,7 @@ export function EventsPage() {
           {/* 作成ボタンは未ログインでも表示してよい。押下時は /login へ。
               ボタンを隠すと、外部から見たときにサークルの活動量が伝わらない
               （画面②の注記）。API側は必ず401を返す */}
-          <AnchorButton elementAs={Link} to="/create" variant="primary">
+          <AnchorButton elementAs={Link} to="/create?kind=event" variant="primary">
             イベントを作成
           </AnchorButton>
         </Cluster>
