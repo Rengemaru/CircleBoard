@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
 import { Field, INPUT_CLASS } from "../../components/ui/Field";
+import { Modal } from "../../components/ui/Modal";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import {
@@ -37,6 +38,8 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 無効化は取り消せないので、他の破壊的操作と同じく確認を挟む(Issue #39)
+  const [revoking, setRevoking] = useState<SignageTokenRow | null>(null);
 
   function load() {
     fetchSignageTokens()
@@ -70,6 +73,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
     setError(null);
     try {
       await revokeSignageToken(id);
+      setRevoking(null);
       load();
     } catch (e: unknown) {
       setError(toMessage(e));
@@ -128,7 +132,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
         <p className="mb-5 text-[13px] text-gray-500">有効なトークンがありません。</p>
       ) : (
         active.map((token) => (
-          <TokenCard key={token.id} token={token} busy={busy} onRevoke={() => revoke(token.id)} />
+          <TokenCard key={token.id} token={token} busy={busy} onRevoke={() => setRevoking(token)} />
         ))
       )}
 
@@ -142,6 +146,25 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
             無効にした端末も一覧に残ります。どの端末をいつ止めたかを追えるようにするためです。
           </p>
         </>
+      )}
+
+      {revoking !== null && (
+        <Modal
+          title="⚠️ このトークンを無効化しますか？"
+          confirmLabel="無効化する"
+          busy={busy}
+          onCancel={() => setRevoking(null)}
+          onConfirm={() => revoke(revoking.id)}
+        >
+          <p>
+            <strong>{revoking.name}</strong> のトークンを無効化します。
+            <br />
+            このURLを設定した端末は、次の更新で表示できなくなります。
+            <br />
+            <strong>元に戻せません。</strong>同じ端末で使うには、新しいトークンを発行して
+            URLを設定し直してください。
+          </p>
+        </Modal>
       )}
     </>
   );
