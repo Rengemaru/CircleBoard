@@ -127,7 +127,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
               <Button variant="ghost" size="sm" onClick={onCloseForm}>
                 キャンセル
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={busy}>
+              <Button type="submit" variant="primary" size="sm" busy={busy} busyLabel="発行中…">
                 発行する
               </Button>
             </div>

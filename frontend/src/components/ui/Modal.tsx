@@ -29,7 +29,14 @@ export function Modal({
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
             キャンセル
           </Button>
-          <Button variant="dangerFill" size="sm" onClick={onConfirm} disabled={busy}>
+          {/* 確定側だけ aria-busy を付ける。キャンセルは押せないだけで処理中ではない */}
+          <Button
+            variant="dangerFill"
+            size="sm"
+            onClick={onConfirm}
+            busy={busy}
+            busyLabel="処理中…"
+          >
             {confirmLabel}
           </Button>
         </div>

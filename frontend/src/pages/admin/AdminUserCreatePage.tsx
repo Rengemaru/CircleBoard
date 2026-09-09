@@ -155,7 +155,7 @@ function IssueForm() {
           <Button variant="ghost" onClick={() => navigate("/admin/users")}>
             キャンセル
           </Button>
-          <Button type="submit" variant="primary" disabled={busy}>
+          <Button type="submit" variant="primary" busy={busy} busyLabel="発行中…">
             アカウントを発行する
           </Button>
         </div>
