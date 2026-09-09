@@ -4,6 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
 import { Field, INPUT_CLASS } from "../../components/ui/Field";
+import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { createUser, type NewUserInput } from "../../api/admin";
@@ -38,7 +39,9 @@ function IssueForm() {
     role: "member",
   });
   const [issued, setIssued] = useState<Issued | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
+  // 表示側(ErrorNote)で判定するため(Issue #72)
+  const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
@@ -52,7 +55,7 @@ function IssueForm() {
       setIssued({ name: form.name, email: form.email, password: form.password });
       setForm({ ...form, name: "", email: "", password: "" });
     } catch (e: unknown) {
-      setError(toMessage(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -65,7 +68,7 @@ function IssueForm() {
   return (
     <form onSubmit={submit} className="max-w-[560px]">
       <Panel title="新規アカウント情報">
-        {error !== null && <Note tone="danger">{error}</Note>}
+        {error !== null && <ErrorNote error={error} fallback="発行に失敗しました" />}
 
         <div className="grid gap-x-4 sm:grid-cols-2">
           <Field label="名前" required>
@@ -211,8 +214,4 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="font-mono break-all">{value}</dd>
     </div>
   );
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "発行に失敗しました";
 }

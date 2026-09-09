@@ -3,6 +3,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
+import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import {
   fetchAdminPosts,
@@ -49,7 +50,9 @@ function PostList() {
   const [kind, setKind] = useState<KindFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [trashing, setTrashing] = useState<AdminPostRow | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
+  // 表示側(ErrorNote)で判定するため(Issue #72)
+  const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -59,7 +62,7 @@ function PostList() {
         setPosts(rows);
         setError(null);
       })
-      .catch((e: unknown) => setError(toMessage(e)));
+      .catch((e: unknown) => setError(e));
   }
 
   useEffect(() => {
@@ -80,14 +83,14 @@ function PostList() {
       setTrashing(null);
       load();
     } catch (e: unknown) {
-      setError(toMessage(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
   }
 
   if (error !== null && posts === null) {
-    return <Note tone="danger">{error}</Note>;
+    return <ErrorNote error={error} fallback="読み込みに失敗しました" />;
   }
   if (posts === null) {
     return <p className="text-gray-500">読み込み中…</p>;
@@ -140,7 +143,7 @@ function PostList() {
         </select>
       </div>
 
-      {error !== null && <Note tone="danger">{error}</Note>}
+      {error !== null && <ErrorNote error={error} fallback="読み込みに失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
 
       <div className="mb-5 rounded border border-gray-200 bg-white">
@@ -328,8 +331,4 @@ function formatDate(value: string): string {
 // 絞り込んでいるときだけ「N件 / 全M件」にする
 function formatCount(visible: number, total: number): string {
   return visible === total ? `${total}件` : `${visible}件 / 全${total}件`;
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "読み込みに失敗しました";
 }

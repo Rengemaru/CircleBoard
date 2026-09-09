@@ -3,6 +3,7 @@ import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
 import { Field, INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
+import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import {
@@ -36,7 +37,9 @@ export function AdminSignageTokensPage() {
 function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: () => void }) {
   const [tokens, setTokens] = useState<SignageTokenRow[] | null>(null);
   const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
+  // 表示側(ErrorNote)で判定するため(Issue #72)
+  const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   // 無効化は取り消せないので、他の破壊的操作と同じく確認を挟む(Issue #39)
@@ -53,7 +56,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
         setTokens(rows);
         setError(null);
       })
-      .catch((e: unknown) => setError(toMessage(e)));
+      .catch((e: unknown) => setError(e));
   }
 
   useEffect(() => {
@@ -73,7 +76,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       onCloseForm();
       load();
     } catch (e: unknown) {
-      setError(toMessage(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -89,14 +92,14 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       setRevoking(null);
       load();
     } catch (e: unknown) {
-      setError(toMessage(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
   }
 
   if (error !== null && tokens === null) {
-    return <Note tone="danger">{error}</Note>;
+    return <ErrorNote error={error} fallback="操作に失敗しました" />;
   }
   if (tokens === null) {
     return <p className="text-gray-500">読み込み中…</p>;
@@ -163,7 +166,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
         </Panel>
       )}
 
-      {error !== null && <Note tone="danger">{error}</Note>}
+      {error !== null && <ErrorNote error={error} fallback="操作に失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
 
       <SectionHeading>有効なトークン</SectionHeading>
@@ -282,8 +285,4 @@ function formatDate(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "操作に失敗しました";
 }
