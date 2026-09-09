@@ -62,7 +62,7 @@ function AdminSidebar({ user }: { user: CurrentUser }) {
       <div className="border-b border-gray-800 px-4 py-5">
         <div className="text-sm font-bold">CircleBoard</div>
         <div className="mt-1.5">
-          <span className="rounded-sm bg-red-600 px-[7px] py-px text-[10px] font-bold tracking-wider">
+          <span className="rounded bg-red-600 px-[7px] py-px text-[10px] font-bold tracking-wider">
             ADMIN
           </span>
         </div>

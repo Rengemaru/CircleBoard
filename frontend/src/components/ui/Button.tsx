@@ -32,7 +32,7 @@ export function Button({ variant = "default", size = "md", className = "", ...re
       // type を明示しないと、フォームの中では submit になる。
       // 呼び出し側で type="submit" を渡せば上書きされる
       type="button"
-      className={`rounded-sm border-[1.5px] font-semibold disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
+      className={`rounded border-[1.5px] font-semibold disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
       {...rest}
     />
   );

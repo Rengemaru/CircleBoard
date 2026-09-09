@@ -5,7 +5,7 @@
 // 色は付けず、選ばれているかどうかだけを反転で示す。
 export function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-sm border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600">
+    <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600">
       {children}
     </span>
   );
@@ -28,7 +28,7 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-sm border-[1.5px] px-[10px] py-1 text-xs font-semibold ${
+      className={`rounded border-[1.5px] px-[10px] py-1 text-xs font-semibold ${
         active
           ? "border-gray-900 bg-gray-900 text-white"
           : "border-gray-300 bg-white text-gray-600 hover:border-gray-900 hover:text-gray-900"

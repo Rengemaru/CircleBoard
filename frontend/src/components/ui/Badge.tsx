@@ -28,7 +28,7 @@ const TONE: Record<Tone, string> = {
 export function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   return (
     <span
-      className={`inline-block rounded-sm border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${TONE[tone]}`}
+      className={`inline-block rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${TONE[tone]}`}
     >
       {children}
     </span>

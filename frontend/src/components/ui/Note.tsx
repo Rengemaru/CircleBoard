@@ -10,7 +10,7 @@ const TONE: Record<Tone, string> = {
 export function Note({ tone = "info", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
     <p
-      className={`mb-4 rounded-sm border border-gray-200 border-l-[3px] px-3.5 py-2.5 text-xs ${TONE[tone]}`}
+      className={`mb-4 rounded border border-gray-200 border-l-[3px] px-3.5 py-2.5 text-xs ${TONE[tone]}`}
     >
       {children}
     </p>
