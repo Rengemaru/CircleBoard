@@ -21,8 +21,13 @@ const TONE: Record<Tone, BarType> = {
 
 export function Note({ tone = "info", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
-    <NotificationBar type={TONE[tone]} base="base" className="mb-4">
-      {children}
-    </NotificationBar>
+    // 下の余白は外側の div に付ける。NotificationBar の className は
+    // base="base" が被せる Panel の「内側」に付き、その Panel は
+    // overflow: hidden なので margin が中に取り込まれて余白にならない
+    <div className="mb-4">
+      <NotificationBar type={TONE[tone]} base="base">
+        {children}
+      </NotificationBar>
+    </div>
   );
 }
