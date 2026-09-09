@@ -1,19 +1,20 @@
-// タグを出す小さな枠と、絞り込みに使う押せる版。
+import { Button, Chip as ShrChip } from "smarthr-ui";
+
+// タグを出す小さな枠と、選択に使う押せる版(docs/instructions.md Phase 8-4)。
 //
-// Badge と分けているのは役割が違うため。Badge は状態（募集中・終了・停止中）を
-// 色で示すもので、色に意味がある。こちらはタグや絞り込みの選択肢で、
-// 色は付けず、選ばれているかどうかだけを反転で示す。
+// Badge と分けているのは役割が違うため。Badge（StatusLabel）は企画や
+// アカウントの状態を示すもので、1オブジェクトに1つしか付けない。
+// こちらはタグ・カテゴリ・権限のような「属性」で、いくつ付いてもよい。
+// SmartHR も Chip を「オブジェクトのプロパティ」向けとしている。
 export function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600">
-      {children}
-    </span>
-  );
+  return <ShrChip size="S">{children}</ShrChip>;
 }
 
-// 一覧の絞り込みと、企画作成のタグ選択で使う。
-// 見た目は wireframe-admin-ver2.html の .wf-btn.sm に合わせ、
-// 選択中は primary と同じ反転にする
+// 企画作成のタグ選択。押せる要素なので Chip では作らない。
+// SmartHR は Chip にアクションを持たせないことを求めている。
+//
+// 見た目と選択の伝え方は一覧の絞り込み(FilterRow の FilterButton)と同じにする。
+// 「選ぶ」という操作は同じなのに、画面ごとに形が違うと覚え直しになる。
 export function FilterChip({
   active,
   onClick,
@@ -21,20 +22,19 @@ export function FilterChip({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Button
+      size="S"
+      variant={active ? "primary" : "secondary"}
+      // 押した状態を持つボタンであることを支援技術に伝える
       aria-pressed={active}
-      className={`rounded border-[1.5px] px-[10px] py-1 text-xs font-semibold ${
-        active
-          ? "border-gray-900 bg-gray-900 text-white"
-          : "border-gray-300 bg-white text-gray-600 hover:border-gray-900 hover:text-gray-900"
-      }`}
+      // 選択中を色だけで示さない(guidelines/sensory-characteristics.mdx)
+      prefix={active ? <span aria-hidden="true">✓</span> : undefined}
+      onClick={onClick}
     >
       {children}
-    </button>
+    </Button>
   );
 }
