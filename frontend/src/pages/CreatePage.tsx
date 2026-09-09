@@ -155,20 +155,31 @@ export function CreatePage() {
         {error !== null && <Note tone="danger">{error}</Note>}
 
         <Panel title="種類">
-          <div className="flex flex-wrap gap-4 text-[13px]">
+          {/* name が無いと2つが別々のラジオになり、矢印キーで切り替えられず、
+              「2つのうち1つを選ぶ」と支援技術に伝わらない。
+              fieldset と legend で1つの選択肢の集まりだと示す。
+              legend は Panel の見出しと文言が重なるので視覚的には隠す(Issue #55) */}
+          <fieldset className="flex flex-wrap gap-4 text-[13px]">
+            <legend className="sr-only">種類</legend>
             <label className="flex items-center gap-2">
-              <input type="radio" checked={kind === "event"} onChange={() => setKind("event")} />
+              <input
+                type="radio"
+                name="kind"
+                checked={kind === "event"}
+                onChange={() => setKind("event")}
+              />
               イベント（単発。未ログインでも閲覧できます）
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
+                name="kind"
                 checked={kind === "project"}
                 onChange={() => setKind("project")}
               />
               プロジェクト（継続。ログイン必須）
             </label>
-          </div>
+          </fieldset>
         </Panel>
 
         <Panel title="内容">
