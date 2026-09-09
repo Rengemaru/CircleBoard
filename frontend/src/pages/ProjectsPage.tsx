@@ -115,7 +115,7 @@ export function ProjectsPage() {
         title="プロジェクト"
         subtitle="継続的に成果物を作る企画です。途中からでも参加できます"
         action={
-          <Link to="/create">
+          <Link to="/create?kind=project">
             <Button variant="primary" size="sm">
               ＋ プロジェクトを作成
             </Button>
