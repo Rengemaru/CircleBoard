@@ -1,6 +1,5 @@
-import { Link } from "react-router-dom";
 import { SiteHeader } from "../components/SiteHeader";
-import { Button } from "../components/ui/Button";
+import { LinkButton } from "../components/ui/LinkButton";
 import { Panel } from "../components/ui/Panel";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
@@ -18,9 +17,9 @@ export function NotFoundPage() {
           <p className="mt-2 text-[13px] text-gray-700">
             URLが変わったか、削除された可能性があります。
           </p>
-          <Link to="/" className="mt-4 inline-block">
-            <Button size="sm">トップへ戻る</Button>
-          </Link>
+          <LinkButton to="/" size="sm" className="mt-4">
+            トップへ戻る
+          </LinkButton>
         </Panel>
       </main>
     </>

@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { LinkButton } from "../components/ui/LinkButton";
 import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
 import { Panel } from "../components/ui/Panel";
@@ -193,9 +194,9 @@ function ParticipationButton({
   // ログイン後はこのイベントに戻す(Issue #37)
   if (!loggedIn) {
     return (
-      <Link to={loginPathFrom(location.pathname + location.search)}>
-        <Button variant="primary">ログインして参加</Button>
-      </Link>
+      <LinkButton to={loginPathFrom(location.pathname + location.search)} variant="primary">
+        ログインして参加
+      </LinkButton>
     );
   }
 

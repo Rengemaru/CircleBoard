@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "./ui/Button";
+import { LinkButton } from "./ui/LinkButton";
 import { logout, type CurrentUser } from "../api/session";
 import { loginPathFrom } from "../lib/redirectTo";
 
@@ -26,9 +27,9 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
         </nav>
         <div className="ml-auto flex items-center gap-3 text-[13px]">
           {user === null ? (
-            <Link to={loginPathFrom(location.pathname + location.search)}>
-              <Button size="sm">ログイン</Button>
-            </Link>
+            <LinkButton to={loginPathFrom(location.pathname + location.search)} size="sm">
+              ログイン
+            </LinkButton>
           ) : (
             <>
               {/* 管理画面への入口。admin のときだけ出す。
@@ -38,11 +39,9 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
                   出しっぱなしにしないのは、押しても断られるだけのリンクを
                   全員に見せる意味がないため */}
               {user.role === "admin" && (
-                <Link to="/admin">
-                  <Button size="sm" variant="ghost">
-                    管理
-                  </Button>
-                </Link>
+                <LinkButton to="/admin" size="sm" variant="ghost">
+                  管理
+                </LinkButton>
               )}
               <span className="text-gray-700">{user.name}</span>
               <LogoutButton />
