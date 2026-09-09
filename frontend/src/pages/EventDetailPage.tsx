@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
@@ -7,6 +8,7 @@ import { Button } from "../components/ui/Button";
 import { LinkButton } from "../components/ui/LinkButton";
 import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -85,9 +87,11 @@ export function EventDetailPage() {
 
   return (
     <MemberPage user={user} sessionFailed={failed}>
-      <Link to="/events" className="mb-3 inline-block text-xs text-gray-500 hover:text-gray-900">
-        ← イベント一覧
-      </Link>
+      <div className="mb-3">
+        <TextLink elementAs={Link} to="/events" size="XS">
+          ← イベント一覧
+        </TextLink>
+      </div>
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
@@ -100,30 +104,35 @@ export function EventDetailPage() {
           ))}
         </div>
 
-        <h1 className="mt-2.5 text-xl font-bold">{event.title}</h1>
+        {/* PageHeading を通すとタブにもイベント名が出る。
+            同じイベントのタブを2枚開いても見分けられる */}
+        <PageHeading title={event.title} className="mt-2.5" size="XL" />
         {/* 開催の近さがこの画面で一番効く情報なので、見出しの直下に大きく置く */}
         <p className="mt-1 text-lg font-bold text-gray-700">{formatCountdown(event.starts_at)}</p>
 
-        <dl className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-[13px]">
-          <Row label="開催日時" value={formatDateTime(event.starts_at)} />
-          <Row label="開催場所" value={event.location} />
-          {/* 残り枠(ワイヤーフレーム ③ のサイド)。定員なしのときに
-              「残り null枠」と出さない */}
-          <Row label="残り枠" value={formatRemaining(event)} />
-        </dl>
+        {/* 「いつ・どこで・あと何枠」は関連する3つなので横に並べる。
+            縦に積むと、行き先を決めるのに必要な情報が縦長に散る
+            (SmartHR「関連性のある項目は横に並べて関連性を伝える」) */}
+        <DefinitionList className="mt-4 border-t border-gray-200 pt-4">
+          <DefinitionListItem term="開催日時" maxColumns={3}>
+            {formatDateTime(event.starts_at)}
+          </DefinitionListItem>
+          <DefinitionListItem term="開催場所" maxColumns={3}>
+            {event.location}
+          </DefinitionListItem>
+          {/* 定員なしのときに「残り null枠」と出さない */}
+          <DefinitionListItem term="残り枠" maxColumns={3}>
+            {formatRemaining(event)}
+          </DefinitionListItem>
+        </DefinitionList>
 
         {/* 外部リンクは任意。connpass や申し込みフォームへ飛ばす。
             外部サイトなので新しいタブで開く */}
         {event.external_url !== null && event.external_url !== "" && (
-          <p className="mt-3 text-[13px]">
-            <a
-              href={event.external_url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-gray-700 underline hover:text-gray-900"
-            >
-              関連リンクを開く ↗
-            </a>
+          <p className="mt-3">
+            <TextLink href={event.external_url} target="_blank" rel="noreferrer noopener" size="S">
+              関連リンクを開く
+            </TextLink>
           </p>
         )}
       </Panel>
@@ -228,15 +237,6 @@ function ParticipationButton({
     <Button variant="primary" onClick={onJoin} busy={busy} busyLabel="参加中…">
       参加する
     </Button>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-4">
-      <dt className="w-24 shrink-0 text-gray-500">{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }
 

@@ -16,17 +16,22 @@ export function PageHeading({
   action,
   // 下の余白。管理画面のようにトップバーの中へ置くときは "" で消す
   className = "mb-5",
+  // 画面名の大きさ。smarthr-ui は太さではなく大きさで階層を作るので、
+  // 同じ画面に太字の情報が並ぶところ（イベント詳細のカウントダウン）では
+  // 一段大きくしないとタイトルが埋もれる
+  size = "L",
 }: {
   title: string;
   subtitle?: string;
   // 見出し行の右端に置く主操作（例: 「＋ イベントを作成」）
   action?: React.ReactNode;
   className?: string;
+  size?: "L" | "XL";
 }) {
   return (
     <Cluster align="center" justify="space-between" className={className}>
       <div>
-        <ShrPageHeading size="L" pageTitleSuffix={PAGE_TITLE_SUFFIX}>
+        <ShrPageHeading size={size} pageTitleSuffix={PAGE_TITLE_SUFFIX}>
           {title}
         </ShrPageHeading>
         {subtitle !== undefined && <p className="mt-px text-xs text-gray-500">{subtitle}</p>}
