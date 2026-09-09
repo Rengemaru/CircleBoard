@@ -1,4 +1,4 @@
-import { Section } from "smarthr-ui";
+import { Base, Heading, Section, Stack, Text } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
@@ -18,7 +18,7 @@ export function LegalPage() {
 
       <Section className="mb-7">
         <SectionHeading>よくある質問</SectionHeading>
-        <div className="space-y-3">
+        <Stack gap="XS">
           <Faq q="アカウントはどうやって作りますか？">
             {"部長に連絡してください。管理者が発行します。このサイトに新規登録の機能はありません。"}
           </Faq>
@@ -43,13 +43,13 @@ export function LegalPage() {
               "サイネージ表示です。開催が近いイベントを自動で並べています。表示する端末は管理者が登録します。"
             }
           </Faq>
-        </div>
+        </Stack>
       </Section>
 
       <Section>
         <SectionHeading>利用規約</SectionHeading>
         <Panel>
-          <div className="space-y-4">
+          <Stack gap="S">
             <Article title="このサイトについて">
               {
                 "CircleBoard は情報系学生サークルの企画掲示板です。部室のディスプレイに表示するサイネージ機能を兼ねています。"
@@ -75,7 +75,7 @@ export function LegalPage() {
             </Article>
 
             <Article title="お問い合わせ">サークルの部長までご連絡ください。</Article>
-          </div>
+          </Stack>
         </Panel>
       </Section>
     </MemberPage>
@@ -84,22 +84,34 @@ export function LegalPage() {
 
 // 本文は文字列リテラルで渡している。JSX のテキストは改行が半角スペースに
 // 変わるため、日本語だと語の途中に空白が入る（「新規登録の 機能」）
+// 質問1つ = 1セクション。Section で囲むと Heading のレベルが
+// 入れ子の深さから決まる(「よくある質問」の下なので h3 になる)。
+// 見出しにするのは、スクリーンリーダーで質問間を飛べるようにするため(Issue #58)
 function Faq({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-4">
-      {/* 規約側の項目は h3 なのに質問だけ p だった。見出しにすると
-          スクリーンリーダーで質問間を飛べる。見た目は変えない(Issue #58) */}
-      <h3 className="text-[13px] font-bold">Q. {q}</h3>
-      <p className="mt-1 text-[13px] text-gray-700">A. {children}</p>
-    </div>
+    <Section>
+      <Base padding={1}>
+        <Stack gap="XXS">
+          <Heading type="subBlockTitle">Q. {q}</Heading>
+          <Text size="S" color="TEXT_GREY">
+            A. {children}
+          </Text>
+        </Stack>
+      </Base>
+    </Section>
   );
 }
 
+// こちらは Section で囲まない。囲む Panel が既に Section 1つ分に
+// なっているので、さらに囲むと見出しが h4 まで下がる（実際に下がった）。
+// 「よくある質問」側の Faq と同じ h3 に揃える
 function Article({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="text-[13px] font-bold">{title}</h3>
-      <p className="mt-1 text-[13px] leading-relaxed text-gray-700">{children}</p>
-    </div>
+    <Stack gap="XXS">
+      <Heading type="subBlockTitle">{title}</Heading>
+      <Text size="S" color="TEXT_GREY" leading="RELAXED">
+        {children}
+      </Text>
+    </Stack>
   );
 }
