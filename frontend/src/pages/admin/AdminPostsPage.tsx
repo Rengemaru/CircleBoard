@@ -103,16 +103,21 @@ function PostList() {
 
   return (
     <>
+      {/* placeholder は入力を始めると消えるので、その欄が何なのかの手がかりが
+          無くなる。select には名前が一切無く「コンボボックス」としか
+          読み上げられなかった(Issue #58) */}
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
+          aria-label="企画名・投稿者で検索"
           placeholder="企画名・投稿者で検索"
           className={`${INPUT_CLASS} min-w-[200px] flex-1`}
         />
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as KindFilter)}
+          aria-label="種別で絞り込む"
           className={`${INPUT_CLASS} w-[140px] flex-none`}
         >
           {(Object.keys(KIND_LABEL) as KindFilter[]).map((key) => (
@@ -124,6 +129,7 @@ function PostList() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as StatusFilter)}
+          aria-label="状態で絞り込む"
           className={`${INPUT_CLASS} w-[140px] flex-none`}
         >
           {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (

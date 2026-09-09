@@ -106,16 +106,21 @@ function UserList({ currentUserId }: { currentUserId: number }) {
 
   return (
     <>
+      {/* placeholder は入力を始めると消えるので、その欄が何なのかの手がかりが
+          無くなる。select には名前が一切無く「コンボボックス」としか
+          読み上げられなかった(Issue #58) */}
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
+          aria-label="名前・メールアドレスで検索"
           placeholder="名前・メールアドレスで検索"
           className={`${INPUT_CLASS} min-w-[200px] flex-1`}
         />
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as Filter)}
+          aria-label="状態で絞り込む"
           className={`${INPUT_CLASS} w-[160px] flex-none`}
         >
           {(Object.keys(FILTER_LABEL) as Filter[]).map((key) => (
