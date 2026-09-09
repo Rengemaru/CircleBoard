@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -8,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Chip } from "../components/ui/Chip";
 import { Modal } from "../components/ui/Modal";
 import { Note } from "../components/ui/Note";
+import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -100,9 +102,11 @@ export function ProjectDetailPage() {
 
   return (
     <MemberPage user={user}>
-      <Link to="/projects" className="mb-3 inline-block text-xs text-gray-500 hover:text-gray-900">
-        ← プロジェクト一覧
-      </Link>
+      <div className="mb-3">
+        <TextLink elementAs={Link} to="/projects" size="XS">
+          ← プロジェクト一覧
+        </TextLink>
+      </div>
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
@@ -114,19 +118,30 @@ export function ProjectDetailPage() {
           ))}
         </div>
 
-        <h1 className="mt-2.5 text-xl font-bold">{project.title}</h1>
+        {/* PageHeading を通すとタブにも企画名が出る。
+            size は XL。smarthr-ui は太さではなく大きさで階層を作るので、
+            既定の L だとパネル内の他の情報に埋もれる(PR #134 と同じ) */}
+        <PageHeading title={project.title} className="mt-2.5" size="XL" />
 
-        <dl className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-[13px]">
+        {/* 「いつ活動して・いつ集まって・あと何枠か」は参加を決めるのに
+            一緒に見る情報なので横に並べる
+            (SmartHR「関連性のある項目は横に並べて関連性を伝える」) */}
+        <DefinitionList className="mt-4 border-t border-gray-200 pt-4">
           {project.activity_schedule !== null && (
-            <Row label="活動日" value={project.activity_schedule} />
+            <DefinitionListItem term="活動日" maxColumns={3}>
+              {project.activity_schedule}
+            </DefinitionListItem>
           )}
           {project.meeting_schedule !== null && (
-            <Row label="MTG" value={project.meeting_schedule} />
+            <DefinitionListItem term="MTG" maxColumns={3}>
+              {project.meeting_schedule}
+            </DefinitionListItem>
           )}
-          {/* 残り枠(ワイヤーフレーム⑤のサイド)。定員なしのときに
-              「残り null枠」と出さない */}
-          <Row label="残り枠" value={formatRemaining(project)} />
-        </dl>
+          {/* 定員なしのときに「残り null枠」と出さない */}
+          <DefinitionListItem term="残り枠" maxColumns={3}>
+            {formatRemaining(project)}
+          </DefinitionListItem>
+        </DefinitionList>
       </Panel>
 
       <Panel title="概要">
@@ -203,15 +218,6 @@ export function ProjectDetailPage() {
 function formatRemaining(project: ProjectSummary): string {
   if (project.capacity === null) return "制限なし";
   return `${Math.max(0, project.capacity - project.participants_count)}名`;
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-4">
-      <dt className="w-24 shrink-0 text-gray-500">{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
 }
 
 function toMessage(error: unknown): string {
