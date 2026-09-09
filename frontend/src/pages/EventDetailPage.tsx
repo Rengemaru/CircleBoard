@@ -23,9 +23,14 @@ export function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 再読み込みに成功したらエラーを消す。消さないと、通信が直ったあとも
+  // 赤い帯が残り続け、失敗したのか成功したのかが判別できない(Issue #44)
   const load = useCallback(() => {
     apiFetch<EventDetail>(`/api/events/${id}`)
-      .then(setEvent)
+      .then((result) => {
+        setEvent(result);
+        setError(null);
+      })
       .catch((e: unknown) => setError(toMessage(e)));
   }, [id]);
 

@@ -42,9 +42,14 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
   // 無効化は取り消せないので、他の破壊的操作と同じく確認を挟む(Issue #39)
   const [revoking, setRevoking] = useState<SignageTokenRow | null>(null);
 
+  // 再読み込みに成功したらエラーを消す。消さないと、通信が直ったあとも
+  // 赤い帯が残り続け、失敗したのか成功したのかが判別できない(Issue #44)
   function load() {
     fetchSignageTokens()
-      .then(setTokens)
+      .then((rows) => {
+        setTokens(rows);
+        setError(null);
+      })
       .catch((e: unknown) => setError(toMessage(e)));
   }
 
