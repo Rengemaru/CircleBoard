@@ -14,14 +14,17 @@ export function PageHeading({
   title,
   subtitle,
   action,
+  // 下の余白。管理画面のようにトップバーの中へ置くときは "" で消す
+  className = "mb-5",
 }: {
   title: string;
   subtitle?: string;
   // 見出し行の右端に置く主操作（例: 「＋ イベントを作成」）
   action?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Cluster align="center" justify="space-between" className="mb-5">
+    <Cluster align="center" justify="space-between" className={className}>
       <div>
         <ShrPageHeading size="L" pageTitleSuffix={PAGE_TITLE_SUFFIX}>
           {title}
