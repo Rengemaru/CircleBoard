@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { ApiError } from "../api/client";
 import { fetchSignage } from "../api/signage";
 import { formatCountdownDays } from "../lib/countdown";
 import type { SignageData, SignageEvent, SignageProject } from "../types/signage";
@@ -18,11 +19,31 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // 端末なので自力で復帰できなかった。データだけ取り直す(Issue #47)。
 const REFRESH_INTERVAL_SECONDS = 60;
 
+// 失敗の種類。部室に入った人が最初に打つ手が変わるので分ける
+type Failure = "invalid_token" | "offline";
+
+const FAILURE_MESSAGE: Record<Failure, string> = {
+  // サーバーはトークン不正を 404 で返す(docs/api-spec.md §0 の「存在を隠す」方針)
+  invalid_token: "このディスプレイのURLは無効です。管理画面でトークンを再発行してください",
+  offline: "サーバーに接続できません",
+};
+
+// ApiError.status が 0 のときはネットワークに届いていない(api/client.ts)
+function toFailure(error: unknown): Failure {
+  if (error instanceof ApiError && error.status === 404) return "invalid_token";
+  return "offline";
+}
+
 export function SignagePage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [data, setData] = useState<SignageData | null>(null);
-  const [failed, setFailed] = useState(false);
+  // 失敗の理由を分ける。トークン失効・Wi-Fi断・サーバー停止が
+  // 同じ「表示できません」だと、部室に入った人が何をすればよいか
+  // 決められない(Issue #48)
+  const [failure, setFailure] = useState<Failure | null>(null);
+  // 最後に取得できた時刻。表示が古いことに気づけるよう、正常時も常に出す
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     // アンマウント後に setState しないための番人。
@@ -34,11 +55,12 @@ export function SignagePage() {
         .then((next) => {
           if (cancelled) return;
           setData(next);
-          setFailed(false);
+          setFetchedAt(new Date());
+          setFailure(null);
         })
-        .catch(() => {
+        .catch((e: unknown) => {
           if (cancelled) return;
-          setFailed(true);
+          setFailure(toFailure(e));
         });
     }
 
@@ -52,12 +74,11 @@ export function SignagePage() {
   }, [token]);
 
   // 一度でも取得できていれば、そのあと失敗しても画面を捨てない。
-  // 部室のディスプレイは誰も操作しないので、消すと戻す人がいない。
-  // 表示が古いことを伝えるのは Issue #48 で扱う
-  if (failed && data === null) {
+  // 部室のディスプレイは誰も操作しないので、消すと戻す人がいない
+  if (failure !== null && data === null) {
     return (
       <Screen>
-        <CenteredMessage>表示できません</CenteredMessage>
+        <CenteredMessage>{FAILURE_MESSAGE[failure]}</CenteredMessage>
       </Screen>
     );
   }
@@ -77,7 +98,7 @@ export function SignagePage() {
   if (!hasEvents && !hasProjects) {
     return (
       <Screen>
-        <Header />
+        <Header fetchedAt={fetchedAt} failure={failure} />
         <EmptyState />
       </Screen>
     );
@@ -85,7 +106,7 @@ export function SignagePage() {
 
   return (
     <Screen>
-      <Header />
+      <Header fetchedAt={fetchedAt} failure={failure} />
       {/* 片方が0件なら、残った方を全画面に繰り上げる。
           空セクションの見出しだけを残さない(wireframe-signage.html S4) */}
       {hasEvents && <EventSection events={data.spotlight_events} grown={!hasProjects} />}
@@ -110,15 +131,34 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Header() {
+function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failure | null }) {
   return (
     <header className="flex items-end justify-between border-b border-[#2b2e3c] pb-[1.1%]">
       <div>
         <div className="text-[2.1vw] font-bold tracking-tight">CircleBoard</div>
         <div className="mt-1 text-[1.05vw] text-[#5d6474]">情報系学生サークル</div>
       </div>
-      <Clock />
+      <div className="flex items-end gap-[2vw]">
+        <FetchStatus fetchedAt={fetchedAt} failure={failure} />
+        <Clock />
+      </div>
     </header>
+  );
+}
+
+// いつの情報かを常に出す。更新が止まっていても画面は最後の内容を映し続けるので、
+// 時刻が無いと「古い」ことに気づけない(Issue #48)
+function FetchStatus({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failure | null }) {
+  if (fetchedAt === null) return null;
+
+  return (
+    <div className="max-w-[26vw] text-right text-[1.05vw] leading-snug">
+      <div className="text-[#5d6474]">最終更新 {formatClock(fetchedAt)}</div>
+      {failure !== null && (
+        // 更新できていないことは、色だけでなく文言でも伝える
+        <div className="mt-1 text-[#fca5a5]">{FAILURE_MESSAGE[failure]}</div>
+      )}
+    </div>
   );
 }
 
