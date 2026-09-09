@@ -72,7 +72,13 @@ export function LoginPage() {
             />
           </Field>
 
-          <Button type="submit" variant="primary" disabled={busy} className="w-full">
+          <Button
+            type="submit"
+            variant="primary"
+            busy={busy}
+            busyLabel="ログイン中…"
+            className="w-full"
+          >
             ログイン
           </Button>
         </form>

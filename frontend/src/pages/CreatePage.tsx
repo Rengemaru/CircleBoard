@@ -267,7 +267,7 @@ export function CreatePage() {
         </Panel>
 
         <div className="flex gap-2">
-          <Button type="submit" variant="primary" disabled={busy}>
+          <Button type="submit" variant="primary" busy={busy} busyLabel="作成中…">
             作成する
           </Button>
           {/* 直前の画面に戻る。/ に固定で飛ばすと、一覧から来た人が

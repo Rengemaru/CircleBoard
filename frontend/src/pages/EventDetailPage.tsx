@@ -201,7 +201,7 @@ function ParticipationButton({
 
   if (joined) {
     return (
-      <Button variant="ghost" onClick={onCancel} disabled={busy}>
+      <Button variant="ghost" onClick={onCancel} busy={busy} busyLabel="キャンセル中…">
         参加をキャンセル
       </Button>
     );
@@ -214,7 +214,7 @@ function ParticipationButton({
   }
 
   return (
-    <Button variant="primary" onClick={onJoin} disabled={busy}>
+    <Button variant="primary" onClick={onJoin} busy={busy} busyLabel="参加中…">
       参加する
     </Button>
   );
