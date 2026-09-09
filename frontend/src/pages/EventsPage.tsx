@@ -39,12 +39,15 @@ export function EventsPage() {
 
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [tagsError, setTagsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 失敗を空配列に倒すと、通信できなかったのかタグが0件なのかを
+    // 見分けられない。再試行の手がかりも消える(Issue #52)
     fetchTags()
       .then(setTags)
-      .catch(() => setTags([]));
+      .catch(() => setTagsError(true));
   }, []);
 
   useEffect(() => {
@@ -95,6 +98,14 @@ export function EventsPage() {
         </Cluster>
 
         <Base overflow="hidden">
+          {tagsError && (
+            <div className="border-b border-gray-200 p-3">
+              <Text size="S" color="TEXT_GREY">
+                タグを読み込めませんでした。ページを再読み込みしてください。
+              </Text>
+            </div>
+          )}
+
           {tags.length > 0 && (
             <Cluster gap="XS" className="border-b border-gray-200 p-3">
               <TagFilter active={selectedTagId === null} onClick={() => selectTag(null)}>

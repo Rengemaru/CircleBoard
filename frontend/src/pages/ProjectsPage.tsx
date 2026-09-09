@@ -39,14 +39,17 @@ export function ProjectsPage() {
 
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [tagsError, setTagsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading || user === null) return;
 
+    // 失敗を空配列に倒すと、通信できなかったのかタグが0件なのかを
+    // 見分けられない。再試行の手がかりも消える(Issue #52)
     fetchTags()
       .then(setTags)
-      .catch(() => setTags([]));
+      .catch(() => setTagsError(true));
   }, [loading, user]);
 
   useEffect(() => {
@@ -134,6 +137,12 @@ export function ProjectsPage() {
           </FilterChip>
         ))}
       </FilterRow>
+
+      {tagsError && (
+        <p className="mb-3 text-[13px] text-gray-500">
+          タグを読み込めませんでした。ページを再読み込みしてください。
+        </p>
+      )}
 
       {tags.length > 0 && (
         <FilterRow label="TAG">
