@@ -1,10 +1,11 @@
-import { buttonClassName, type ButtonSize, type ButtonVariant } from "./buttonStyle";
+import { Button as ShrButton } from "smarthr-ui";
+import { shrSize, shrVariant, type ButtonSize, type ButtonVariant } from "./buttonVariant";
 
-// wireframe-admin-ver2.html の .wf-btn に対応する。
+// smarthr-ui の Button に、このリポジトリの呼び出し語をかぶせたもの
+// (docs/instructions.md Phase 8-3)。
 //
-// 新WFは <style> に生CSSを持っているが、そのまま持ち込まない。
-// Tailwind のユーティリティを直接書く(CLAUDE.md §4)。
-// wf-btn primary sm  →  <Button variant="primary" size="sm">
+// 直接 smarthr-ui の Button を呼ばないのは、variant / size の対応表を
+// buttonVariant.ts の1箇所に集めておくため。busy の扱いもここに閉じる。
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -22,23 +23,25 @@ export function Button({
   busy = false,
   busyLabel,
   disabled,
-  className = "",
   children,
   ...rest
 }: Props) {
   return (
-    <button
+    <ShrButton
       // type を明示しないと、フォームの中では submit になる。
-      // 呼び出し側で type="submit" を渡せば上書きされる
+      // 呼び出し側で type="submit" を渡せば rest が上書きする
       type="button"
+      variant={shrVariant(variant)}
+      size={shrSize(size)}
+      loading={busy}
+      // loading はスピナーを出すだけなので、押せない状態は自分で作る。
+      // 呼び出し側の disabled とどちらかが真なら無効
+      disabled={disabled === true || busy}
       // false を渡すと aria-busy="false" が出てしまうので、そのときは属性ごと落とす
       aria-busy={busy || undefined}
-      // 処理中は二重送信させない。呼び出し側の disabled とどちらかが真なら無効
-      disabled={disabled === true || busy}
-      className={`${buttonClassName(variant, size)} ${className}`}
       {...rest}
     >
       {busy && busyLabel !== undefined ? busyLabel : children}
-    </button>
+    </ShrButton>
   );
 }
