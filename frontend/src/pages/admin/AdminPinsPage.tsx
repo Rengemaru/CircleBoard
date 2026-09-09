@@ -78,21 +78,10 @@ function PinPicker() {
 
       {error !== null && <Note tone="danger">{error}</Note>}
 
-      <Panel
-        title="現在のピン留め"
-        action={
-          pinned !== null && (
-            <Button
-              variant="danger"
-              size="xs"
-              disabled={busy}
-              onClick={() => run(() => unpinEvent(pinned.id))}
-            >
-              ピン留めを解除
-            </Button>
-          )
-        }
-      >
+      {/* 解除ボタンをここに置いていたが、押した瞬間に確定してしまい、
+          上のコメントで自分が決めた方針（選んでから保存する）に反していた。
+          「ピン留めなし」を選択肢の1つにして、付ける側と同じ2段階に揃える(Issue #40) */}
+      <Panel title="現在のピン留め">
         {pinned === null ? (
           <p className="text-[13px] text-gray-500">
             ピン留めなし。注目枠は4枠すべてスコア順で自動選出されます。
@@ -114,7 +103,8 @@ function PinPicker() {
 
       <Panel title="ピン留めするイベントを選ぶ">
         <Note>
-          スコアが高い順に表示しています（スコア = 開催間近ボーナス × 15 + 直近3日の参加増加数 × 10）
+          スコアが高い順に表示しています（スコア = 開催間近ボーナス × 15 + 直近3日の参加増加数 ×
+          10）
         </Note>
 
         {events.length === 0 ? (
@@ -122,6 +112,7 @@ function PinPicker() {
         ) : (
           <>
             <div className="mb-4">
+              <NoPinRow selected={selectedId === null} onSelect={() => setSelectedId(null)} />
               {events.map((event) => (
                 <EventRow
                   key={event.id}
@@ -134,7 +125,9 @@ function PinPicker() {
 
             {changed && (
               <Note tone="warning">
-                サイネージとトップページの表示が変わります。現在のピンは自動で外れます。
+                {selectedId === null
+                  ? "サイネージとトップページの表示が変わります。注目枠は4枠すべて自動選出になります。"
+                  : "サイネージとトップページの表示が変わります。現在のピンは自動で外れます。"}
               </Note>
             )}
 
@@ -148,10 +141,14 @@ function PinPicker() {
               </Button>
               <Button
                 variant="primary"
-                disabled={!changed || busy || selectedId === null}
-                onClick={() => selectedId !== null && run(() => pinEvent(selectedId))}
+                disabled={!changed || busy}
+                onClick={() => {
+                  if (selectedId !== null) return run(() => pinEvent(selectedId));
+                  // selectedId が null で changed なら、外す対象のピンが必ずある
+                  if (pinned !== null) return run(() => unpinEvent(pinned.id));
+                }}
               >
-                ピン留めを保存
+                保存
               </Button>
             </div>
           </>
@@ -162,6 +159,28 @@ function PinPicker() {
         注目スコアはこの画面にだけ表示しています。数値が見えると、順位を上げるための操作を誘発するためです。
       </p>
     </>
+  );
+}
+
+// 「ピン留めしない」も選択肢の1つとして並べる。解除を別のボタンにすると、
+// 付けるときだけ確認があって外すときは無いという不揃いになる(Issue #40)
+function NoPinRow({ selected, onSelect }: { selected: boolean; onSelect: () => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 border-b border-gray-100 py-2.5">
+      <input
+        type="radio"
+        name="pinned-event"
+        checked={selected}
+        onChange={onSelect}
+        className="h-4 w-4 shrink-0 accent-gray-900"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold">ピン留めしない</span>
+        <span className="block text-[11px] text-gray-500">
+          注目枠4枠すべてをスコア順で自動選出する
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -187,8 +206,8 @@ function EventRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] font-semibold">{event.title}</span>
         <span className="block text-[11px] text-gray-500">
-          開催：{formatDate(event.starts_at)} ・ {event.location} ・ 参加{" "}
-          {event.participants_count}名
+          開催：{formatDate(event.starts_at)} ・ {event.location} ・ 参加 {event.participants_count}
+          名
         </span>
       </span>
       <span className="shrink-0 text-xs text-gray-500">
