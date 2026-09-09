@@ -5,6 +5,10 @@ import { Button } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
+// 独自に「残N日 / 本日」を書いていたが、開催日が過去でも「本日」と出ていた。
+// countdown.ts が「同じ表示は1か所にまとめる」と決めているのに、
+// この画面だけそこを通っていなかった(Issue #62)
+import { formatCountdownDays } from "../../lib/countdown";
 import { AdminLayout } from "./AdminLayout";
 
 // 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
@@ -29,9 +33,7 @@ function DashboardBody() {
         setData(result);
         setError(null);
       })
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "読み込みに失敗しました"),
-      );
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "読み込みに失敗しました"));
   }, []);
 
   if (error !== null) {
@@ -62,7 +64,7 @@ function DashboardBody() {
           sub={
             stats.next_event === null
               ? "開催予定なし"
-              : `次回：${stats.next_event.title}（${formatDaysUntil(stats.next_event.days_until)}）`
+              : `次回：${stats.next_event.title}（${formatCountdownDays(stats.next_event.days_until)}）`
           }
         />
         <StatCard
@@ -192,7 +194,11 @@ function QuickActions() {
   return (
     <Panel title="クイックアクション">
       <div className="flex flex-col gap-2">
-        <Button variant="primary" className="text-left" onClick={() => navigate("/admin/users/new")}>
+        <Button
+          variant="primary"
+          className="text-left"
+          onClick={() => navigate("/admin/users/new")}
+        >
           👤 アカウントを発行する
         </Button>
         <Button className="text-left" onClick={() => navigate("/admin/pin")}>
@@ -220,9 +226,4 @@ function Td({ className = "", children }: { className?: string; children: React.
       {children}
     </td>
   );
-}
-
-function formatDaysUntil(days: number): string {
-  if (days > 0) return `残${days}日`;
-  return "本日";
 }
