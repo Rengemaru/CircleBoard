@@ -177,17 +177,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
         )}
       </div>
 
-      <Note>
-        <strong>「停止」は表示上のラベルではありません。</strong>
-        ログインできなくなるだけでなく、すでにログイン中の画面もその場で無効になります。
-        企画と参加記録は残るので、あとから解除すれば元どおり使えます。
-      </Note>
-
-      <Note tone="warning">
-        「削除」はメンバーの物理削除です。取り消せません。ただし、その人が作った企画と
-        過去の参加記録は消えず、名前の部分が空欄になって残ります。
-      </Note>
-
+      {/* 破壊的操作の意味は確認モーダルに書く。押す直前に必ず目に入る場所でないと
+          読まれない(SmartHR feedback.mdx「直前に操作した要素の近く」)。
+          ここに残すのは、操作の前提として知っておく話だけ(Issue #61) */}
       <Note>
         パスワードの再発行と権限の変更は、この画面からはできません。
         <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
