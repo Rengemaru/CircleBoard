@@ -237,7 +237,9 @@ export function CreatePage() {
             </Field>
           )}
 
-          <Field label="定員（空欄なら無制限）">
+          {/* 任意であることは（任意）で統一し、空欄にしたときの挙動は
+              hint に分ける。ラベルに混ぜると2通りの書き方になる(Issue #58) */}
+          <Field label="定員（任意）" hint="空欄にすると無制限になります">
             <input
               type="number"
               value={capacity}

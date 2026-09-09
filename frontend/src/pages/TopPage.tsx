@@ -53,6 +53,9 @@ export function TopPage() {
 
   return (
     <MemberPage user={user}>
+      {/* サイトの入口なのに見出しが h2 から始まっていた。ヘッダーのロゴは
+          リンクであって見出しではない。視覚的には冗長なので隠す(Issue #58) */}
+      <h1 className="sr-only">CircleBoard — 今週の企画</h1>
       <div className="space-y-7">
         <SpotlightSection events={events} error={eventsError} />
         <ProjectSection user={user} projects={projects} error={projectsError} />

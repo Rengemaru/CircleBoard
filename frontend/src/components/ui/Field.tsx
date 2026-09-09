@@ -24,7 +24,15 @@ export function Field({
     <label className="mb-4 block">
       <span className="mb-1.5 block text-xs font-semibold text-gray-700">
         {label}
-        {required && <span className="ml-1 text-red-600">*</span>}
+        {required && (
+          <>
+            {/* 赤い * だけだと、色が見えない人にも読み上げにも伝わらない */}
+            <span className="ml-1 text-red-600" aria-hidden="true">
+              *
+            </span>
+            <span className="sr-only">必須</span>
+          </>
+        )}
       </span>
       {children}
       {hint !== undefined && <span className="mt-1 block text-[11px] text-gray-400">{hint}</span>}

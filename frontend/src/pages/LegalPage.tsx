@@ -86,7 +86,9 @@ export function LegalPage() {
 function Faq({ q, children }: { q: string; children: React.ReactNode }) {
   return (
     <div className="rounded border border-gray-200 bg-white p-4">
-      <p className="text-[13px] font-bold">Q. {q}</p>
+      {/* 規約側の項目は h3 なのに質問だけ p だった。見出しにすると
+          スクリーンリーダーで質問間を飛べる。見た目は変えない(Issue #58) */}
+      <h3 className="text-[13px] font-bold">Q. {q}</h3>
       <p className="mt-1 text-[13px] text-gray-700">A. {children}</p>
     </div>
   );
