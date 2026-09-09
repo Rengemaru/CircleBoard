@@ -17,7 +17,7 @@ import { REDIRECT_PARAM, safeRedirectPath } from "../lib/redirectTo";
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useCurrentUser();
+  const { user, failed } = useCurrentUser();
   // 戻り先は URL から来るので、外部サイトを指していないかをここで絞る
   const redirectTo = safeRedirectPath(searchParams.get(REDIRECT_PARAM));
   const [email, setEmail] = useState("");
@@ -45,7 +45,7 @@ export function LoginPage() {
   }
 
   return (
-    <MemberPage user={user} width="narrow">
+    <MemberPage user={user} width="narrow" sessionFailed={failed}>
       <Panel title="ログイン">
         <form onSubmit={submit}>
           {error !== null && <Note tone="danger">{error}</Note>}

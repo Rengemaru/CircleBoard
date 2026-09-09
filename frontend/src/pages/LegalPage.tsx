@@ -9,10 +9,10 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 // 静的ページとして実装する。DBもCMSも作らない。内容の更新はコード変更 +
 // デプロイで行う。同意フローは作らない、表示のみ(CLAUDE.md §10)。
 export function LegalPage() {
-  const { user } = useCurrentUser();
+  const { user, failed } = useCurrentUser();
 
   return (
-    <MemberPage user={user}>
+    <MemberPage user={user} sessionFailed={failed}>
       <PageHeading title="よくある質問・利用規約" />
 
       <section className="mb-7">
