@@ -1,5 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
-import { Button } from "./ui/Button";
+import { useLocation } from "react-router-dom";
+import { LinkButton } from "./ui/LinkButton";
 import { loginPathFrom } from "../lib/redirectTo";
 
 // ログインしないと使えない画面で出す案内。
@@ -16,11 +16,14 @@ export function LoginRequired({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded border border-gray-200 bg-white p-5">
       <p className="text-[13px] text-gray-700">{children}</p>
-      <Link to={loginPathFrom(location.pathname + location.search)} className="mt-3 inline-block">
-        <Button variant="primary" size="sm">
-          ログイン
-        </Button>
-      </Link>
+      <LinkButton
+        to={loginPathFrom(location.pathname + location.search)}
+        variant="primary"
+        size="sm"
+        className="mt-3"
+      >
+        ログイン
+      </LinkButton>
     </div>
   );
 }

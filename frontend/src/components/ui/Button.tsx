@@ -1,29 +1,14 @@
+import { buttonClassName, type ButtonSize, type ButtonVariant } from "./buttonStyle";
+
 // wireframe-admin-ver2.html の .wf-btn に対応する。
 //
 // 新WFは <style> に生CSSを持っているが、そのまま持ち込まない。
 // Tailwind のユーティリティを直接書く(CLAUDE.md §4)。
 // wf-btn primary sm  →  <Button variant="primary" size="sm">
-type Variant = "default" | "primary" | "danger" | "dangerFill" | "success" | "ghost";
-type Size = "md" | "sm" | "xs";
-
-const VARIANT: Record<Variant, string> = {
-  default: "border-gray-900 bg-white text-gray-900",
-  primary: "border-gray-900 bg-gray-900 text-white",
-  danger: "border-red-600 bg-white text-red-600",
-  dangerFill: "border-red-600 bg-red-600 text-white",
-  success: "border-green-600 bg-white text-green-600",
-  ghost: "border-gray-300 bg-white text-gray-500",
-};
-
-const SIZE: Record<Size, string> = {
-  md: "px-4 py-[7px] text-[13px]",
-  sm: "px-[10px] py-1 text-xs",
-  xs: "px-2 py-[3px] text-[11px]",
-};
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: Variant;
-  size?: Size;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   // 処理中かどうか。disabled による薄さだけだと、押せなかったのか
   // 処理中なのかが分からず連打を誘発する(Issue #46)
   busy?: boolean;
@@ -50,7 +35,7 @@ export function Button({
       aria-busy={busy || undefined}
       // 処理中は二重送信させない。呼び出し側の disabled とどちらかが真なら無効
       disabled={disabled === true || busy}
-      className={`rounded border-[1.5px] font-semibold disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
+      className={`${buttonClassName(variant, size)} ${className}`}
       {...rest}
     >
       {busy && busyLabel !== undefined ? busyLabel : children}
