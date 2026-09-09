@@ -117,7 +117,7 @@ function SpotlightSection({
           <li key={event.id} className="rounded border border-gray-200 bg-white p-5">
             {event.pinned && (
               <div className="mb-2">
-                <Badge tone="pinned">📌 ピン留め</Badge>
+                <Chip>📌 ピン留め</Chip>
               </div>
             )}
             {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」

@@ -94,7 +94,7 @@ export function EventDetailPage() {
           <Badge tone={event.status === "recruiting" ? "recruiting" : "completed"}>
             {event.status === "recruiting" ? "募集中" : "終了"}
           </Badge>
-          {event.pinned && <Badge tone="pinned">📌 ピン留め</Badge>}
+          {event.pinned && <Chip>📌 ピン留め</Chip>}
           {event.tags.map((tag) => (
             <Chip key={tag.id}>{tag.name}</Chip>
           ))}
