@@ -208,6 +208,13 @@ function Clock() {
     <div className="text-right">
       <div className="font-mono text-[3.1vw] font-bold leading-none tracking-tight">
         {formatClock(now)}
+        {/* 秒を小さく添える。毎秒更新しているのに分単位の表示だと、
+            画面が固まっているのか動いているのかが遠目に分からない。
+            「動いている時計＝生きている画面」の証拠にならなかった(Issue #69) */}
+        {/* 区切りを入れないと 02:46 と 01秒 が「02:461」に見える */}
+        <span className="ml-[0.15em] text-[0.45em] font-normal text-[#5d6474]">
+          :{formatSeconds(now)}
+        </span>
       </div>
       <div className="mt-[0.35em] text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
         {formatToday(now)}
@@ -369,15 +376,28 @@ function EmptyState() {
   );
 }
 
+// timeZone を明示する。省くと部室の端末の設定に依存し、ずれていても
+// 誰も操作しないので現地で直されない(CLAUDE.md §4「時刻はタイムゾーン付きで扱う」)
+const SIGNAGE_TIME_ZONE = "Asia/Tokyo";
+
 function formatClock(now: Date): string {
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: SIGNAGE_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   }).format(now);
 }
 
+function formatSeconds(now: Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: SIGNAGE_TIME_ZONE,
+    second: "2-digit",
+  }).format(now);
+}
+
 function formatToday(now: Date): string {
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: SIGNAGE_TIME_ZONE,
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -387,6 +407,7 @@ function formatToday(now: Date): string {
 
 function formatStartsAt(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: SIGNAGE_TIME_ZONE,
     month: "numeric",
     day: "numeric",
     weekday: "short",
