@@ -1,5 +1,7 @@
 module Api
   class ProjectsController < ApplicationController
+    include TagFilterable
+
     # イベントと違い、一覧・詳細もログイン必須(docs/api-spec.md §3)。
     # プロジェクトは継続的に成果物を作る活動で、参加者や進行状況が
     # 部外者に見える必要がないため
@@ -90,10 +92,6 @@ module Api
       scope.joins(:project_tags).where(project_tags: { tag_id: ids }).distinct
     end
 
-    # "1,3,5" を [1, 3, 5] にする。数字でないものは捨てる
-    def parse_tag_ids(raw)
-      raw.to_s.split(",").filter_map { |s| Integer(s, exception: false) }
-    end
 
     # 募集中 → 進行中 の順(画面④)。enum の整数(0:recruiting 1:in_progress
     # 2:completed)がそのままこの順序なので、status で並べるだけでよい。

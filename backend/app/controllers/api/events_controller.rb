@@ -1,5 +1,7 @@
 module Api
   class EventsController < ApplicationController
+    include TagFilterable
+
     before_action :require_login, only: [ :create, :update, :destroy ]
     before_action :set_event, only: [ :show, :update, :destroy ]
     before_action :require_owner_or_admin, only: [ :update, :destroy ]
@@ -108,10 +110,6 @@ module Api
       scope.joins(:event_tags).where(event_tags: { tag_id: ids }).distinct
     end
 
-    # "1,3,5" を [1, 3, 5] にする。数字でないものは捨てる
-    def parse_tag_ids(raw)
-      raw.to_s.split(",").filter_map { |s| Integer(s, exception: false) }
-    end
 
     def set_event
       @event = Event.active

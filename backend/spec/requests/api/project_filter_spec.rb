@@ -114,6 +114,24 @@ RSpec.describe "GET /api/projects の絞り込み", type: :request do
       expect(response.parsed_body["projects"].map { _1["title"] }).to eq([ "両方持ち" ])
     end
 
+    # Integer("010") は基数を省くと8進数として 8 になる
+    it "先頭にゼロが付いていても10進数として読む" do
+      tag = create(:tag, name: "Web開発")
+      create(:project, title: "タグあり", tags: [ tag ])
+      create(:project, title: "タグなし")
+
+      get "/api/projects", params: { tag_ids: format("%03d", tag.id) }
+
+      expect(response.parsed_body["projects"].map { _1["title"] }).to eq([ "タグあり" ])
+    end
+
+    it "bigint を超える値でもエラーにならない" do
+      get "/api/projects", params: { tag_ids: "99999999999999999999" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["projects"]).to be_empty
+    end
+
     it "空や数字でない値のときは絞り込まない" do
       create(:project, title: "タグなし")
 
