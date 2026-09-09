@@ -131,9 +131,10 @@ export function EventsPage() {
             <EmptyRow>読み込み中…</EmptyRow>
           ) : events.length === 0 ? (
             <EmptyRow>
+              {/* 絞り込みの結果0件のときは、やり直せることを伝える(Issue #53) */}
               {selectedTagId === null
                 ? "開催予定のイベントはありません。"
-                : "このタグのイベントはありません。"}
+                : "このタグのイベントはありません。別のタグを試してください。"}
             </EmptyRow>
           ) : (
             <ul className="divide-y divide-gray-200">

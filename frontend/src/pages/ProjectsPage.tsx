@@ -166,9 +166,11 @@ export function ProjectsPage() {
           <p className="text-[13px] text-gray-500">読み込み中…</p>
         ) : projects.length === 0 ? (
           <p className="text-[13px] text-gray-500">
+            {/* 一覧は募集中と進行中の両方を出す。「募集中はありません」だと、
+                進行中があるのに隠れていると誤読される(Issue #53) */}
             {status === "all" && selectedTagId === null
-              ? "いま募集中のプロジェクトはありません。"
-              : "この条件のプロジェクトはありません。"}
+              ? "参加できるプロジェクトはありません。"
+              : "条件に合うプロジェクトはありません。条件を変えて試してください。"}
           </p>
         ) : (
           <ul className="space-y-4">

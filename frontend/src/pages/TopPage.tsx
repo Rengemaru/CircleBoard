@@ -159,7 +159,8 @@ function ProjectSection({
       ) : projects === null ? (
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       ) : projects.length === 0 ? (
-        <p className="text-[13px] text-gray-500">いま募集中のプロジェクトはありません。</p>
+        // 一覧と同じく募集中と進行中の両方を出すので、募集中だけを否定しない(Issue #53)
+        <p className="text-[13px] text-gray-500">参加できるプロジェクトはありません。</p>
       ) : (
         <ListPanel>
           {projects.slice(0, 3).map((project) => (
