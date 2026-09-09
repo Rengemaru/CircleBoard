@@ -234,11 +234,17 @@ function ListPanel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// 開催時刻は分まで出す。日付だけだと「その日に行けるか」は分かっても
+// 「何時に行けばよいか」が分からず、詳細を開き直すことになる。
+// 秒は出さない。イベントの開始時刻に秒の精度は要らない。
+// 他の画面（/events・詳細・サイネージ）も同じ粒度で揃えている
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
     month: "numeric",
     day: "numeric",
     weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
