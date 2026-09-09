@@ -11,6 +11,7 @@ import {
   Text,
 } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
+import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { Note } from "../components/ui/Note";
@@ -33,7 +34,7 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
 };
 
 export function ProjectsPage() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, failed } = useCurrentUser();
 
   // 絞り込みは ?status= と ?tag_ids= で行い、URLで共有できる状態にする
   // （画面④の注記）。画面の中に状態を持たず、URLを唯一の状態にしている
@@ -116,6 +117,16 @@ export function ProjectsPage() {
     return (
       <MemberPage user={null}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
+  }
+
+  // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
+  if (failed) {
+    return (
+      <MemberPage user={null} sessionFailed>
+        <PageHeading pageTitleSuffix="CircleBoard">プロジェクト</PageHeading>
+        <SessionUnavailable />
       </MemberPage>
     );
   }

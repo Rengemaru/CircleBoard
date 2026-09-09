@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
+import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
 import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
@@ -32,6 +33,8 @@ export function TopPage() {
   // 見えなくなっていた(Issue #45)
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  // ログイン状態を確かめられなかった状態。未ログインとは区別する(Issue #72)
+  const [sessionFailed, setSessionFailed] = useState(false);
 
   useEffect(() => {
     fetchCurrentUser()
@@ -44,7 +47,7 @@ export function TopPage() {
             .catch((e: unknown) => setProjectsError(toMessage(e)));
         }
       })
-      .catch(() => setUser(null));
+      .catch(() => setSessionFailed(true));
 
     fetchEvents({ sort: "spotlight" })
       .then(setEvents)
@@ -52,13 +55,18 @@ export function TopPage() {
   }, []);
 
   return (
-    <MemberPage user={user}>
+    <MemberPage user={user} sessionFailed={sessionFailed}>
       {/* サイトの入口なのに見出しが h2 から始まっていた。ヘッダーのロゴは
           リンクであって見出しではない。視覚的には冗長なので隠す(Issue #58) */}
       <h1 className="sr-only">CircleBoard — 今週の企画</h1>
       <div className="space-y-7">
         <SpotlightSection events={events} error={eventsError} />
-        <ProjectSection user={user} projects={projects} error={projectsError} />
+        <ProjectSection
+          user={user}
+          projects={projects}
+          error={projectsError}
+          sessionFailed={sessionFailed}
+        />
         <EventListSection events={events} error={eventsError} />
       </div>
     </MemberPage>
@@ -156,15 +164,19 @@ function ProjectSection({
   user,
   projects,
   error,
+  sessionFailed,
 }: {
   user: CurrentUser | null;
   projects: ProjectSummary[] | null;
   error: string | null;
+  sessionFailed: boolean;
 }) {
   return (
     <section>
       <SectionHeading link="/projects">プロジェクト</SectionHeading>
-      {user === null ? (
+      {sessionFailed ? (
+        <SessionUnavailable />
+      ) : user === null ? (
         <Note>プロジェクトはログインすると閲覧できます。アカウントは管理者が発行します。</Note>
       ) : error !== null ? (
         <Note tone="danger">{error}</Note>

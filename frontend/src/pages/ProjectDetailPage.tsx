@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
+import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -18,7 +19,7 @@ import type { ProjectSummary } from "../types/project";
 // 参加後に取り消すボタンも置かない。
 export function ProjectDetailPage() {
   const { id } = useParams();
-  const { user, loading } = useCurrentUser();
+  const { user, loading, failed } = useCurrentUser();
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,6 +60,15 @@ export function ProjectDetailPage() {
     return (
       <MemberPage user={null}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
+      </MemberPage>
+    );
+  }
+
+  // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
+  if (failed) {
+    return (
+      <MemberPage user={null} sessionFailed>
+        <SessionUnavailable />
       </MemberPage>
     );
   }
