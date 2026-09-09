@@ -33,7 +33,9 @@ function DashboardBody() {
         setData(result);
         setError(null);
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : "読み込みに失敗しました"));
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "読み込みに失敗しました"),
+      );
   }, []);
 
   if (error !== null) {
@@ -194,11 +196,7 @@ function QuickActions() {
   return (
     <Panel title="クイックアクション">
       <div className="flex flex-col gap-2">
-        <Button
-          variant="primary"
-          className="text-left"
-          onClick={() => navigate("/admin/users/new")}
-        >
+        <Button variant="primary" className="text-left" onClick={() => navigate("/admin/users/new")}>
           👤 アカウントを発行する
         </Button>
         <Button className="text-left" onClick={() => navigate("/admin/pin")}>
