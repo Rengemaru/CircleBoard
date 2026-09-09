@@ -257,7 +257,9 @@ function UserRow({
   busy: boolean;
 }) {
   return (
-    <tr className={user.suspended ? "bg-red-50" : user.graduated ? "opacity-65" : ""}>
+    // 卒業生は背景で示す。opacity を下げると文字が読めなくなる(Issue #68)。
+    // 状態列のバッジでも分かるので、色だけに頼っていない
+    <tr className={user.suspended ? "bg-red-50" : user.graduated ? "bg-gray-100" : ""}>
       <Td>
         <span className={isSelf ? "font-bold" : ""}>{user.name}</span>
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}

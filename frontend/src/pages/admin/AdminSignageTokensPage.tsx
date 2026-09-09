@@ -223,9 +223,12 @@ function TokenCard({
   const revoked = token.revoked_at !== null;
 
   return (
+    // 不透明度を下げると、区別は付くが文字が読めなくなる。無効化済みの行は
+    // 「どの端末をいつ止めたか」を追うために残しているので、読めないと意味がない。
+    // 背景と枠線で区別し、テキストのコントラストは保つ(Issue #68)
     <div
-      className={`mb-2.5 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white px-4 py-3.5 ${
-        revoked ? "opacity-50" : ""
+      className={`mb-2.5 flex flex-wrap items-center gap-3 rounded border px-4 py-3.5 ${
+        revoked ? "border-gray-300 bg-gray-100" : "border-gray-200 bg-white"
       }`}
     >
       <span
@@ -243,7 +246,7 @@ function TokenCard({
           signage_tokens.last_accessed_at は意図的に作っていない(docs/er.md)。
           代わりに発行日を出す。同じ端末名で作り直したとき、どちらが新しいかを
           名前だけでは判断できないため */}
-      <span className="flex-1 text-right text-[11px] text-gray-400">
+      <span className="flex-1 text-right text-[11px] text-gray-600">
         {revoked
           ? `無効化：${formatDate(token.revoked_at as string)}`
           : `発行：${formatDate(token.created_at)}`}
