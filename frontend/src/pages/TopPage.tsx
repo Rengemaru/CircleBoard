@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Section } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
+import { PageHeading } from "../components/ui/PageHeading";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
 import { Chip } from "../components/ui/Chip";
@@ -58,8 +59,10 @@ export function TopPage() {
   return (
     <MemberPage user={user} sessionFailed={sessionFailed}>
       {/* サイトの入口なのに見出しが h2 から始まっていた。ヘッダーのロゴは
-          リンクであって見出しではない。視覚的には冗長なので隠す(Issue #58) */}
-      <h1 className="sr-only">CircleBoard — 今週の企画</h1>
+          リンクであって見出しではない。視覚的には冗長なので隠す(Issue #58)。
+          PageHeading を通すのは document.title も書き換えるため。
+          自前の h1 だと、他の画面から戻ったときにタブ名が前のまま残る */}
+      <PageHeading title="今週の企画" visuallyHidden className="" />
       <div className="space-y-7">
         <SpotlightSection events={events} error={eventsError} />
         <ProjectSection

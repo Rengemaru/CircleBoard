@@ -20,6 +20,9 @@ export function PageHeading({
   // 同じ画面に太字の情報が並ぶところ（イベント詳細のカウントダウン）では
   // 一段大きくしないとタイトルが埋もれる
   size = "L",
+  // 見出しを画面に出さずに置く。トップのように、ヘッダーのロゴが
+  // 実質の画面名になっていて見出しを重ねると冗長な場所で使う(Issue #58)
+  visuallyHidden = false,
 }: {
   title: string;
   subtitle?: string;
@@ -27,11 +30,16 @@ export function PageHeading({
   action?: React.ReactNode;
   className?: string;
   size?: "L" | "XL";
+  visuallyHidden?: boolean;
 }) {
   return (
     <Cluster align="center" justify="space-between" className={className}>
       <div>
-        <ShrPageHeading size={size} pageTitleSuffix={PAGE_TITLE_SUFFIX}>
+        <ShrPageHeading
+          size={size}
+          visuallyHidden={visuallyHidden}
+          pageTitleSuffix={PAGE_TITLE_SUFFIX}
+        >
           {title}
         </ShrPageHeading>
         {subtitle !== undefined && <p className="mt-px text-xs text-gray-500">{subtitle}</p>}
