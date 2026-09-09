@@ -27,6 +27,7 @@ function PinPicker() {
   const [events, setEvents] = useState<AdminEventRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   // ラジオで選んでから「ピン留めを保存」で確定する(ワイヤーフレーム⑥)。
   // 押した瞬間にサイネージの表示が変わると、誤操作を取り消せない
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -46,11 +47,16 @@ function PinPicker() {
     load();
   }, []);
 
-  async function run(action: () => Promise<void>) {
+  // 成功しても load() するだけだと、表の下の方を操作したときに
+  // 押せたのか無視されたのかが分からず二度押しを誘発する。
+  // 何が起きたかを message で受け取って出す(Issue #43)
+  async function run(action: () => Promise<void>, message: string) {
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       await action();
+      setSuccess(message);
       load();
     } catch (e: unknown) {
       setError(toMessage(e));
@@ -77,6 +83,7 @@ function PinPicker() {
       </Note>
 
       {error !== null && <Note tone="danger">{error}</Note>}
+      {success !== null && <Note tone="success">{success}</Note>}
 
       {/* 解除ボタンをここに置いていたが、押した瞬間に確定してしまい、
           上のコメントで自分が決めた方針（選んでから保存する）に反していた。
@@ -143,9 +150,17 @@ function PinPicker() {
                 variant="primary"
                 disabled={!changed || busy}
                 onClick={() => {
-                  if (selectedId !== null) return run(() => pinEvent(selectedId));
+                  if (selectedId !== null) {
+                    const target = events.find((e) => e.id === selectedId);
+                    return run(
+                      () => pinEvent(selectedId),
+                      `${target?.title ?? "イベント"} をピン留めしました`,
+                    );
+                  }
                   // selectedId が null で changed なら、外す対象のピンが必ずある
-                  if (pinned !== null) return run(() => unpinEvent(pinned.id));
+                  if (pinned !== null) {
+                    return run(() => unpinEvent(pinned.id), "ピン留めを解除しました");
+                  }
                 }}
               >
                 保存

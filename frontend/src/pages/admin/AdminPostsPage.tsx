@@ -51,6 +51,7 @@ function PostList() {
   const [trashing, setTrashing] = useState<AdminPostRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function load() {
     fetchAdminPosts()
@@ -66,11 +67,16 @@ function PostList() {
     load();
   }, []);
 
-  async function run(action: () => Promise<void>) {
+  // 成功しても load() するだけだと、表の下の方を操作したときに
+  // 押せたのか無視されたのかが分からず二度押しを誘発する。
+  // 何が起きたかを message で受け取って出す(Issue #43)
+  async function run(action: () => Promise<void>, message: string) {
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       await action();
+      setSuccess(message);
       setTrashing(null);
       load();
     } catch (e: unknown) {
@@ -129,6 +135,7 @@ function PostList() {
       </div>
 
       {error !== null && <Note tone="danger">{error}</Note>}
+      {success !== null && <Note tone="success">{success}</Note>}
 
       <div className="mb-5 rounded border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5">
@@ -159,7 +166,9 @@ function PostList() {
                   key={`${post.kind}-${post.id}`}
                   post={post}
                   onTrash={() => setTrashing(post)}
-                  onRestore={() => run(() => restorePost(post.kind, post.id))}
+                  onRestore={() =>
+                    run(() => restorePost(post.kind, post.id), `${post.title} を復旧しました`)
+                  }
                   busy={busy}
                 />
               ))}
@@ -191,7 +200,9 @@ function PostList() {
           confirmLabel="削除する"
           busy={busy}
           onCancel={() => setTrashing(null)}
-          onConfirm={() => run(() => trashPost(trashing.kind, trashing.id))}
+          onConfirm={() =>
+            run(() => trashPost(trashing.kind, trashing.id), `${trashing.title} を削除しました`)
+          }
         >
           <p>
             {/* 折り返すと JSX が改行を空白にしてしまうので、文はつなげて書く */}

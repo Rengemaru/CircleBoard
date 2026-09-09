@@ -55,6 +55,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
   const [suspending, setSuspending] = useState<AdminUserRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function load() {
     fetchAdminUsers()
@@ -70,11 +71,16 @@ function UserList({ currentUserId }: { currentUserId: number }) {
     load();
   }, []);
 
-  async function run(action: () => Promise<void>) {
+  // 成功しても load() するだけだと、表の下の方を操作したときに
+  // 押せたのか無視されたのかが分からず二度押しを誘発する。
+  // 何が起きたかを message で受け取って出す(Issue #43)
+  async function run(action: () => Promise<void>, message: string) {
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       await action();
+      setSuccess(message);
       setDeleting(null);
       setSuspending(null);
       load();
@@ -121,6 +127,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
       </div>
 
       {error !== null && <Note tone="danger">{error}</Note>}
+      {success !== null && <Note tone="success">{success}</Note>}
 
       <div className="mb-5 rounded border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5">
@@ -150,7 +157,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                   isSelf={user.id === currentUserId}
                   onDelete={() => setDeleting(user)}
                   onSuspend={() => setSuspending(user)}
-                  onUnsuspend={() => run(() => unsuspendUser(user.id))}
+                  onUnsuspend={() =>
+                    run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
+                  }
                   busy={busy}
                 />
               ))}
@@ -188,7 +197,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           confirmLabel="完全に削除する"
           busy={busy}
           onCancel={() => setDeleting(null)}
-          onConfirm={() => run(() => deleteUser(deleting.id))}
+          onConfirm={() =>
+            run(() => deleteUser(deleting.id), `${deleting.name} のアカウントを削除しました`)
+          }
         >
           <p>
             <strong>{deleting.name}</strong>（{deleting.email}）のアカウントを削除します。
@@ -207,7 +218,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           confirmLabel="停止する"
           busy={busy}
           onCancel={() => setSuspending(null)}
-          onConfirm={() => run(() => suspendUser(suspending.id))}
+          onConfirm={() =>
+            run(() => suspendUser(suspending.id), `${suspending.name} を停止しました`)
+          }
         >
           <p>
             <strong>{suspending.name}</strong>（{suspending.email}）を停止します。

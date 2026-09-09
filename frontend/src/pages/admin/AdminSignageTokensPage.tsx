@@ -38,6 +38,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   // 無効化は取り消せないので、他の破壊的操作と同じく確認を挟む(Issue #39)
   const [revoking, setRevoking] = useState<SignageTokenRow | null>(null);
 
@@ -56,8 +57,10 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       await createSignageToken(name);
+      setSuccess(`${name} のトークンを発行しました`);
       setName("");
       onCloseForm();
       load();
@@ -68,11 +71,13 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
     }
   }
 
-  async function revoke(id: number) {
+  async function revoke(id: number, tokenName: string) {
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       await revokeSignageToken(id);
+      setSuccess(`${tokenName} のトークンを無効化しました`);
       setRevoking(null);
       load();
     } catch (e: unknown) {
@@ -126,6 +131,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       )}
 
       {error !== null && <Note tone="danger">{error}</Note>}
+      {success !== null && <Note tone="success">{success}</Note>}
 
       <SectionHeading>有効なトークン</SectionHeading>
       {active.length === 0 ? (
@@ -154,7 +160,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
           confirmLabel="無効化する"
           busy={busy}
           onCancel={() => setRevoking(null)}
-          onConfirm={() => revoke(revoking.id)}
+          onConfirm={() => revoke(revoking.id, revoking.name)}
         >
           <p>
             <strong>{revoking.name}</strong> のトークンを無効化します。
