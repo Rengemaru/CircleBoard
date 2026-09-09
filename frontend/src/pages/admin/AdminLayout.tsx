@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LinkButton } from "../../components/ui/LinkButton";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { fetchCurrentUser, type CurrentUser } from "../../api/session";
 import { loginPathFrom } from "../../lib/redirectTo";
 
@@ -57,12 +58,11 @@ export function AdminLayout({ title, subtitle, action, children }: Props) {
     <div className="grid min-h-screen grid-cols-[200px_1fr]">
       <AdminSidebar user={user} />
       <div className="min-w-0 bg-gray-50">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3.5">
-          <div>
-            <h1 className="text-base font-bold">{title}</h1>
-            <p className="mt-px text-xs text-gray-500">{subtitle}</p>
-          </div>
-          {action}
+        {/* member 側と同じ PageHeading を通す。自前の h1 のままだと
+            document.title が書き換わらず、管理画面のタブが全部
+            「CircleBoard」になって見分けられない(PR #119) */}
+        <div className="border-b border-gray-200 bg-white px-6 py-3.5">
+          <PageHeading title={title} subtitle={subtitle} action={action} className="" />
         </div>
         <div className="p-6">{children(user)}</div>
       </div>
