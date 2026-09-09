@@ -5,6 +5,7 @@ import { MemberPage } from "../components/MemberPage";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Chip } from "../components/ui/Chip";
+import { Modal } from "../components/ui/Modal";
 import { Note } from "../components/ui/Note";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
@@ -21,6 +22,8 @@ export function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 参加は自分では取り消せないので、押す前に確認する(Issue #42)
+  const [confirming, setConfirming] = useState(false);
 
   const load = useCallback(() => {
     apiFetch<ProjectSummary>(`/api/projects/${id}`)
@@ -38,6 +41,7 @@ export function ProjectDetailPage() {
     setError(null);
     try {
       await apiFetch<unknown>(`/api/projects/${id}/participation`, { method: "POST" });
+      setConfirming(false);
       load();
     } catch (e: unknown) {
       setError(toMessage(e));
@@ -152,9 +156,28 @@ export function ProjectDetailPage() {
       ) : full ? (
         <Note tone="warning">定員に達しています。</Note>
       ) : (
-        <Button variant="primary" onClick={join} disabled={busy}>
-          参加を申請する
+        // 「申請」と書いていたが、承認フローは無く押した時点で参加が確定する。
+        // 実態に合わせて「参加する」にする(Issue #42)
+        <Button variant="primary" onClick={() => setConfirming(true)} disabled={busy}>
+          参加する
         </Button>
+      )}
+
+      {confirming && (
+        <Modal
+          title="このプロジェクトに参加しますか？"
+          confirmLabel="参加する"
+          busy={busy}
+          onCancel={() => setConfirming(false)}
+          onConfirm={join}
+        >
+          <p>
+            <strong>{project.title}</strong>に参加します。
+            <br />
+            <strong>参加すると、自分では取り消せません。</strong>
+            やめるときは部長に連絡してください。
+          </p>
+        </Modal>
       )}
     </MemberPage>
   );
