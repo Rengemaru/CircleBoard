@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/CopyButton";
-import { Field, INPUT_CLASS } from "../../components/ui/Field";
+import { FormControl, Input, Select, Stack, StatusLabel } from "smarthr-ui";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
@@ -14,6 +14,15 @@ import { AdminLayout } from "./AdminLayout";
 //
 // 一覧(②)とは別の画面にしている。発行は「たまに1人ぶんだけ行う操作」で、
 // 一覧を見ながら行うものではないため。
+// 必須は赤いラベルで出す。従来は赤い * と読み上げ用の「必須」を自前で
+// 並べていたが、FormControl の statusLabels が同じことをする
+const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
+
+const ROLE_OPTIONS: { label: string; value: NewUserInput["role"] }[] = [
+  { label: "メンバー（通常）", value: "member" },
+  { label: "管理者", value: "admin" },
+];
+
 export function AdminUserCreatePage() {
   return (
     <AdminLayout title="アカウント発行" subtitle="新しいメンバーのアカウントを作成する">
@@ -27,6 +36,7 @@ type Issued = { name: string; email: string; password: string };
 // 入学年度・卒業年度の選択肢。今年の前後を出しておけば足りる
 const THIS_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 14 }, (_, i) => THIS_YEAR - 6 + i);
+const YEAR_OPTIONS = YEARS.map((year) => ({ label: String(year), value: String(year) }));
 
 function IssueForm() {
   const navigate = useNavigate();
@@ -70,87 +80,80 @@ function IssueForm() {
       <Panel title="新規アカウント情報">
         {error !== null && <ErrorNote error={error} fallback="発行に失敗しました" />}
 
-        <div className="grid gap-x-4 sm:grid-cols-2">
-          <Field label="名前" required>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              placeholder="山田 一郎"
-              className={INPUT_CLASS}
-            />
-          </Field>
-          <Field label="メールアドレス（大学）" required>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              placeholder="xxxxx@xxx.ac.jp"
-              className={INPUT_CLASS}
-            />
-          </Field>
-        </div>
+        {/* 項目の間隔は Stack で決める。FormControl は自分では下余白を持たない */}
+        <Stack gap={1.25}>
+          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+            <FormControl label="名前" statusLabels={REQUIRED} exampleMessage="山田 一郎">
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                width="100%"
+              />
+            </FormControl>
+            <FormControl
+              label="メールアドレス（大学）"
+              statusLabels={REQUIRED}
+              exampleMessage="xxxxx@xxx.ac.jp"
+            >
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                width="100%"
+              />
+            </FormControl>
+          </div>
 
-        {/* 入学年度はワイヤーフレーム③に無いが、users.enrollment_year が
+          {/* 入学年度はワイヤーフレーム③に無いが、users.enrollment_year が
             NOT NULL なので外せない(spec-v2.2.md §2)。
             学科の入力欄は逆に、列が無いので今は作れない(T7-4) */}
-        <div className="grid gap-x-4 sm:grid-cols-2">
-          <Field label="入学年度" required>
-            <select
-              value={form.enrollment_year}
-              onChange={(e) => setForm({ ...form, enrollment_year: Number(e.target.value) })}
-              className={INPUT_CLASS}
-            >
-              {YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {/* 卒業年度は必須。後から一括入力するとコストが高いため発行時に必ず取る */}
-          <Field label="卒業年度" required>
-            <select
-              value={form.graduation_year}
-              onChange={(e) => setForm({ ...form, graduation_year: Number(e.target.value) })}
-              className={INPUT_CLASS}
-            >
-              {YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+            <FormControl label="入学年度" statusLabels={REQUIRED}>
+              <Select
+                value={String(form.enrollment_year)}
+                options={YEAR_OPTIONS}
+                onChangeValue={(value) => setForm({ ...form, enrollment_year: Number(value) })}
+                width="100%"
+              />
+            </FormControl>
+            {/* 卒業年度は必須。後から一括入力するとコストが高いため発行時に必ず取る */}
+            <FormControl label="卒業年度" statusLabels={REQUIRED}>
+              <Select
+                value={String(form.graduation_year)}
+                options={YEAR_OPTIONS}
+                onChangeValue={(value) => setForm({ ...form, graduation_year: Number(value) })}
+                width="100%"
+              />
+            </FormControl>
+          </div>
 
-        <Field
-          label="初期パスワード"
-          required
-          hint="※ パスワード再発行機能はないため、本人に直接伝えてください"
-        >
-          <input
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-            placeholder="8文字以上。管理者が設定して本人に伝える"
-            className={INPUT_CLASS}
-          />
-        </Field>
-
-        {/* 権限の選択肢は管理者/メンバーの2つのみ。
-            demo は users.role に確保済みだがUIには出さない(ワイヤーフレーム③) */}
-        <Field label="権限">
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as NewUserInput["role"] })}
-            className={INPUT_CLASS}
+          <FormControl
+            label="初期パスワード"
+            statusLabels={REQUIRED}
+            exampleMessage="8文字以上。管理者が設定して本人に伝える"
+            helpMessage="パスワード再発行機能はないため、本人に直接伝えてください"
           >
-            <option value="member">メンバー（通常）</option>
-            <option value="admin">管理者</option>
-          </select>
-        </Field>
+            <Input
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+              width="100%"
+            />
+          </FormControl>
+
+          {/* 権限の選択肢は管理者/メンバーの2つのみ。
+            demo は users.role に確保済みだがUIには出さない(ワイヤーフレーム③) */}
+          <FormControl label="権限">
+            <Select
+              value={form.role}
+              options={ROLE_OPTIONS}
+              onChangeValue={(value) => setForm({ ...form, role: value })}
+              width="100%"
+            />
+          </FormControl>
+        </Stack>
 
         <hr className="my-4 border-gray-200" />
 
