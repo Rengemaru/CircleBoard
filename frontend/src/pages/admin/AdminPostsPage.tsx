@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Table, Td, Th } from "smarthr-ui";
+import { Cluster, SearchInput, Select, Table, Td, Th } from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { INPUT_CLASS } from "../../components/ui/Field";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
@@ -44,6 +43,18 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
   completed: "終了",
   trashed: "削除済み",
 };
+
+// Select は options を配列で受け取る。ラベルの定義は表の中でも使うので
+// Record のまま持ち、ここで並びに直す
+const KIND_OPTIONS = (Object.keys(KIND_LABEL) as KindFilter[]).map((key) => ({
+  label: KIND_LABEL[key],
+  value: key,
+}));
+
+const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => ({
+  label: STATUS_LABEL[key],
+  value: key,
+}));
 
 function PostList() {
   const [posts, setPosts] = useState<AdminPostRow[] | null>(null);
@@ -107,42 +118,36 @@ function PostList() {
 
   return (
     <>
-      {/* placeholder は入力を始めると消えるので、その欄が何なのかの手がかりが
-          無くなる。select には名前が一切無く「コンボボックス」としか
-          読み上げられなかった(Issue #58) */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        <input
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          aria-label="企画名・投稿者で検索"
-          placeholder="企画名・投稿者で検索"
-          className={`${INPUT_CLASS} min-w-[200px] flex-1`}
-        />
-        <select
+      {/* 絞り込みは名前を持たせる。select は名前が無いと
+          「コンボボックス」としか読み上げられない(Issue #58)。
+          SearchInput と Select は aria-label をそのまま受け取る */}
+      <Cluster gap="XS" className="mb-4">
+        {/* SearchInput の className は中の input には届くが、外側の幅は
+            決まらない。伸ばす役目は包む div に持たせる */}
+        <div className="min-w-[200px] flex-1">
+          <SearchInput
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            aria-label="企画名・投稿者で検索"
+            tooltipMessage="企画名・投稿者で検索"
+            width="100%"
+          />
+        </div>
+        <Select
           value={kind}
-          onChange={(e) => setKind(e.target.value as KindFilter)}
+          options={KIND_OPTIONS}
+          onChangeValue={setKind}
           aria-label="種別で絞り込む"
-          className={`${INPUT_CLASS} w-[140px] flex-none`}
-        >
-          {(Object.keys(KIND_LABEL) as KindFilter[]).map((key) => (
-            <option key={key} value={key}>
-              {KIND_LABEL[key]}
-            </option>
-          ))}
-        </select>
-        <select
+          width="140px"
+        />
+        <Select
           value={status}
-          onChange={(e) => setStatus(e.target.value as StatusFilter)}
+          options={STATUS_OPTIONS}
+          onChangeValue={setStatus}
           aria-label="状態で絞り込む"
-          className={`${INPUT_CLASS} w-[140px] flex-none`}
-        >
-          {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
-            <option key={key} value={key}>
-              {STATUS_LABEL[key]}
-            </option>
-          ))}
-        </select>
-      </div>
+          width="140px"
+        />
+      </Cluster>
 
       {error !== null && <ErrorNote error={error} fallback="読み込みに失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
