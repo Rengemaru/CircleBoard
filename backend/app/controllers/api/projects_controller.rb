@@ -74,13 +74,25 @@ module Api
       scope.where(status: status)
     end
 
-    # 絞り込みは ?tag_id= で行い、URLで共有できる状態にする
-    # (wireframes/wireframe-member.html 画面④)
+    # 絞り込みは ?tag_ids= で行い、URLで共有できる状態にする
+    # (wireframes/wireframe-member.html 画面④)。
+    #
+    # 複数指定は OR。「Web開発 か ゲーム制作」を見たい人がいるため。
+    # AND にすると、タグを足すほど結果が減って0件になりやすい。
+    #
+    # distinct が要る。2つのタグが付いたプロジェクトは join で2行になる。
+    # 空・不正な値は「絞り込まない」に倒す。URLを手で書き換えられても
+    # エラーにせず全件を返す
     def filter_by_tag(scope)
-      tag_id = params[:tag_id]
-      return scope if tag_id.blank?
+      ids = parse_tag_ids(params[:tag_ids])
+      return scope if ids.empty?
 
-      scope.joins(:project_tags).where(project_tags: { tag_id: tag_id })
+      scope.joins(:project_tags).where(project_tags: { tag_id: ids }).distinct
+    end
+
+    # "1,3,5" を [1, 3, 5] にする。数字でないものは捨てる
+    def parse_tag_ids(raw)
+      raw.to_s.split(",").filter_map { |s| Integer(s, exception: false) }
     end
 
     # 募集中 → 進行中 の順(画面④)。enum の整数(0:recruiting 1:in_progress

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AnchorButton,
@@ -35,14 +35,15 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
 export function ProjectsPage() {
   const { user, loading } = useCurrentUser();
 
-  // 絞り込みは ?status= と ?tag_id= で行い、URLで共有できる状態にする
+  // 絞り込みは ?status= と ?tag_ids= で行い、URLで共有できる状態にする
   // （画面④の注記）。画面の中に状態を持たず、URLを唯一の状態にしている
   const [searchParams, setSearchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
   const status: StatusFilter =
     statusParam === "recruiting" || statusParam === "in_progress" ? statusParam : "all";
-  const tagIdParam = searchParams.get("tag_id");
-  const selectedTagId = tagIdParam === null ? null : Number(tagIdParam);
+  // useMemo で参照を安定させる。毎レンダリングで新しい配列を作ると、
+  // useEffect の依存として使えない
+  const selectedTagIds = useMemo(() => parseTagIds(searchParams.get("tag_ids")), [searchParams]);
 
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -68,7 +69,7 @@ export function ProjectsPage() {
 
     fetchProjects({
       status: status === "all" ? undefined : status,
-      tagId: selectedTagId ?? undefined,
+      tagIds: selectedTagIds,
     })
       .then((result) => {
         if (cancelled) return;
@@ -84,21 +85,31 @@ export function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, [loading, user, status, selectedTagId]);
+  }, [loading, user, status, selectedTagIds]);
 
   // 絞り込みは片方を変えても、もう片方を保つ
-  function updateParams(next: { status?: StatusFilter; tagId?: number | null }) {
+  function updateParams(next: { status?: StatusFilter; tagIds?: number[] }) {
     const params = new URLSearchParams(searchParams);
     const nextStatus = next.status ?? status;
-    const nextTagId = next.tagId === undefined ? selectedTagId : next.tagId;
+    const nextTagIds = next.tagIds ?? selectedTagIds;
 
     if (nextStatus === "all") params.delete("status");
     else params.set("status", nextStatus);
 
-    if (nextTagId === null) params.delete("tag_id");
-    else params.set("tag_id", String(nextTagId));
+    // 選択が0件のときは絞り込まない（＝全件）。URLからもキーごと消す
+    if (nextTagIds.length === 0) params.delete("tag_ids");
+    else params.set("tag_ids", nextTagIds.join(","));
 
     setSearchParams(params);
+  }
+
+  // 押すたびに入れる／外す
+  function toggleTag(tagId: number) {
+    const next = selectedTagIds.includes(tagId)
+      ? selectedTagIds.filter((id) => id !== tagId)
+      : [...selectedTagIds, tagId];
+
+    updateParams({ tagIds: next });
   }
 
   if (loading) {
@@ -161,17 +172,11 @@ export function ProjectsPage() {
 
           {tags.length > 0 && (
             <FilterRow label="TAG">
-              <FilterButton
-                active={selectedTagId === null}
-                onClick={() => updateParams({ tagId: null })}
-              >
-                すべて
-              </FilterButton>
               {tags.map((tag) => (
                 <FilterButton
                   key={tag.id}
-                  active={selectedTagId === tag.id}
-                  onClick={() => updateParams({ tagId: tag.id })}
+                  active={selectedTagIds.includes(tag.id)}
+                  onClick={() => toggleTag(tag.id)}
                 >
                   {tag.name}
                 </FilterButton>
@@ -189,7 +194,7 @@ export function ProjectsPage() {
             <EmptyRow>
               {/* 一覧は募集中と進行中の両方を出す。「募集中はありません」だと、
                   進行中があるのに隠れていると誤読される(Issue #53) */}
-              {status === "all" && selectedTagId === null
+              {status === "all" && selectedTagIds.length === 0
                 ? "参加できるプロジェクトはありません。"
                 : "条件に合うプロジェクトはありません。条件を変えて試してください。"}
             </EmptyRow>
@@ -204,6 +209,17 @@ export function ProjectsPage() {
       </Stack>
     </MemberPage>
   );
+}
+
+// "1,3" を [1, 3] にする。数字でないものは捨てる。
+// URLを手で書き換えられても壊れないようにする
+function parseTagIds(raw: string | null): number[] {
+  if (raw === null) return [];
+
+  return raw
+    .split(",")
+    .map((s) => Number(s))
+    .filter((n) => Number.isInteger(n) && n > 0);
 }
 
 function EmptyRow({ children }: { children: string }) {

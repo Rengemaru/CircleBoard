@@ -92,13 +92,25 @@ module Api
       status == "recruiting" ? scope.upcoming : scope
     end
 
-    # 絞り込みは ?tag_id= で行い、URLで共有できる状態にする
-    # (wireframes/wireframe-member.html 画面②)
+    # 絞り込みは ?tag_ids= で行い、URLで共有できる状態にする
+    # (wireframes/wireframe-member.html 画面②)。
+    #
+    # 複数指定は OR。「Web開発 か ゲーム制作」を見たい人がいるため。
+    # AND にすると、タグを足すほど結果が減って0件になりやすい。
+    #
+    # distinct が要る。2つのタグが付いたイベントは join で2行になる。
+    # 空・不正な値は「絞り込まない」に倒す。URLを手で書き換えられても
+    # エラーにせず全件を返す
     def filter_by_tag(scope)
-      tag_id = params[:tag_id]
-      return scope if tag_id.blank?
+      ids = parse_tag_ids(params[:tag_ids])
+      return scope if ids.empty?
 
-      scope.joins(:event_tags).where(event_tags: { tag_id: tag_id })
+      scope.joins(:event_tags).where(event_tags: { tag_id: ids }).distinct
+    end
+
+    # "1,3,5" を [1, 3, 5] にする。数字でないものは捨てる
+    def parse_tag_ids(raw)
+      raw.to_s.split(",").filter_map { |s| Integer(s, exception: false) }
     end
 
     def set_event

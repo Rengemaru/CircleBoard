@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AnchorButton,
@@ -31,11 +31,12 @@ import type { EventSummary, Tag } from "../types/event";
 //   - オブジェクト名は Text size="M"、付随情報は size="S" color="TEXT_GREY"
 export function EventsPage() {
   const { user } = useCurrentUser();
-  // 絞り込みは ?tag_id= で行い、URLで共有できる状態にする（画面②の注記）。
+  // 絞り込みは ?tag_ids= で行い、URLで共有できる状態にする（画面②の注記）。
   // 画面の中に状態を持たず、URLを唯一の状態にしている
   const [searchParams, setSearchParams] = useSearchParams();
-  const tagIdParam = searchParams.get("tag_id");
-  const selectedTagId = tagIdParam === null ? null : Number(tagIdParam);
+  // useMemo で参照を安定させる。毎レンダリングで新しい配列を作ると、
+  // useEffect の依存として使えない
+  const selectedTagIds = useMemo(() => parseTagIds(searchParams.get("tag_ids")), [searchParams]);
 
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -55,7 +56,7 @@ export function EventsPage() {
     // 届いた結果で置き換える。切り替えのたびに一瞬空になるのを避ける
     let cancelled = false;
 
-    fetchEvents(selectedTagId === null ? {} : { tagId: selectedTagId })
+    fetchEvents({ tagIds: selectedTagIds })
       .then((result) => {
         if (cancelled) return;
         setEvents(result);
@@ -70,10 +71,15 @@ export function EventsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedTagId]);
+  }, [selectedTagIds]);
 
-  function selectTag(tagId: number | null) {
-    setSearchParams(tagId === null ? {} : { tag_id: String(tagId) });
+  // 押すたびに入れる／外す。選択が0件のときは絞り込まない（＝全件）
+  function toggleTag(tagId: number) {
+    const next = selectedTagIds.includes(tagId)
+      ? selectedTagIds.filter((id) => id !== tagId)
+      : [...selectedTagIds, tagId];
+
+    setSearchParams(next.length === 0 ? {} : { tag_ids: next.join(",") });
   }
 
   return (
@@ -108,14 +114,11 @@ export function EventsPage() {
 
           {tags.length > 0 && (
             <FilterRow label="TAG">
-              <FilterButton active={selectedTagId === null} onClick={() => selectTag(null)}>
-                すべて
-              </FilterButton>
               {tags.map((tag) => (
                 <FilterButton
                   key={tag.id}
-                  active={selectedTagId === tag.id}
-                  onClick={() => selectTag(tag.id)}
+                  active={selectedTagIds.includes(tag.id)}
+                  onClick={() => toggleTag(tag.id)}
                 >
                   {tag.name}
                 </FilterButton>
@@ -132,7 +135,7 @@ export function EventsPage() {
           ) : events.length === 0 ? (
             <EmptyRow>
               {/* 絞り込みの結果0件のときは、やり直せることを伝える(Issue #53) */}
-              {selectedTagId === null
+              {selectedTagIds.length === 0
                 ? "開催予定のイベントはありません。"
                 : "このタグのイベントはありません。別のタグを試してください。"}
             </EmptyRow>
@@ -208,6 +211,17 @@ function EventRow({ event }: { event: EventSummary }) {
       </Stack>
     </li>
   );
+}
+
+// "1,3" を [1, 3] にする。数字でないものは捨てる。
+// URLを手で書き換えられても壊れないようにする
+function parseTagIds(raw: string | null): number[] {
+  if (raw === null) return [];
+
+  return raw
+    .split(",")
+    .map((s) => Number(s))
+    .filter((n) => Number.isInteger(n) && n > 0);
 }
 
 function formatDate(date: Date): string {

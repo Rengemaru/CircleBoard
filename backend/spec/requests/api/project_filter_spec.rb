@@ -78,15 +78,48 @@ RSpec.describe "GET /api/projects の絞り込み", type: :request do
     end
   end
 
-  describe "?tag_id=" do
+  describe "?tag_ids=" do
     it "1つのタグに絞れる" do
       tag = create(:tag, name: "Web開発")
       create(:project, title: "タグあり", tags: [ tag ])
       create(:project, title: "タグなし")
 
-      get "/api/projects", params: { tag_id: tag.id }
+      get "/api/projects", params: { tag_ids: tag.id }
 
       expect(response.parsed_body["projects"].map { _1["title"] }).to eq([ "タグあり" ])
+    end
+
+    # 複数指定は OR。AND にするとタグを足すほど0件に近づく
+    it "複数指定したときは、どれか1つでも持つプロジェクトを返す" do
+      web = create(:tag, name: "Web開発")
+      game = create(:tag, name: "ゲーム制作")
+      create(:project, title: "Webのやつ", tags: [ web ])
+      create(:project, title: "ゲームのやつ", tags: [ game ])
+      create(:project, title: "どちらでもない")
+
+      get "/api/projects", params: { tag_ids: "#{web.id},#{game.id}" }
+
+      expect(response.parsed_body["projects"].map { _1["title"] })
+        .to contain_exactly("Webのやつ", "ゲームのやつ")
+    end
+
+    # 2つのタグが付いたプロジェクトは join で2行になる。distinct が要る
+    it "複数のタグを持つプロジェクトが重複しない" do
+      web = create(:tag, name: "Web開発")
+      game = create(:tag, name: "ゲーム制作")
+      create(:project, title: "両方持ち", tags: [ web, game ])
+
+      get "/api/projects", params: { tag_ids: "#{web.id},#{game.id}" }
+
+      expect(response.parsed_body["projects"].map { _1["title"] }).to eq([ "両方持ち" ])
+    end
+
+    it "空や数字でない値のときは絞り込まない" do
+      create(:project, title: "タグなし")
+
+      get "/api/projects", params: { tag_ids: "abc" }
+
+      expect(response.parsed_body["projects"].map { _1["title"] }).to include("タグなし")
     end
 
     it "status と併用できる" do
@@ -94,7 +127,7 @@ RSpec.describe "GET /api/projects の絞り込み", type: :request do
       create(:project, title: "募集中でタグあり", status: :recruiting, tags: [ tag ])
       create(:project, title: "進行中でタグあり", status: :in_progress, tags: [ tag ])
 
-      get "/api/projects", params: { tag_id: tag.id, status: "recruiting" }
+      get "/api/projects", params: { tag_ids: tag.id, status: "recruiting" }
 
       expect(response.parsed_body["projects"].map { _1["title"] }).to eq([ "募集中でタグあり" ])
     end
