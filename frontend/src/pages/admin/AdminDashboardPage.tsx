@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
+import { formatCountdownDays } from "../../lib/countdown";
 import { AdminLayout } from "./AdminLayout";
 
 // 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
@@ -59,10 +60,12 @@ function DashboardBody() {
         <StatCard
           label="今月のイベント"
           value={stats.events_this_month_count}
+          // 日数の書式は countdown.ts に集約する。ここで自前に書くと
+          // 他の画面と言い回しが割れる
           sub={
             stats.next_event === null
               ? "開催予定なし"
-              : `次回：${stats.next_event.title}（${formatDaysUntil(stats.next_event.days_until)}）`
+              : `次回：${stats.next_event.title}（${formatCountdownDays(stats.next_event.days_until)}）`
           }
         />
         <StatCard
@@ -220,9 +223,4 @@ function Td({ className = "", children }: { className?: string; children: React.
       {children}
     </td>
   );
-}
-
-function formatDaysUntil(days: number): string {
-  if (days > 0) return `残${days}日`;
-  return "本日";
 }
