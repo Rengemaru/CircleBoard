@@ -1,21 +1,33 @@
-// wireframe-admin-ver2.html の .wf-note に対応する。左の色帯で強さを分ける。
+import { NotificationBar } from "smarthr-ui";
+import type { ComponentProps } from "react";
+
+// 画面の中に置く1行の知らせ(docs/instructions.md Phase 8-4)。
+//
+// 操作の結果（成功・失敗）と、その画面で知っておいてほしいこと（注意書き）の
+// 両方に使う。SmartHR は画面全体に出す NotificationBar をフィードバック専用と
+// しているが、base="base" を付けて画面の中に置く形は注意書きにも使ってよい。
 type Tone = "info" | "success" | "warning" | "danger";
 
-const TONE: Record<Tone, string> = {
-  info: "border-l-gray-500 bg-gray-50 text-gray-500",
-  // 操作が成功したことを伝える。色だけに頼らないよう、文面は必ず
-  // 「〇〇しました」と何が起きたかを書く(Issue #43)
-  success: "border-l-green-600 bg-green-50 text-green-800",
-  warning: "border-l-amber-500 bg-amber-50 text-amber-800",
-  danger: "border-l-red-600 bg-red-50 text-red-800",
+type BarType = ComponentProps<typeof NotificationBar>["type"];
+
+// danger だけ名前が違う。CircleBoard 側は「赤で出す」という見た目の語で、
+// smarthr-ui 側は「エラーである」という意味の語を使っている
+const TONE: Record<Tone, BarType> = {
+  info: "info",
+  success: "success",
+  warning: "warning",
+  danger: "error",
 };
 
 export function Note({ tone = "info", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
-    <p
-      className={`mb-4 rounded border border-gray-200 border-l-[3px] px-3.5 py-2.5 text-xs ${TONE[tone]}`}
-    >
-      {children}
-    </p>
+    // 下の余白は外側の div に付ける。NotificationBar の className は
+    // base="base" が被せる Panel の「内側」に付き、その Panel は
+    // overflow: hidden なので margin が中に取り込まれて余白にならない
+    <div className="mb-4">
+      <NotificationBar type={TONE[tone]} base="base">
+        {children}
+      </NotificationBar>
+    </div>
   );
 }
