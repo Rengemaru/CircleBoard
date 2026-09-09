@@ -149,6 +149,9 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
               <Th>種別</Th>
               <Th>状態</Th>
               <Th>投稿者</Th>
+              {/* 「最近」が今日なのか半年前なのかが分からないと、
+                  たまにしか開かない管理者には動きの有無を判断できない(Issue #71) */}
+              <Th>投稿日</Th>
             </tr>
           </thead>
           <tbody>
@@ -163,6 +166,7 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
                 </Td>
                 {/* 投稿者が退会していると null になる。空欄ではなく理由を書く */}
                 <Td className="text-gray-500">{row.owner_name ?? "（退会済み）"}</Td>
+                <Td className="text-xs text-gray-500">{formatPostedAt(row.created_at)}</Td>
               </tr>
             ))}
           </tbody>
@@ -174,6 +178,16 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
 
 // イベントは recruiting / completed、プロジェクトは recruiting / in_progress /
 // completed。文字列で受けて、知らない値はそのまま出す
+// 企画一覧(/admin/posts)と同じ書式にする。同じ情報が画面ごとに違う形で
+// 出ると、見比べたときに別物に見える
+function formatPostedAt(value: string): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "recruiting":
