@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
 import { Field, INPUT_CLASS } from "../components/ui/Field";
@@ -7,6 +7,7 @@ import { Note } from "../components/ui/Note";
 import { Panel } from "../components/ui/Panel";
 import { login } from "../api/session";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { REDIRECT_PARAM, safeRedirectPath } from "../lib/redirectTo";
 
 // ログイン(wireframes/wireframe-member.html ⑥)。
 //
@@ -15,7 +16,10 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 // フロントは資格情報を一切保持しない。
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useCurrentUser();
+  // 戻り先は URL から来るので、外部サイトを指していないかをここで絞る
+  const redirectTo = safeRedirectPath(searchParams.get(REDIRECT_PARAM));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +34,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate("/");
+      navigate(redirectTo);
     } catch (e: unknown) {
       // サーバーは「メールが存在しない」と「パスワードが違う」を区別しない。
       // 画面でも区別せず、サーバーが返した文言をそのまま出す

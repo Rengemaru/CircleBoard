@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "./ui/Button";
 import { logout, type CurrentUser } from "../api/session";
+import { loginPathFrom } from "../lib/redirectTo";
 
 // メンバー画面で共通のヘッダー。
 // サイネージには置かない（ナビゲーションを一切表示しない仕様のため）。
@@ -9,6 +10,9 @@ import { logout, type CurrentUser } from "../api/session";
 // member 用の新しいワイヤーフレームは無いので、管理画面と同じ寸法・色・字送りを
 // 使うことで「同じプロダクトの画面」に見せる(docs/instructions.md Phase 7 T7-5)。
 export function SiteHeader({ user }: { user: CurrentUser | null }) {
+  // ログインしたら、いま見ていた画面に戻す(Issue #37)
+  const location = useLocation();
+
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
@@ -22,7 +26,7 @@ export function SiteHeader({ user }: { user: CurrentUser | null }) {
         </nav>
         <div className="ml-auto flex items-center gap-3 text-[13px]">
           {user === null ? (
-            <Link to="/login">
+            <Link to={loginPathFrom(location.pathname + location.search)}>
               <Button size="sm">ログイン</Button>
             </Link>
           ) : (
