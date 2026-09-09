@@ -187,12 +187,9 @@ function PostList() {
         )}
       </div>
 
-      <Note>
-        <strong>「削除」は論理削除です。</strong>
-        一覧・サイネージから消えますが、レコードは残ります。この画面の「復旧」で元に戻せます。
-        参加者への通知は行いません。
-      </Note>
-
+      {/* 破壊的操作の意味は確認モーダルに書く。押す直前に必ず目に入る場所でないと
+          読まれない(SmartHR feedback.mdx「直前に操作した要素の近く」)。
+          ここに残すのは、操作の前提として知っておく話だけ(Issue #61) */}
       <Note tone="warning">
         企画の内容そのものは、この画面からは編集できません。文面を直したいときは owner
         本人に依頼するか、
@@ -216,7 +213,7 @@ function PostList() {
             ）を一覧とサイネージから消します。
             <br />
             <strong>あとからこの画面の「復旧」で元に戻せます。</strong>
-            参加者{trashing.participants_count}名の記録も残ります。
+            参加者{trashing.participants_count}名の記録も残り、参加者への通知は行いません。
           </p>
         </Modal>
       )}
