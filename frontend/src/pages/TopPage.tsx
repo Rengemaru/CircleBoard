@@ -112,9 +112,12 @@ function SpotlightSection({
                 <Badge tone="pinned">📌 ピン留め</Badge>
               </div>
             )}
-            {/* 開催の近さがこの枠で一番効く情報なので、数字を一番大きく置く
-                (ver2 の .stat-value と同じ 28px) */}
-            <div className="text-[28px] leading-none font-bold">
+            {/* 開催の近さがこの枠で一番効く情報なので、数字を大きく置く。
+                ただし 28px は ver2 の .stat-value（ダッシュボードの統計値）から
+                借りた値で、wireframe-member.html の .cd は 17px。
+                日数だけが 1.6 倍に膨らみ、13.5px のタイトルを埋もれさせていた。
+                ワイヤーフレームの値に戻す(Issue #59) */}
+            <div className="text-[17px] leading-none font-bold">
               {formatCountdown(event.starts_at)}
             </div>
             <div className="mt-2 text-xs text-gray-500">
