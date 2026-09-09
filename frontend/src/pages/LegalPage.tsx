@@ -1,3 +1,4 @@
+import { Section } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
@@ -15,7 +16,7 @@ export function LegalPage() {
     <MemberPage user={user} sessionFailed={failed}>
       <PageHeading title="よくある質問・利用規約" />
 
-      <section className="mb-7">
+      <Section className="mb-7">
         <SectionHeading>よくある質問</SectionHeading>
         <div className="space-y-3">
           <Faq q="アカウントはどうやって作りますか？">
@@ -43,9 +44,9 @@ export function LegalPage() {
             }
           </Faq>
         </div>
-      </section>
+      </Section>
 
-      <section>
+      <Section>
         <SectionHeading>利用規約</SectionHeading>
         <Panel>
           <div className="space-y-4">
@@ -76,7 +77,7 @@ export function LegalPage() {
             <Article title="お問い合わせ">サークルの部長までご連絡ください。</Article>
           </div>
         </Panel>
-      </section>
+      </Section>
     </MemberPage>
   );
 }
