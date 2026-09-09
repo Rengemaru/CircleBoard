@@ -157,6 +157,9 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                 <Th>名前</Th>
                 <Th>メールアドレス</Th>
                 <Th>入学 / 卒業</Th>
+                {/* 権限と状態は別の軸。1列にまとめて排他で出すと、
+                    停止中の管理者から「管理者」が消える(Issue #64) */}
+                <Th>権限</Th>
                 <Th>状態</Th>
                 <Th>操作</Th>
               </tr>
@@ -264,10 +267,17 @@ function UserRow({
         {user.enrollment_year} / {user.graduation_year}
       </Td>
       <Td>
+        {/* 権限。停止中でも卒業生でも、その人が管理者であることは変わらない */}
+        {user.role === "admin" ? (
+          <Badge tone="admin">管理者</Badge>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </Td>
+      <Td>
+        {/* 状態。停止は解除できるので卒業より前に見せる */}
         {user.suspended ? (
           <Badge tone="suspended">停止中</Badge>
-        ) : user.role === "admin" ? (
-          <Badge tone="admin">管理者</Badge>
         ) : user.graduated ? (
           <Badge tone="grad">卒業生</Badge>
         ) : (
