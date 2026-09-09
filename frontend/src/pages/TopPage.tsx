@@ -26,7 +26,12 @@ export function TopPage() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   // 通信に失敗したとき「0件」と表示すると、企画が無いのか繋がっていないのかを
   // 見分けられない。部室のディスプレイでは「今日は企画が無いんだ」と誤読される
-  const [error, setError] = useState<string | null>(null);
+  //
+  // イベントとプロジェクトでエラーを分ける。1つの state を共有していたときは
+  // 片方が失敗すると画面全体が消え、取得できていた注目イベントまで
+  // 見えなくなっていた(Issue #45)
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCurrentUser()
@@ -36,30 +41,22 @@ export function TopPage() {
         if (current !== null) {
           fetchProjects()
             .then(setProjects)
-            .catch((e: unknown) => setError(toMessage(e)));
+            .catch((e: unknown) => setProjectsError(toMessage(e)));
         }
       })
       .catch(() => setUser(null));
 
     fetchEvents({ sort: "spotlight" })
       .then(setEvents)
-      .catch((e: unknown) => setError(toMessage(e)));
+      .catch((e: unknown) => setEventsError(toMessage(e)));
   }, []);
-
-  if (error !== null) {
-    return (
-      <MemberPage user={user}>
-        <Note tone="danger">{error}</Note>
-      </MemberPage>
-    );
-  }
 
   return (
     <MemberPage user={user}>
       <div className="space-y-7">
-        <SpotlightSection events={events} />
-        <ProjectSection user={user} projects={projects} />
-        <EventListSection events={events} />
+        <SpotlightSection events={events} error={eventsError} />
+        <ProjectSection user={user} projects={projects} error={projectsError} />
+        <EventListSection events={events} error={eventsError} />
       </div>
     </MemberPage>
   );
@@ -69,7 +66,24 @@ export function TopPage() {
 // ここでは先頭から最大4件を取るだけでよい。
 // 表示件数は可変で、空枠は描かない。閑散期に空箱が並ぶのが最も見苦しい
 // (wireframe-member.html 画面①の注記)
-function SpotlightSection({ events }: { events: EventSummary[] | null }) {
+function SpotlightSection({
+  events,
+  error,
+}: {
+  events: EventSummary[] | null;
+  error: string | null;
+}) {
+  // イベントの取得エラーはこのセクションにだけ出す。下のイベント一覧にも
+  // 出すと同じ文言が2回並ぶ
+  if (error !== null) {
+    return (
+      <section>
+        <SectionHeading>注目イベント</SectionHeading>
+        <Note tone="danger">{error}</Note>
+      </section>
+    );
+  }
+
   if (events === null) {
     return <p className="text-[13px] text-gray-500">読み込み中…</p>;
   }
@@ -129,15 +143,19 @@ function SpotlightSection({ events }: { events: EventSummary[] | null }) {
 function ProjectSection({
   user,
   projects,
+  error,
 }: {
   user: CurrentUser | null;
   projects: ProjectSummary[] | null;
+  error: string | null;
 }) {
   return (
     <section>
       <SectionHeading link="/projects">プロジェクト</SectionHeading>
       {user === null ? (
         <Note>プロジェクトはログインすると閲覧できます。アカウントは管理者が発行します。</Note>
+      ) : error !== null ? (
+        <Note tone="danger">{error}</Note>
       ) : projects === null ? (
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       ) : projects.length === 0 ? (
@@ -164,7 +182,15 @@ function ProjectSection({
   );
 }
 
-function EventListSection({ events }: { events: EventSummary[] | null }) {
+function EventListSection({
+  events,
+  error,
+}: {
+  events: EventSummary[] | null;
+  error: string | null;
+}) {
+  // エラーは注目イベントのセクションで出しているので、ここでは何も出さない
+  if (error !== null) return null;
   if (events === null || events.length === 0) return null;
 
   return (
