@@ -12,6 +12,7 @@ import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { flashState } from "../lib/flash";
 import type { Tag } from "../types/event";
 
 // 企画作成(wireframes/wireframe-member.html ⑥)。要ログイン。
@@ -104,7 +105,9 @@ export function CreatePage() {
             },
           }),
         });
-        navigate(`/events/${created.id}`);
+        // 画面が変わるだけでは「作られた」と言い切れない。
+        // 他の操作はすべて文言で伝えている(Issue #191)
+        navigate(`/events/${created.id}`, { state: flashState("イベントを作成しました。") });
       } else {
         const created = await apiFetch<{ id: number }>("/api/projects", {
           method: "POST",
@@ -118,7 +121,9 @@ export function CreatePage() {
             },
           }),
         });
-        navigate(`/projects/${created.id}`);
+        navigate(`/projects/${created.id}`, {
+          state: flashState("プロジェクトを作成しました。"),
+        });
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "作成に失敗しました");
