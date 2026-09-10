@@ -4,6 +4,14 @@
 # ブロックが実行されないため、レコードは増えない。
 #
 # 開発環境専用。パスワードは全員 password123（README に明記）。
+#
+# テストDBには入れない。db:prepare は DB を新しく作ったときに seed も流すので、
+# CI のテストDBに開発用データが混ざる。件数やIDを数える spec が落ちるうえ、
+# 同名タグの一意制約にも当たる（実際に 270 件中 92 件が落ちた）。
+if Rails.env.test?
+  puts "test 環境では seed を流さない"
+  return
+end
 
 puts "== users =="
 admin = User.find_or_create_by!(email: "admin@example.ac.jp") do |u|
@@ -68,11 +76,20 @@ events = [
   event = Event.find_or_create_by!(title: attrs[:title]) do |e|
     e.description = attrs[:description]
     e.location = attrs[:location]
-    e.starts_at = attrs[:starts_at]
     e.capacity = attrs[:capacity]
     e.owner = attrs[:owner]
+    # starts_at は NOT NULL。ここで入れないと作成時のバリデーションで落ちる
+    e.starts_at = attrs[:starts_at]
     e.status = attrs[:starts_at].past? ? :completed : :recruiting
   end
+  # 2回目以降はブロックが実行されないので、開催日時はここで入れ直す。
+  # 入れ直さないと、seed を流した日から時間が経つうちに4件とも過去日付になり、
+  # 注目枠・サイネージ・ピン留めの候補が全部空になる。
+  # 「もう一度 db:seed を流せば直る」状態にしておく
+  event.update!(
+    starts_at: attrs[:starts_at],
+    status: attrs[:starts_at].past? ? :completed : :recruiting
+  )
   event.tags = attrs[:tags].map { |name| tags[name] }
   event
 end
