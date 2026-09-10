@@ -10,7 +10,8 @@ import { Note } from "../components/ui/Note";
 import { SectionHeading } from "../components/ui/SectionHeading";
 import { fetchEvents } from "../api/events";
 import { fetchProjects } from "../api/projects";
-import { fetchCurrentUser, type CurrentUser } from "../api/session";
+import type { CurrentUser } from "../api/session";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import { formatCountdown } from "../lib/countdown";
 import type { EventSummary } from "../types/event";
 import type { ProjectSummary } from "../types/project";
@@ -24,7 +25,11 @@ const SPOTLIGHT_LIMIT = 4;
 const EVENT_LIST_LIMIT = 3;
 
 export function TopPage() {
-  const [user, setUser] = useState<CurrentUser | null>(null);
+  // 自前で fetchCurrentUser を呼ばず、他の画面と同じ hook を使う。
+  // ここだけ独自に持っていたため「読み込み中」の状態が無く、
+  // ヘッダーに一瞬「ログイン」が出ていた(Issue #184)
+  const session = useCurrentUser();
+  const { user, loading, failed: sessionFailed } = session;
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   // 通信に失敗したとき「0件」と表示すると、企画が無いのか繋がっていないのかを
@@ -35,29 +40,23 @@ export function TopPage() {
   // 見えなくなっていた(Issue #45)
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  // ログイン状態を確かめられなかった状態。未ログインとは区別する(Issue #72)
-  const [sessionFailed, setSessionFailed] = useState(false);
-
   useEffect(() => {
-    fetchCurrentUser()
-      .then((current) => {
-        setUser(current);
-        // プロジェクトはログイン必須。未ログインで叩くと 401 になるので呼ばない
-        if (current !== null) {
-          fetchProjects()
-            .then(setProjects)
-            .catch((e: unknown) => setProjectsError(toMessage(e)));
-        }
-      })
-      .catch(() => setSessionFailed(true));
-
     fetchEvents({ sort: "spotlight" })
       .then(setEvents)
       .catch((e: unknown) => setEventsError(toMessage(e)));
   }, []);
 
+  useEffect(() => {
+    // プロジェクトはログイン必須。未ログインで叩くと 401 になるので呼ばない
+    if (loading || user === null) return;
+
+    fetchProjects()
+      .then(setProjects)
+      .catch((e: unknown) => setProjectsError(toMessage(e)));
+  }, [loading, user]);
+
   return (
-    <MemberPage user={user} sessionFailed={sessionFailed}>
+    <MemberPage session={session}>
       {/* サイトの入口なのに見出しが h2 から始まっていた。ヘッダーのロゴは
           リンクであって見出しではない。視覚的には冗長なので隠す(Issue #58)。
           PageHeading を通すのは document.title も書き換えるため。

@@ -18,7 +18,7 @@ import { REDIRECT_PARAM, safeRedirectPath } from "../lib/redirectTo";
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, failed } = useCurrentUser();
+  const session = useCurrentUser();
   // 戻り先は URL から来るので、外部サイトを指していないかをここで絞る
   const redirectTo = safeRedirectPath(searchParams.get(REDIRECT_PARAM));
   const [email, setEmail] = useState("");
@@ -46,7 +46,7 @@ export function LoginPage() {
   }
 
   return (
-    <MemberPage user={user} size="NARROW" sessionFailed={failed}>
+    <MemberPage session={session} size="NARROW">
       {/* Container の NARROW は 880px で、入力欄2つのフォームには広すぎる。
           入力欄が画面幅いっぱいに伸びると、どこを読めばよいのか分からなくなる。
           カード側の最大幅はこの画面の都合なので、外枠ではなくここで決める。

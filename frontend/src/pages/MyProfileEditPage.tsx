@@ -36,7 +36,8 @@ const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
 export function MyProfileEditPage() {
   const navigate = useNavigate();
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
   // 読み込む前のフォームを触らせない。空欄が入った状態で保存されると、
   // 書いてあった内容が消える
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -131,7 +132,7 @@ export function MyProfileEditPage() {
   // 書き換わらず、SPA では前の画面のタブ名が残る(PR #135)
   if (loading) {
     return (
-      <MemberPage user={null} size="NARROW">
+      <MemberPage session={session} size="NARROW">
         <PageHeading title={TITLE} />
         <Text size="S" color="TEXT_GREY">
           読み込み中…
@@ -142,7 +143,7 @@ export function MyProfileEditPage() {
 
   if (failed) {
     return (
-      <MemberPage user={null} size="NARROW" sessionFailed>
+      <MemberPage session={session} size="NARROW">
         <PageHeading title={TITLE} />
         <SessionUnavailable />
       </MemberPage>
@@ -151,7 +152,7 @@ export function MyProfileEditPage() {
 
   if (user === null) {
     return (
-      <MemberPage user={null} size="NARROW">
+      <MemberPage session={session} size="NARROW">
         <PageHeading title={TITLE} />
         <LoginRequired>プロフィールの編集にはログインが必要です。</LoginRequired>
       </MemberPage>
@@ -160,7 +161,7 @@ export function MyProfileEditPage() {
 
   // フォーム1枚の画面なので NARROW(docs/spec-layout-unification.md §5)
   return (
-    <MemberPage user={user} size="NARROW">
+    <MemberPage session={session} size="NARROW">
       <PageHeading title={TITLE} subtitle="書いた内容は、ログインした部員だけが見られます" />
 
       {error !== null && <ErrorNote error={error} fallback="保存できませんでした" />}

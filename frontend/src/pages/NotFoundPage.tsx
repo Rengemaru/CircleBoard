@@ -7,10 +7,10 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 // 定義していないURLを開いたとき。SPAなのでサーバーは200を返し、
 // 何も出さないと真っ白な画面になる。行き先を示す
 export function NotFoundPage() {
-  const { user, failed } = useCurrentUser();
+  const session = useCurrentUser();
 
   return (
-    <MemberPage user={user} sessionFailed={failed}>
+    <MemberPage session={session}>
       {/* h1 を自前で書くと document.title が変わらず、SPA では
           前に開いていた画面のタブ名が残る */}
       <PageHeading title="ページが見つかりません" />

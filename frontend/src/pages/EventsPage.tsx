@@ -22,7 +22,7 @@ import type { EventSummary, Tag } from "../types/event";
 //   - 一時操作エリア（タグの絞り込み）は Base の中の上部
 //   - オブジェクト名は Text size="M"、付随情報は size="S" color="TEXT_GREY"
 export function EventsPage() {
-  const { user, failed } = useCurrentUser();
+  const session = useCurrentUser();
   // 絞り込みは ?tag_ids= で行い、URLで共有できる状態にする（画面②の注記）。
   // 画面の中に状態を持たず、URLを唯一の状態にしている
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,7 +75,7 @@ export function EventsPage() {
   }
 
   return (
-    <MemberPage user={user} sessionFailed={failed}>
+    <MemberPage session={session}>
       <Stack gap="M">
         <Cluster align="center" justify="space-between">
           <Stack gap="XXS">

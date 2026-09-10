@@ -22,7 +22,8 @@ import type { ProjectSummary } from "../types/project";
 // 参加後に取り消すボタンも置かない。
 export function ProjectDetailPage() {
   const { id } = useParams();
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,7 +62,7 @@ export function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -70,7 +71,7 @@ export function ProjectDetailPage() {
   // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <SessionUnavailable />
       </MemberPage>
     );
@@ -78,7 +79,7 @@ export function ProjectDetailPage() {
 
   if (user === null) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -86,14 +87,14 @@ export function ProjectDetailPage() {
 
   if (error !== null && project === null) {
     return (
-      <MemberPage user={user}>
+      <MemberPage session={session}>
         <Note tone="danger">{error}</Note>
       </MemberPage>
     );
   }
   if (project === null) {
     return (
-      <MemberPage user={user}>
+      <MemberPage session={session}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -102,7 +103,7 @@ export function ProjectDetailPage() {
   const full = project.capacity !== null && project.participants_count >= project.capacity;
 
   return (
-    <MemberPage user={user}>
+    <MemberPage session={session}>
       <div className="mb-3">
         <TextLink elementAs={Link} to="/projects" size="XS">
           ← プロジェクト一覧
