@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
+import { DefinitionList, DefinitionListItem, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -20,6 +20,11 @@ import type { ProjectSummary } from "../types/project";
 //
 // 脱退APIは作らない(MVP対象外。rails console で対応。docs/api-spec.md §3)ので、
 // 参加後に取り消すボタンも置かない。
+// プロジェクト名が分かるまでの画面名。どの分岐でも PageHeading を通さないと
+// document.title が書き換わらず、SPA では前の画面のタブ名が残る
+// (PR #135、Issue #185)
+const FALLBACK_TITLE = "プロジェクト";
+
 export function ProjectDetailPage() {
   const { id } = useParams();
   const session = useCurrentUser();
@@ -63,7 +68,10 @@ export function ProjectDetailPage() {
   if (loading) {
     return (
       <MemberPage session={session}>
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
+        <PageHeading title={FALLBACK_TITLE} />
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
       </MemberPage>
     );
   }
@@ -72,6 +80,7 @@ export function ProjectDetailPage() {
   if (failed) {
     return (
       <MemberPage session={session}>
+        <PageHeading title={FALLBACK_TITLE} />
         <SessionUnavailable />
       </MemberPage>
     );
@@ -80,6 +89,7 @@ export function ProjectDetailPage() {
   if (user === null) {
     return (
       <MemberPage session={session}>
+        <PageHeading title={FALLBACK_TITLE} />
         <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -88,6 +98,7 @@ export function ProjectDetailPage() {
   if (error !== null && project === null) {
     return (
       <MemberPage session={session}>
+        <PageHeading title={FALLBACK_TITLE} />
         <Note tone="danger">{error}</Note>
       </MemberPage>
     );
@@ -95,7 +106,10 @@ export function ProjectDetailPage() {
   if (project === null) {
     return (
       <MemberPage session={session}>
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
+        <PageHeading title={FALLBACK_TITLE} />
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
       </MemberPage>
     );
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
+import { DefinitionList, DefinitionListItem, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { UserLink } from "../components/UserLink";
 import { SessionUnavailable } from "../components/SessionUnavailable";
@@ -21,6 +21,11 @@ import type { EventDetail } from "../types/event";
 //
 // owner と participants は**サーバーがキーごと落とす**。CSSで隠すのは不可
 // (CLAUDE.md §3-2)。ここでは「キーが無い＝見せてよい情報ではない」として扱う。
+// イベント名が分かるまでの画面名。どの分岐でも PageHeading を通さないと
+// document.title が書き換わらず、SPA では前の画面のタブ名が残る
+// (PR #135、Issue #185)
+const FALLBACK_TITLE = "イベント";
+
 export function EventDetailPage() {
   const { id } = useParams();
   const session = useCurrentUser();
@@ -73,6 +78,7 @@ export function EventDetailPage() {
   if (error !== null && event === null) {
     return (
       <MemberPage session={session}>
+        <PageHeading title={FALLBACK_TITLE} />
         <Note tone="danger">{error}</Note>
       </MemberPage>
     );
@@ -80,7 +86,10 @@ export function EventDetailPage() {
   if (event === null) {
     return (
       <MemberPage session={session}>
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
+        <PageHeading title={FALLBACK_TITLE} />
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
       </MemberPage>
     );
   }
