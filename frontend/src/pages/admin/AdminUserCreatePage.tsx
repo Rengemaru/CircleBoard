@@ -182,9 +182,7 @@ function IssuedNotice({ issued, onClose }: { issued: Issued; onClose: () => void
           <Row label="初期パスワード" value={issued.password} />
         </dl>
 
-        <Note tone="warning">
-          本人に伝えてください。この画面を閉じると再表示できません。
-        </Note>
+        <Note tone="warning">本人に伝えてください。この画面を閉じると再表示できません。</Note>
 
         {/* 手で書き写すと打ち間違える。そのまま DM に貼れる形でコピーする */}
         <div className="flex flex-wrap items-center gap-3">
