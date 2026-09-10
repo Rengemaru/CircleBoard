@@ -1,0 +1,10 @@
+# CircleBoard - see docs/spec-v2.2.md section 9 (decision 2, 2026-09-10).
+#
+# This site is intentionally kept out of search results.
+# The rule that does that is the noindex meta tag in index.html, NOT this file.
+#
+# Do NOT add "Disallow: /" here. Blocking the crawl stops the crawler from
+# reading the noindex tag, and bare URLs linked from elsewhere can still be
+# listed. Let crawlers in, and tell them not to index.
+User-agent: *
+Allow: /
