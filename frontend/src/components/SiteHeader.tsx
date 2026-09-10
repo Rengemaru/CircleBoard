@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { AppNavi, AppNaviCustomTag, AppNaviDropdown, Stack } from "smarthr-ui";
+import { AppNavi, AppNaviCustomTag, AppNaviDropdown, Stack, TextLink } from "smarthr-ui";
 import { Button } from "./ui/Button";
 import { LinkButton } from "./ui/LinkButton";
 import { logout, type CurrentUser } from "../api/session";
@@ -56,7 +56,12 @@ export function SiteHeader({
             <>
               {/* 管理画面への入口はナビゲーションの「管理」に集約した。
                   ここにも置くと、同じ場所へ行く導線が1画面に2つ並ぶ */}
-              <span className="text-gray-700">{user.name}</span>
+              {/* 名前をマイページへの入口にする。ナビに「マイページ」を
+                  足すと、毎日使う3つと同じ重みで並んでしまう。
+                  名前が出ている場所は、その人自身の設定を探す場所でもある */}
+              <TextLink elementAs={Link} to="/me" className="text-gray-700">
+                {user.name}
+              </TextLink>
               <LogoutButton />
             </>
           )}
