@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
+import { UserLink } from "../components/UserLink";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -152,10 +153,11 @@ export function EventDetailPage() {
         ) : event.participants.length === 0 ? (
           <p className="text-[13px] text-gray-500">まだ参加者がいません。</p>
         ) : (
-          <ul className="flex flex-wrap gap-1.5">
+          // 名前からその人のプロフィールへ行けるようにする
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
             {event.participants.map((p) => (
               <li key={p.id}>
-                <Chip>{p.name}</Chip>
+                <UserLink id={p.id} name={p.name} />
               </li>
             ))}
           </ul>
@@ -165,7 +167,9 @@ export function EventDetailPage() {
       {/* owner キーが無い＝未ログイン。実名がインターネットに公開されるのを避ける */}
       {event.owner !== undefined && event.owner !== null && (
         <Panel title="主催">
-          <p className="text-[13px]">{event.owner.name}</p>
+          <p>
+            <UserLink id={event.owner.id} name={event.owner.name} />
+          </p>
         </Panel>
       )}
 

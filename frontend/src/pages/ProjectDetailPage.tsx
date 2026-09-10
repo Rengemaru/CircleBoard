@@ -4,6 +4,7 @@ import { DefinitionList, DefinitionListItem, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
+import { UserLink } from "../components/UserLink";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Chip } from "../components/ui/Chip";
@@ -156,17 +157,16 @@ export function ProjectDetailPage() {
         {(project.participants ?? []).length === 0 ? (
           <p className="text-[13px] text-gray-500">まだメンバーがいません。</p>
         ) : (
-          <ul className="flex flex-wrap gap-1.5">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
             {(project.participants ?? []).map((p) => (
               <li key={p.id}>
+                <UserLink id={p.id} name={p.name} />
                 {/* 誰が主催かを一覧の中でも分かるようにする(ワイヤーフレーム⑤)。
-                    下の「主催」欄と照らし合わせずに済む */}
-                <Chip>
-                  {p.name}
-                  {p.id === project.owner?.id && (
-                    <span className="ml-1 text-gray-400">（主催）</span>
-                  )}
-                </Chip>
+                    下の「主催」欄と照らし合わせずに済む。
+                    リンクの中に入れない。押せる文字列は名前だけにする */}
+                {p.id === project.owner?.id && (
+                  <span className="ml-1 text-xs text-gray-500">（主催）</span>
+                )}
               </li>
             ))}
           </ul>
@@ -175,7 +175,9 @@ export function ProjectDetailPage() {
 
       {project.owner !== undefined && project.owner !== null && (
         <Panel title="主催">
-          <p className="text-[13px]">{project.owner.name}</p>
+          <p>
+            <UserLink id={project.owner.id} name={project.owner.name} />
+          </p>
         </Panel>
       )}
 
