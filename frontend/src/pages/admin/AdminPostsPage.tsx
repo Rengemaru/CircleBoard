@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Cluster, SearchInput, Select, Table, Td, Th } from "smarthr-ui";
+import {
+  Cluster,
+  SearchInput,
+  Select,
+  Stack,
+  Table,
+  Td,
+  Text,
+  Th,
+  useEnvironment,
+} from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
@@ -71,6 +81,8 @@ const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) =
 }));
 
 function PostList() {
+  // 表と縦積みの切り替え。境界は smarthr-ui の SCREEN_SMALL(width <= 751px)
+  const { mobile } = useEnvironment();
   const [posts, setPosts] = useState<AdminPostRow[] | null>(null);
   const [keyword, setKeyword] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
@@ -180,38 +192,57 @@ function PostList() {
           <span className="text-xs text-gray-500">投稿日が新しい順</span>
         </div>
 
-        {/* 列が多い表は横に溢れる。ページ全体を横スクロールさせない */}
-        {/* Table は既定で reel が有効で、溢れるときだけ表自身が横スクロールする。
-            ページ全体を横スクロールさせないのは今までと同じ */}
-        <div>
-          <Table>
-            <thead>
-              <tr>
-                <Th>企画名</Th>
-                <Th>種別</Th>
-                <Th>状態</Th>
-                <Th>投稿者</Th>
-                <Th>参加人数</Th>
-                <Th>投稿日</Th>
-                <Th>操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((post) => (
-                <PostRow
-                  // イベントとプロジェクトでIDが重複するので、種別と組にする
-                  key={`${post.kind}-${post.id}`}
-                  post={post}
-                  onTrash={() => setTrashing(post)}
-                  onRestore={() =>
-                    run(() => restorePost(post.kind, post.id), `${post.title} を復旧しました`)
-                  }
-                  busy={busy}
-                />
-              ))}
-            </tbody>
-          </Table>
-        </div>
+        {/* モバイルでは表をやめて縦に積む。SmartHR の Table は
+            「モバイルでは、画面幅を越えたテーブルは2次元スクロールを招くため、
+            垂直方向に積みあげることを推奨します」としている。
+            実際 375px では、7列が潰れて「機械学/習輪読/会」「プロ/ジェク/ト」の
+            ように文字単位で折り返していた。
+            境界は smarthr-ui の SCREEN_SMALL(width <= 751px)に合わせる */}
+        {mobile ? (
+          <ul className="divide-y divide-gray-200">
+            {visible.map((post) => (
+              <PostCard
+                key={`${post.kind}-${post.id}`}
+                post={post}
+                onTrash={() => setTrashing(post)}
+                onRestore={() =>
+                  run(() => restorePost(post.kind, post.id), `${post.title} を復旧しました`)
+                }
+                busy={busy}
+              />
+            ))}
+          </ul>
+        ) : (
+          <div>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>企画名</Th>
+                  <Th>種別</Th>
+                  <Th>状態</Th>
+                  <Th>投稿者</Th>
+                  <Th>参加人数</Th>
+                  <Th>投稿日</Th>
+                  <Th>操作</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((post) => (
+                  <PostRow
+                    // イベントとプロジェクトでIDが重複するので、種別と組にする
+                    key={`${post.kind}-${post.id}`}
+                    post={post}
+                    onTrash={() => setTrashing(post)}
+                    onRestore={() =>
+                      run(() => restorePost(post.kind, post.id), `${post.title} を復旧しました`)
+                    }
+                    busy={busy}
+                  />
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
 
         {visible.length === 0 && (
           <p className="px-4 py-6 text-[13px] text-gray-500">該当する企画がありません。</p>
@@ -249,6 +280,70 @@ function PostList() {
         </Modal>
       )}
     </>
+  );
+}
+
+// モバイル1件分。SmartHR の「よくあるリスト」の並びに合わせる。
+// 識別子(企画名)→ 属性(状態・種別・投稿者・参加人数・投稿日)→ 操作 の順。
+//
+// 操作を文言のままのボタンにしているのは、削除と復旧を取り違えると
+// 参加者の見え方が変わるため。アイコンだけでは何が起きるか読めない
+function PostCard({
+  post,
+  onTrash,
+  onRestore,
+  busy,
+}: {
+  post: AdminPostRow;
+  onTrash: () => void;
+  onRestore: () => void;
+  busy: boolean;
+}) {
+  return (
+    // 削除済みは背景で示す。バッジと打ち消し線でも分かるので色だけに頼らない
+    <li className={`py-3 ${post.trashed ? "bg-gray-100" : ""}`}>
+      <Stack gap={0.5}>
+        <Cluster align="center" gap={0.5}>
+          {post.trashed ? (
+            <s>{post.title}</s>
+          ) : (
+            <strong>
+              <PostLink kind={post.kind} id={post.id}>
+                {post.title}
+              </PostLink>
+            </strong>
+          )}
+          {post.trashed ? (
+            <>
+              <Badge tone="trashed">削除済み</Badge>
+              <Chip>{STATUS_LABEL[post.status]}</Chip>
+            </>
+          ) : (
+            <Badge tone={STATUS_TONE[post.status]}>{STATUS_LABEL[post.status]}</Badge>
+          )}
+        </Cluster>
+
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
+          {KIND_LABEL[post.kind]} ・ {post.owner_name ?? "（退会済み）"} ・ 参加人数{" "}
+          {post.participants_count} / {post.capacity ?? "制限なし"}
+        </Text>
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
+          投稿日 {formatDate(post.created_at)}
+        </Text>
+
+        <Cluster gap={0.5}>
+          {post.trashed ? (
+            <Button variant="success" size="xs" onClick={onRestore} disabled={busy}>
+              復旧
+            </Button>
+          ) : (
+            <Button variant="danger" size="xs" onClick={onTrash} disabled={busy}>
+              削除
+            </Button>
+          )}
+        </Cluster>
+      </Stack>
+    </li>
   );
 }
 
