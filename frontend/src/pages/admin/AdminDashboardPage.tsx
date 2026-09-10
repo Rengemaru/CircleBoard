@@ -5,6 +5,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Panel } from "../../components/ui/Panel";
+import { PostLink } from "../../components/PostLink";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
 import { formatCountdownDays } from "../../lib/countdown";
 import { AdminOnly } from "./AdminOnly";
@@ -162,7 +163,13 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
           <tbody>
             {rows.map((row) => (
               <tr key={`${row.kind}-${row.id}`}>
-                <Td className="font-medium">{row.title}</Td>
+                {/* 気になった企画をその場で開けるようにする(Issue #188)。
+                    Event.active / Project.active なので削除済みは出てこない */}
+                <Td className="font-medium">
+                  <PostLink kind={row.kind} id={row.id}>
+                    {row.title}
+                  </PostLink>
+                </Td>
                 <Td className="text-gray-500">
                   {row.kind === "event" ? "イベント" : "プロジェクト"}
                 </Td>

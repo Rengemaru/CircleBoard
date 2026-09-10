@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
+import { UserLink } from "../../components/UserLink";
 import {
   deleteUser,
   fetchAdminUsers,
@@ -273,7 +274,12 @@ function UserRow({
     // 状態列のバッジでも分かるので、色だけに頼っていない
     <tr className={user.suspended ? "bg-red-50" : user.graduated ? "bg-gray-100" : ""}>
       <Td>
-        <span className={isSelf ? "font-bold" : ""}>{user.name}</span>
+        {/* 名前からその人のプロフィールへ行けるようにする(Issue #188)。
+            管理者がユーザーを一番見る画面なのに、M-7 で作った /users/:id へ
+            行く導線がここに無かった */}
+        <span className={isSelf ? "font-bold" : ""}>
+          <UserLink id={user.id} name={user.name} />
+        </span>
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}
       </Td>
       <Td className="text-xs text-gray-500">{user.email}</Td>
