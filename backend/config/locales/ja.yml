@@ -1,0 +1,88 @@
+# 検証エラーの文言を日本語にする(Issue #176)。
+#
+# rails-i18n gem は入れない(CLAUDE.md §1)。使うのは activerecord の
+# errors と attributes だけで、必要な分をここに書けば足りる。
+# gem を入れると、使っていない大量の訳文と更新の追従が付いてくる。
+#
+# **属性名を書き忘れると、その項目だけ英語のまま残る。**
+# バリデーションを足したときは、ここに属性名も足すこと。
+ja:
+  # 既定は "%{attribute} %{message}"。日本語は語の間に空白を入れないので外す
+  errors:
+    format: "%{attribute}%{message}"
+
+  activerecord:
+    errors:
+      messages:
+        blank: "を入力してください"
+        taken: "はすでに使われています"
+        invalid: "の形式が正しくありません"
+        too_long: "は%{count}文字以内で入力してください"
+        too_short: "は%{count}文字以上で入力してください"
+        # belongs_to の存在チェック。「イベントを入力してください」になる
+        required: "を入力してください"
+        not_a_number: "は数値で入力してください"
+        greater_than: "は%{count}より大きい値にしてください"
+        greater_than_or_equal_to: "は%{count}以上にしてください"
+        less_than_or_equal_to: "は%{count}以下にしてください"
+
+    models:
+      user: "利用者"
+      event: "イベント"
+      project: "プロジェクト"
+      tag: "タグ"
+      user_link: "リンク"
+      user_tag: "スキル"
+      event_participation: "参加"
+      project_participation: "参加"
+      signage_token: "サイネージトークン"
+
+    attributes:
+      user:
+        name: "名前"
+        email: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード（確認）"
+        role: "権限"
+        enrollment_year: "入学年度"
+        graduation_year: "卒業年度"
+        department: "学科"
+        bio: "自己紹介"
+        suspended_at: "停止日時"
+      event:
+        title: "タイトル"
+        description: "概要"
+        location: "開催場所"
+        starts_at: "開催日時"
+        capacity: "定員"
+        external_url: "外部リンク"
+        status: "状態"
+        owner: "主催"
+      project:
+        title: "タイトル"
+        description: "概要"
+        activity_schedule: "活動日"
+        meeting_schedule: "MTGの予定"
+        capacity: "定員"
+        status: "状態"
+        owner: "主催"
+      tag:
+        name: "タグ名"
+        category: "分類"
+      user_link:
+        label: "ラベル"
+        url: "URL"
+        position: "並び順"
+        user: "利用者"
+      user_tag:
+        user: "利用者"
+        tag: "タグ"
+      event_participation:
+        event: "イベント"
+        user: "利用者"
+      project_participation:
+        project: "プロジェクト"
+        user: "利用者"
+      signage_token:
+        name: "ディスプレイ名"
+        token: "トークン"
