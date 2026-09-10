@@ -9,3 +9,20 @@ import type { Profile } from "../types/user";
 export async function fetchMyProfile(): Promise<Profile> {
   return apiFetch<Profile>("/api/users/me");
 }
+
+// 更新できるのは自分のプロフィールだけ。パスに id を取らないのは
+// サーバー側の設計と対になっている(docs/spec-my-page.md §6.3)。
+//
+// 送らなかったキーには触らない。学科と自己紹介だけを直したいときに、
+// スキルとリンクを毎回送り直さずに済む
+export type ProfileInput = {
+  department?: string;
+  bio?: string;
+};
+
+export async function updateMyProfile(input: ProfileInput): Promise<Profile> {
+  return apiFetch<Profile>("/api/users/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
