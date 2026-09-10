@@ -152,7 +152,7 @@ export function ProjectsPage() {
         {/* リスト操作エリア（作成）は Base の外、一時操作エリア（絞り込み）は
             Base の中の上部。「よくあるリスト」パターン(smarthr-list.mdx) */}
         <Base overflow="hidden">
-          <FilterRow label="STATUS">
+          <FilterRow label="状態">
             {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
               <FilterButton
                 key={key}
@@ -173,7 +173,7 @@ export function ProjectsPage() {
           )}
 
           {tags.length > 0 && (
-            <FilterRow label="TAG">
+            <FilterRow label="タグ">
               {tags.map((tag) => (
                 <FilterButton
                   key={tag.id}

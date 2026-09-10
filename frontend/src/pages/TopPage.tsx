@@ -118,13 +118,18 @@ function SpotlightSection({
       <ul className={spotlight.length === 1 ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         {spotlight.map((event) => (
           <Base as="li" key={event.id} padding={1.25}>
-            <Stack gap="XXS">
-              {event.pinned && (
-                <Cluster gap="XS">
-                  <Chip>📌 ピン留め</Chip>
-                </Cluster>
-              )}
-              {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
+            {/* カード1枚ずつを Section で包む。包まないと、カードの見出しが
+                「注目イベント」と同じ h2 になり、セクションの中身なのか
+                隣のセクションなのかが見出しからは分からない(Issue #187)。
+                smarthr-ui の Heading は Section の入れ子の深さでレベルが決まる */}
+            <Section>
+              <Stack gap="XXS">
+                {event.pinned && (
+                  <Cluster gap="XS">
+                    <Chip>📌 ピン留め</Chip>
+                  </Cluster>
+                )}
+                {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
                 ではなく「あと何日か」になっていた。28px は ver2 の .stat-value
                 （ダッシュボードの統計値）から借りた値で、ワイヤーフレームの
                 .cd は 17px。
@@ -135,27 +140,28 @@ function SpotlightSection({
                 一覧から詳細へ移るたびに視線の置き場所が変わる。
                 ワイヤーフレームは日数を大きくしているが、/events は Phase 8 で
                 既にその配分を離れており、そちらに合わせる(Issue #59) */}
-              <Text size="S" weight="bold">
-                {formatCountdown(event.starts_at)}
-              </Text>
-              <Text size="S" color="TEXT_GREY">
-                {formatDate(event.starts_at)} ・ {event.location}
-              </Text>
-              <Heading type="subBlockTitle">
-                <TextLink elementAs={Link} to={`/events/${event.id}`}>
-                  {event.title}
-                </TextLink>
-              </Heading>
-              {event.tags.length > 0 && (
-                <Cluster gap="XXS" as="ul">
-                  {event.tags.map((tag) => (
-                    <li key={tag.id}>
-                      <Chip>{tag.name}</Chip>
-                    </li>
-                  ))}
-                </Cluster>
-              )}
-            </Stack>
+                <Text size="S" weight="bold">
+                  {formatCountdown(event.starts_at)}
+                </Text>
+                <Text size="S" color="TEXT_GREY">
+                  {formatDate(event.starts_at)} ・ {event.location}
+                </Text>
+                <Heading type="subBlockTitle">
+                  <TextLink elementAs={Link} to={`/events/${event.id}`}>
+                    {event.title}
+                  </TextLink>
+                </Heading>
+                {event.tags.length > 0 && (
+                  <Cluster gap="XXS" as="ul">
+                    {event.tags.map((tag) => (
+                      <li key={tag.id}>
+                        <Chip>{tag.name}</Chip>
+                      </li>
+                    ))}
+                  </Cluster>
+                )}
+              </Stack>
+            </Section>
           </Base>
         ))}
       </ul>

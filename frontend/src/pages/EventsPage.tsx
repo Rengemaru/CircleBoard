@@ -102,7 +102,7 @@ export function EventsPage() {
           )}
 
           {tags.length > 0 && (
-            <FilterRow label="TAG">
+            <FilterRow label="タグ">
               {tags.map((tag) => (
                 <FilterButton
                   key={tag.id}
