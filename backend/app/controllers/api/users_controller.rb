@@ -57,13 +57,22 @@ module Api
     end
 
     # 送られていなければ nil(リンクに触らない)、空配列なら全消し。
-    # 配列以外を渡されたときは :invalid を返す。permit が黙って落とすので、
-    # そのままだと「形が違うのに 200 が返って何も変わらない」ことになる
+    #
+    # 形が違うものは :invalid にする。permit は通らない値を黙って落とすので、
+    # そのままだと配列ごと空になり、200 を返しながら既存のリンクを全部消す。
+    # 配列かどうかだけでなく要素まで見るのは、["xss"] のように
+    # 中身だけが違う形でも同じことが起きるため(PR #172 のレビュー指摘)。
+    # permit 後に件数が減っていないことも確かめる
     def links_param
       return nil unless params.key?(:links)
-      return :invalid unless params[:links].is_a?(Array)
 
-      params.permit(links: [ :label, :url ])[:links] || :invalid
+      raw = params[:links]
+      return :invalid unless raw.is_a?(Array) && raw.all? { |item| item.respond_to?(:permit) }
+
+      permitted = params.permit(links: [ :label, :url ])[:links]
+      return :invalid if permitted.nil? || permitted.size != raw.size
+
+      permitted
     end
 
     def profile_params

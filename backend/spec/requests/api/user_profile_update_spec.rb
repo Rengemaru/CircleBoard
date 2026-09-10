@@ -175,6 +175,24 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    # permit は通らない値を黙って落とすので、配列だけ見ていると
+    # links が [] になり、200 を返しながら既存のリンクを全部消す
+    it "要素が組でない links は 422 で、既存のリンクが消えない" do
+      create(:user_link, user: me, label: "既存", url: "https://example.com/old")
+      patch_me(links: [ "xss" ])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(me.reload.user_links.map(&:label)).to eq [ "既存" ]
+    end
+
+    it "要素が配列の links は 422 で、既存のリンクが消えない" do
+      create(:user_link, user: me, label: "既存", url: "https://example.com/old")
+      patch_me(links: [ [ "GitHub", "https://example.com" ] ])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(me.reload.user_links.map(&:label)).to eq [ "既存" ]
+    end
   end
 
   # 3つの書き込みを1つのトランザクションに入れている理由がこれ。
