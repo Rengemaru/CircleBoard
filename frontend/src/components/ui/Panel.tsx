@@ -19,7 +19,10 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <Section className={`mb-4 block ${className}`}>
+    // セクション間は 32px。SmartHR の「余白とレイアウト」の基準
+    // (16px を 1 として、セクション間 2)。16px だと、パネルの中の
+    // 余白(20px)より外の余白の方が狭くなり、区切りに見えない
+    <Section className={`mb-8 block ${className}`}>
       <ShrPanel padding={1.25}>
         {title !== undefined && (
           <Cluster

@@ -16,7 +16,8 @@ export function LegalPage() {
     <MemberPage user={user} sessionFailed={failed}>
       <PageHeading title="よくある質問・利用規約" />
 
-      <Section className="mb-7">
+      {/* セクション間は 32px に揃える(Panel と同じ基準) */}
+      <Section className="mb-8">
         <SectionHeading>よくある質問</SectionHeading>
         <Stack gap="XS">
           <Faq q="アカウントはどうやって作りますか？">

@@ -171,7 +171,7 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
       {error !== null && <ErrorNote error={error} fallback="操作に失敗しました" />}
       {success !== null && <Note tone="success">{success}</Note>}
 
-      <Section className="block">
+      <Section className="mb-8 block">
         <SectionHeading>有効なトークン</SectionHeading>
         {active.length === 0 ? (
           <p className="mb-5 text-[13px] text-gray-500">有効なトークンがありません。</p>
