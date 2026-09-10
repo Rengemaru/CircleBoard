@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
+import { PostLink } from "../../components/PostLink";
 import {
   fetchAdminPosts,
   restorePost,
@@ -258,7 +259,19 @@ function PostRow({
     // 削除済みは背景で示す。opacity を下げると文字が読めなくなる(Issue #68)。
     // 削除済みバッジと打ち消し線でも分かるので、色だけに頼っていない
     <tr className={post.trashed ? "bg-gray-100" : ""}>
-      <Td>{post.trashed ? <s>{post.title}</s> : <strong>{post.title}</strong>}</Td>
+      {/* 削除済みはリンクにしない。公開APIが必ず404を返すので開けない。
+          復旧すれば開けるようになる(Issue #188) */}
+      <Td>
+        {post.trashed ? (
+          <s>{post.title}</s>
+        ) : (
+          <strong>
+            <PostLink kind={post.kind} id={post.id}>
+              {post.title}
+            </PostLink>
+          </strong>
+        )}
+      </Td>
       <Td className="text-gray-500">{KIND_LABEL[post.kind]}</Td>
       <Td>
         {/* 削除済みでも元のステータスを併記する。出さないと「復旧」を押したとき
