@@ -2,7 +2,13 @@
 //
 // credentials: "include" が必須。認証はサーバー側セッション + HttpOnly Cookie で行い、
 // トークンを JS から触れる場所に置かないため(CLAUDE.md §4)。
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// VITE_API_BASE_URL が空のときは、いま開いている画面と同じホストを見る。
+// LAN の別端末（スマホなど）から 192.168.x.x で開いたときに
+// localhost を指すと、その端末自身を叩いて必ず失敗する。
+// 本番は VITE_API_BASE_URL を明示して、ここには落ちてこない。
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_API_PORT || "3000"}`;
 
 export class ApiError extends Error {
   // コンストラクタの引数プロパティ記法は erasableSyntaxOnly が禁じているため使わない

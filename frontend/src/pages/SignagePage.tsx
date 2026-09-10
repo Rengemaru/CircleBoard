@@ -424,7 +424,9 @@ function EmptyState() {
       <div className="text-[4vw] font-bold">CircleBoard</div>
       <p className="text-[2.4vw] text-[#9aa0ae]">いま募集中の企画はありません</p>
       <QRCodeSVG
-        value={import.meta.env.VITE_PUBLIC_BASE_URL}
+        // 空なら、このサイネージを開いている URL をそのまま使う。
+        // 部室の端末が LAN の IP で開いていれば、QR もその IP になる
+        value={import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin}
         size={qrSize}
         bgColor="#f2f3f7"
         level="M"
