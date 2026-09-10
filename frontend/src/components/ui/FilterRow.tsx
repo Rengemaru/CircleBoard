@@ -29,7 +29,7 @@ export function FilterButton({
   );
 }
 
-// 何で絞り込んでいるのかを示すラベル。プロジェクトは STATUS と TAG の
+// 何で絞り込んでいるのかを示すラベル。プロジェクトは「状態」と「タグ」の
 // 2軸があり、ラベルが無いとどちらの行を触っているのか分からない。
 // イベントは1軸だが、両画面で形を揃えるために同じ形にする。
 export function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
