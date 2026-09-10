@@ -26,7 +26,8 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
 };
 
 export function ProjectsPage() {
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
 
   // 絞り込みは ?status= と ?tag_ids= で行い、URLで共有できる状態にする
   // （画面④の注記）。画面の中に状態を持たず、URLを唯一の状態にしている
@@ -107,7 +108,7 @@ export function ProjectsPage() {
 
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -116,7 +117,7 @@ export function ProjectsPage() {
   // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <PageHeading title="プロジェクト" />
         <SessionUnavailable />
       </MemberPage>
@@ -126,7 +127,7 @@ export function ProjectsPage() {
   // 未ログインは API 自体が 401 を返す。画面側でも案内を出す
   if (user === null) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title="プロジェクト" />
         <LoginRequired>プロジェクトの閲覧にはログインが必要です。</LoginRequired>
       </MemberPage>
@@ -134,7 +135,7 @@ export function ProjectsPage() {
   }
 
   return (
-    <MemberPage user={user}>
+    <MemberPage session={session}>
       <Stack gap="M">
         <Cluster align="center" justify="space-between">
           <Stack gap="XXS">

@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { AppNavi, AppNaviCustomTag, AppNaviDropdown, Stack, TextLink } from "smarthr-ui";
 import { Button } from "./ui/Button";
 import { LinkButton } from "./ui/LinkButton";
-import { logout, type CurrentUser } from "../api/session";
+import { logout } from "../api/session";
+import type { SessionState } from "../hooks/useCurrentUser";
 import { loginPathFrom } from "../lib/redirectTo";
 
 // メンバー画面で共通のヘッダー。
@@ -25,13 +26,8 @@ const ADMIN_ITEMS = [
   { to: "/admin/signage", label: "サイネージトークン" },
 ];
 
-export function SiteHeader({
-  user,
-  sessionFailed = false,
-}: {
-  user: CurrentUser | null;
-  sessionFailed?: boolean;
-}) {
+export function SiteHeader({ session }: { session: SessionState }) {
+  const { user, loading, failed } = session;
   // ログインしたら、いま見ていた画面に戻す(Issue #37)
   const location = useLocation();
 
@@ -45,10 +41,13 @@ export function SiteHeader({
           CircleBoard
         </Link>
         <div className="ml-auto flex items-center gap-3 text-[13px]">
-          {/* ログイン状態が分からないときは、ログインボタンも名前も出さない。
+          {/* ログイン状態が分からないうちは、ログインボタンも名前も出さない。
               本文が「確認できませんでした」と言っている横で「ログイン」を出すと、
-              ログアウトされたのだと読めてしまう(Issue #72) */}
-          {sessionFailed ? null : user === null ? (
+              ログアウトされたのだと読めてしまう(Issue #72)。
+              読み込み中も同じ扱いにする。まだ確かめていないだけなのに
+              「ログイン」を出すと、開くたびにログアウトされたように見える
+              (Issue #184)。出さない方が、間違ったことを言うより良い */}
+          {loading || failed ? null : user === null ? (
             <LinkButton to={loginPathFrom(location.pathname + location.search)} size="sm">
               ログイン
             </LinkButton>

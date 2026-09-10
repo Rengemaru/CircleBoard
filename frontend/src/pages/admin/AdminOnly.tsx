@@ -28,13 +28,14 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
   // member 側と同じ hook を使う。ここで fetchCurrentUser を直接呼ぶと、
   // 「未ログイン」と「確かめられなかった」の区別(Issue #72)を2箇所で
   // 面倒みることになる
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
 
   // どの分岐でも PageHeading を通す。通さないと document.title が
   // 書き換わらず、SPA では前に開いていた画面のタブ名が残る(PR #135)
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <Text size="S" color="TEXT_GREY">
           読み込み中…
@@ -45,7 +46,7 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
 
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <SessionUnavailable />
       </MemberPage>
@@ -56,7 +57,7 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
     // 「見えません」で終わらせず、次に何をすればよいかを置く。
     // member 側と同じ部品を使う。シェルが1つになったので案内も1種類でよい(Issue #72)
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <LoginRequired>この画面を見るにはログインが必要です。</LoginRequired>
       </MemberPage>
@@ -67,7 +68,7 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
     // ナビゲーションからは隠しているが、URLを直接開いた人には理由を出す。
     // 隠すだけだと「押せないのはなぜか」が分からない
     return (
-      <MemberPage user={user}>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <Note tone="warning">管理者だけが使える画面です。</Note>
       </MemberPage>
@@ -75,7 +76,7 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
   }
 
   return (
-    <MemberPage user={user} size={size}>
+    <MemberPage session={session} size={size}>
       <PageHeading title={title} subtitle={subtitle} action={action} />
       {children(user)}
     </MemberPage>

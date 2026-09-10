@@ -23,7 +23,8 @@ import type { EventDetail } from "../types/event";
 // (CLAUDE.md §3-2)。ここでは「キーが無い＝見せてよい情報ではない」として扱う。
 export function EventDetailPage() {
   const { id } = useParams();
-  const { user, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, failed } = session;
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,14 +72,14 @@ export function EventDetailPage() {
 
   if (error !== null && event === null) {
     return (
-      <MemberPage user={user} sessionFailed={failed}>
+      <MemberPage session={session}>
         <Note tone="danger">{error}</Note>
       </MemberPage>
     );
   }
   if (event === null) {
     return (
-      <MemberPage user={user} sessionFailed={failed}>
+      <MemberPage session={session}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -87,7 +88,7 @@ export function EventDetailPage() {
   const full = event.capacity !== null && event.participants_count >= event.capacity;
 
   return (
-    <MemberPage user={user} sessionFailed={failed}>
+    <MemberPage session={session}>
       <div className="mb-3">
         <TextLink elementAs={Link} to="/events" size="XS">
           ← イベント一覧

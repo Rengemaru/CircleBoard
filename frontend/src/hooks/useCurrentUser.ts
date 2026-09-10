@@ -6,11 +6,15 @@ import { fetchCurrentUser, type CurrentUser } from "../api/session";
 // 未ログインでも 401 ではなく 200 + null が返る仕様なので(docs/api-spec.md §1)、
 // 「まだ確かめていない」と「未ログインだと確かめた」を loading で区別する。
 // これを混ぜると、読み込み中に一瞬「ログインしてください」が出る。
-export function useCurrentUser(): {
+// この3つは必ず一緒に持ち回る。1つでも欠けると
+// 「まだ確かめていない」と「未ログインだと確かめた」が区別できなくなる
+export type SessionState = {
   user: CurrentUser | null;
   loading: boolean;
   failed: boolean;
-} {
+};
+
+export function useCurrentUser(): SessionState {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   // 未ログインは 200 + null で返ってくるので、例外が飛んだということは

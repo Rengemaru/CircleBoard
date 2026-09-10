@@ -53,7 +53,8 @@ const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 export function CreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
   // どちらを作りに来たかは呼び出し元のボタンが決める。一覧の「プロジェクトを
   // 作成」から来た人にイベントのフォームを出さない(Issue #38)
   const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
@@ -130,7 +131,7 @@ export function CreatePage() {
 
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <p className="text-[13px] text-gray-500">読み込み中…</p>
       </MemberPage>
     );
@@ -142,7 +143,7 @@ export function CreatePage() {
   // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <SessionUnavailable />
       </MemberPage>
     );
@@ -150,7 +151,7 @@ export function CreatePage() {
 
   if (user === null) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <LoginRequired>企画の作成にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -159,7 +160,7 @@ export function CreatePage() {
   // フォーム1枚の画面なので NARROW。DEFAULT だと1行のタイトル欄が
   // 1000px を超えて読みにくくなる(docs/spec-layout-unification.md §5)
   return (
-    <MemberPage user={user} size="NARROW">
+    <MemberPage session={session} size="NARROW">
       <PageHeading
         title="企画を作成"
         subtitle="作ったあとで編集はできません。内容を確認してから作成してください"

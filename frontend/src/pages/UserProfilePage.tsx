@@ -36,7 +36,8 @@ export function UserProfilePage() {
 }
 
 function Profile({ id }: { id: string | undefined }) {
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<{
     events: EventSummary[];
@@ -74,7 +75,7 @@ function Profile({ id }: { id: string | undefined }) {
 
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <Text size="S" color="TEXT_GREY">
           読み込み中…
@@ -85,7 +86,7 @@ function Profile({ id }: { id: string | undefined }) {
 
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <SessionUnavailable />
       </MemberPage>
@@ -94,7 +95,7 @@ function Profile({ id }: { id: string | undefined }) {
 
   if (user === null) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={title} />
         <LoginRequired>部員のプロフィールを見るにはログインが必要です。</LoginRequired>
       </MemberPage>
@@ -102,7 +103,7 @@ function Profile({ id }: { id: string | undefined }) {
   }
 
   return (
-    <MemberPage user={user}>
+    <MemberPage session={session}>
       <PageHeading title={title} />
 
       {!validId ? (

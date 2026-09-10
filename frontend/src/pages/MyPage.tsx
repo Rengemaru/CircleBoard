@@ -37,7 +37,8 @@ const ROLE_LABEL: Record<CurrentUser["role"], string> = {
 };
 
 export function MyPage() {
-  const { user, loading, failed } = useCurrentUser();
+  const session = useCurrentUser();
+  const { user, loading, failed } = session;
   // 編集画面から戻ってきたときだけ「保存しました」を出す。
   // 保存したかどうかは遷移した側しか知らないので、遷移の state で受け取る。
   // クエリパラメータにすると、URLを共有したときにも出てしまう
@@ -92,7 +93,7 @@ export function MyPage() {
   // 書き換わらず、SPA では前の画面のタブ名が残る(PR #135)
   if (loading) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={TITLE} />
         <Text size="S" color="TEXT_GREY">
           読み込み中…
@@ -104,7 +105,7 @@ export function MyPage() {
   // 「未ログイン」と「確かめられなかった」を分ける(Issue #72)
   if (failed) {
     return (
-      <MemberPage user={null} sessionFailed>
+      <MemberPage session={session}>
         <PageHeading title={TITLE} />
         <SessionUnavailable />
       </MemberPage>
@@ -113,7 +114,7 @@ export function MyPage() {
 
   if (user === null) {
     return (
-      <MemberPage user={null}>
+      <MemberPage session={session}>
         <PageHeading title={TITLE} />
         <LoginRequired>マイページを見るにはログインが必要です。</LoginRequired>
       </MemberPage>
@@ -121,7 +122,7 @@ export function MyPage() {
   }
 
   return (
-    <MemberPage user={user}>
+    <MemberPage session={session}>
       <PageHeading title={TITLE} subtitle="自分のアカウントとプロフィールを確認します" />
 
       {saved && <Note tone="success">プロフィールを保存しました。</Note>}
