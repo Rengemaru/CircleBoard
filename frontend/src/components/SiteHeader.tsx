@@ -37,7 +37,10 @@ export function SiteHeader({
 
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
+      {/* 画面幅いっぱいに置き、左端を下の AppNavi と揃える。
+          max-w-3xl で中央に寄せていたときは、本文(Container)とも
+          ナビとも幅が合っていなかった */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
         <Link to="/" className="text-base font-bold tracking-tight">
           CircleBoard
         </Link>
