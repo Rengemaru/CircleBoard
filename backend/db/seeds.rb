@@ -4,6 +4,14 @@
 # ブロックが実行されないため、レコードは増えない。
 #
 # 開発環境専用。パスワードは全員 password123（README に明記）。
+#
+# テストDBには入れない。db:prepare は DB を新しく作ったときに seed も流すので、
+# CI のテストDBに開発用データが混ざる。件数やIDを数える spec が落ちるうえ、
+# 同名タグの一意制約にも当たる（実際に 270 件中 92 件が落ちた）。
+if Rails.env.test?
+  puts "test 環境では seed を流さない"
+  return
+end
 
 puts "== users =="
 admin = User.find_or_create_by!(email: "admin@example.ac.jp") do |u|
