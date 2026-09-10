@@ -4,10 +4,10 @@
 # サイネージもこのクラスを通す(CLAUDE.md §3-2)。片方だけ塞いで漏れる事故を
 # 構造的に起こせなくするため、詳細用に別クラスを作らず detail: で切り替える。
 #
-#   base                       … 常に返す
-#   owner                      … ログイン時のみ(一覧・詳細とも)
-#   participants               … ログイン時 かつ detail: true のときのみ
-#   current_user_joined
+#   base                … 常に返す
+#   owner               … ログイン時のみ(一覧・詳細とも)
+#   current_user_joined … ログイン時のみ(一覧・詳細とも)
+#   participants        … ログイン時 かつ detail: true のときのみ
 class EventSerializer
   def initialize(event, current_user: nil, detail: false, signage: false)
     @event = event
@@ -45,15 +45,18 @@ class EventSerializer
     # 未ログインならここで返す。owner キーごと存在しない
     return base unless signed_in?
 
+    # current_user_joined は一覧でも返す。マイページの「参加中の企画」が
+    # 必要とするため(Issue #165)。ProjectSerializer は元から一覧で返して
+    # いるので、これで2つのレスポンスの形が揃う。
+    # 参加者の一覧(participants)は詳細だけのまま。名前の並びは
+    # 一覧の1行に入れるものではない
     with_owner = base.merge(
-      owner: @event.owner && { id: @event.owner.id, name: @event.owner.name }
+      owner: @event.owner && { id: @event.owner.id, name: @event.owner.name },
+      current_user_joined: current_user_joined?
     )
     return with_owner unless @detail
 
-    with_owner.merge(
-      participants: participants,
-      current_user_joined: current_user_joined?
-    )
+    with_owner.merge(participants: participants)
   end
 
   private

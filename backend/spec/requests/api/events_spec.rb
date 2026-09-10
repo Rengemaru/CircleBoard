@@ -12,6 +12,7 @@ RSpec.describe "GET /api/events", type: :request do
     events = response.parsed_body["events"]
     expect(events.size).to eq(1)
     expect(events.first).not_to have_key("owner")
+    expect(events.first).not_to have_key("current_user_joined")
   end
 
   # 「常に owner を返さない実装」でも上のテストは通ってしまうため、
@@ -25,5 +26,58 @@ RSpec.describe "GET /api/events", type: :request do
 
     owner = response.parsed_body["events"].first["owner"]
     expect(owner).to eq("id" => event.owner.id, "name" => event.owner.name)
+  end
+
+  # マイページの「参加中の企画」が使う(Issue #165)。
+  # 詳細を1件ずつ引くと参加数だけリクエストが増えるので、一覧でも返す
+  describe "current_user_joined" do
+    it "参加していなければ false" do
+      user = create(:user)
+      create(:event)
+      sign_in(user)
+
+      get "/api/events"
+
+      expect(response.parsed_body["events"].first["current_user_joined"]).to be(false)
+    end
+
+    it "参加していれば true" do
+      user = create(:user)
+      event = create(:event)
+      create(:event_participation, event: event, user: user)
+      sign_in(user)
+
+      get "/api/events"
+
+      expect(response.parsed_body["events"].first["current_user_joined"]).to be(true)
+    end
+
+    # キャンセルは参加を取り消す操作なので、行が残っていても false に戻る
+    it "キャンセル済みなら false" do
+      user = create(:user)
+      event = create(:event)
+      create(:event_participation, event: event, user: user, cancelled_at: Time.current)
+      sign_in(user)
+
+      get "/api/events"
+
+      expect(response.parsed_body["events"].first["current_user_joined"]).to be(false)
+    end
+
+    # 一覧で1件ずつ参加を数えに行かせない(CLAUDE.md §3-3)。
+    # 本数そのものを固定すると、無関係な変更で落ちて意味が薄れるので、
+    # 「件数を増やしても本数が変わらないこと」を見る
+    it "イベントが増えてもクエリの本数が変わらない" do
+      user = create(:user)
+      create(:event)
+      sign_in(user)
+      one = count_queries { get "/api/events" }
+
+      create_list(:event, 4)
+      many = count_queries { get "/api/events" }
+
+      expect(response.parsed_body["events"].size).to eq(5)
+      expect(many).to eq(one)
+    end
   end
 end
