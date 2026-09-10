@@ -8,6 +8,10 @@ end
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
+# 手元では .env から入るが、CI には無い。アプリ側は ENV.fetch のままにして
+# (CLAUDE.md §3-5)、テストのときだけ既定値を置く。
+# 無いと signage 系の spec が KeyError で落ちる
+ENV['PUBLIC_BASE_URL'] ||= 'http://localhost:5173'
 require_relative '../config/environment'
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
