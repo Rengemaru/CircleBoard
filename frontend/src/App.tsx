@@ -3,6 +3,7 @@ import { SiteFooter } from "./components/SiteFooter";
 import { EventsPage } from "./pages/EventsPage";
 import { TopPage } from "./pages/TopPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MyPage } from "./pages/MyPage";
 import { LegalPage } from "./pages/LegalPage";
 import { CreatePage } from "./pages/CreatePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
@@ -29,6 +30,7 @@ export function App() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/create" element={<CreatePage />} />
+          <Route path="/me" element={<MyPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/legal" element={<LegalPage />} />
           {/* 定義していないURL。何も出さないと真っ白な画面になる */}
