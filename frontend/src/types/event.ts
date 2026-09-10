@@ -21,14 +21,15 @@ export type EventSummary = {
   pinned: boolean;
   external_url: string | null;
   tags: Tag[];
-  // owner はログイン時のみサーバーが返す。未ログインではキーごと存在しない
-  // (docs/spec-v2.2.md §4.2)。省略可能であることを型でも表す
+  // owner と current_user_joined はログイン時のみサーバーが返す。
+  // 未ログインではキーごと存在しない(docs/spec-v2.2.md §4.2)。
+  // 省略可能であることを型でも表す
   owner?: { id: number; name: string };
+  current_user_joined?: boolean;
 };
 
 // 詳細API。一覧と同じ EventSerializer が detail: true で返す形。
-// ログイン時のみ participants と current_user_joined が**キーごと**増える。
+// participants だけは詳細にしか無い。名前の並びは一覧の1行に入れるものではない
 export type EventDetail = EventSummary & {
   participants?: { id: number; name: string }[];
-  current_user_joined?: boolean;
 };

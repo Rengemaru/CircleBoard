@@ -128,11 +128,17 @@ AND だとタグを足すほど結果が減り、0件になりやすい。
       "status": "recruiting",
       "external_url": null,
       "tags": [{ "id": 3, "name": "ハッカソン" }]
-      // owner はログイン時のみ追加される
+      // owner と current_user_joined はログイン時のみ追加される
     }
   ]
 }
 ```
+
+> **`current_user_joined` を一覧にも足した理由（2026-09-10 に追加）**
+> マイページの「参加中の企画」が必要とする（Issue #165）。
+> 詳細を1件ずつ引くと、参加数だけリクエストが増える。
+> `GET /api/projects` は元から一覧で返しており、これで形が揃う。
+> 未ログインではキーごと存在しない点も owner と同じ。
 
 ### `GET /api/events/:id` — 詳細 🔓ゲスト可
 
@@ -141,10 +147,12 @@ AND だとタグを足すほど結果が減り、0件になりやすい。
 ```json
 {
   "owner": { "id": 4, "name": "佐藤花子" },
-  "participants": [{ "id": 1, "name": "山田太郎" }],
-  "current_user_joined": true
+  "current_user_joined": true,
+  "participants": [{ "id": 1, "name": "山田太郎" }]
 }
 ```
+
+`participants` だけは詳細のみ。名前の並びは一覧の1行に入れるものではない。
 
 - `visibility: trashed` は **404**
 - 一覧と詳細で**同じ `EventSerializer` を使う**（片方だけ塞ぐ漏れを防ぐ）
