@@ -39,9 +39,12 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
       .finally(() => setChecked(true));
   }, []);
 
+  // どの分岐でも PageHeading を通す。通さないと document.title が
+  // 書き換わらず、SPA では前に開いていた画面のタブ名が残る(PR #135)
   if (!checked) {
     return (
       <MemberPage user={null}>
+        <PageHeading title={title} />
         <Text size="S" color="TEXT_GREY">
           読み込み中…
         </Text>
@@ -52,6 +55,7 @@ export function AdminOnly({ title, subtitle, action, size, children }: Props) {
   if (failed) {
     return (
       <MemberPage user={null} sessionFailed>
+        <PageHeading title={title} />
         <SessionUnavailable />
       </MemberPage>
     );
