@@ -156,8 +156,10 @@ export function CreatePage() {
     );
   }
 
+  // フォーム1枚の画面なので NARROW。DEFAULT だと1行のタイトル欄が
+  // 1000px を超えて読みにくくなる(docs/spec-layout-unification.md §5)
   return (
-    <MemberPage user={user}>
+    <MemberPage user={user} size="NARROW">
       <PageHeading
         title="企画を作成"
         subtitle="作ったあとで編集はできません。内容を確認してから作成してください"

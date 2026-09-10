@@ -46,57 +46,63 @@ export function LoginPage() {
   }
 
   return (
-    <MemberPage user={user} width="narrow" sessionFailed={failed}>
-      {/* 画面名は PageHeading で出す。Panel の title は見出しに見えるが
-          h1 ではなく、document.title も書き換えない。SPA なので前の画面の
-          タブ名が残ったままになる */}
-      <PageHeading title="ログイン" />
-      <Panel>
-        <form onSubmit={submit}>
-          {error !== null && <Note tone="danger">{error}</Note>}
+    <MemberPage user={user} size="NARROW" sessionFailed={failed}>
+      {/* Container の NARROW は 880px で、入力欄2つのフォームには広すぎる。
+          入力欄が画面幅いっぱいに伸びると、どこを読めばよいのか分からなくなる。
+          カード側の最大幅はこの画面の都合なので、外枠ではなくここで決める。
+          Center は中身を内容幅まで縮めてしまうので使わない */}
+      <div className="mx-auto max-w-md">
+        {/* 画面名は PageHeading で出す。Panel の title は見出しに見えるが
+            h1 ではなく、document.title も書き換えない。SPA なので前の画面の
+            タブ名が残ったままになる */}
+        <PageHeading title="ログイン" />
+        <Panel>
+          <form onSubmit={submit}>
+            {error !== null && <Note tone="danger">{error}</Note>}
 
-          {/* 必須の印は付けない。2項目しかなく両方とも必須であることが
+            {/* 必須の印は付けない。2項目しかなく両方とも必須であることが
               自明な画面では、印が並ぶだけで情報が増えない
               (SmartHR「フォーム入力が極めて少なく、すべて必須であることが
               自明な場合は必須ステータスラベルの省略を検討する」) */}
-          <Stack gap={1.25} className="mb-4">
-            <FormControl label="メールアドレス">
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-                width="100%"
-              />
-            </FormControl>
+            <Stack gap={1.25} className="mb-4">
+              <FormControl label="メールアドレス">
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                  width="100%"
+                />
+              </FormControl>
 
-            <FormControl label="パスワード">
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-                width="100%"
-              />
-            </FormControl>
-          </Stack>
+              <FormControl label="パスワード">
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  width="100%"
+                />
+              </FormControl>
+            </Stack>
 
-          <Button
-            type="submit"
-            variant="primary"
-            busy={busy}
-            busyLabel="ログイン中…"
-            className="w-full"
-          >
-            ログイン
-          </Button>
-        </form>
-      </Panel>
+            <Button
+              type="submit"
+              variant="primary"
+              busy={busy}
+              busyLabel="ログイン中…"
+              className="w-full"
+            >
+              ログイン
+            </Button>
+          </form>
+        </Panel>
 
-      {/* パスワード再発行UIは MVP 対象外。rails console で対応する(CLAUDE.md §10) */}
-      <Note>アカウントは部長が発行します。パスワードを忘れた場合も部長に連絡してください。</Note>
+        {/* パスワード再発行UIは MVP 対象外。rails console で対応する(CLAUDE.md §10) */}
+        <Note>アカウントは部長が発行します。パスワードを忘れた場合も部長に連絡してください。</Note>
+      </div>
     </MemberPage>
   );
 }
