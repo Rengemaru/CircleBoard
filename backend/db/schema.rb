@@ -113,8 +113,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_10_173146) do
     t.string "label", null: false
     t.string "url", null: false
     t.integer "position", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.index ["user_id", "position"], name: "index_user_links_on_user_id_and_position"
     t.index ["user_id"], name: "index_user_links_on_user_id"
   end
