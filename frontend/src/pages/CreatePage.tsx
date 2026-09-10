@@ -5,7 +5,7 @@ import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
 import { FilterChip } from "../components/ui/Chip";
-import { FormControl, Input, Stack, StatusLabel, Textarea } from "smarthr-ui";
+import { FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
@@ -47,6 +47,10 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 
 // 必須と任意はステータスラベルで示す。ラベルの文字に「（任意）」と
 // 混ぜると、必須の印だけ別の形になって2通りの書き方が並ぶ
+// どの分岐でも同じ画面名を出す。通さないと document.title が書き換わらず、
+// SPA では前に開いていた画面のタブ名が残る(PR #135、Issue #185)
+const TITLE = "企画を作成";
+
 const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
 const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
@@ -131,8 +135,11 @@ export function CreatePage() {
 
   if (loading) {
     return (
-      <MemberPage session={session}>
-        <p className="text-[13px] text-gray-500">読み込み中…</p>
+      <MemberPage session={session} size="NARROW">
+        <PageHeading title={TITLE} />
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
       </MemberPage>
     );
   }
@@ -143,7 +150,8 @@ export function CreatePage() {
   // ログイン状態を確かめられなかったときは、未ログインの案内を出さない(Issue #72)
   if (failed) {
     return (
-      <MemberPage session={session}>
+      <MemberPage session={session} size="NARROW">
+        <PageHeading title={TITLE} />
         <SessionUnavailable />
       </MemberPage>
     );
@@ -151,7 +159,8 @@ export function CreatePage() {
 
   if (user === null) {
     return (
-      <MemberPage session={session}>
+      <MemberPage session={session} size="NARROW">
+        <PageHeading title={TITLE} />
         <LoginRequired>企画の作成にはログインが必要です。</LoginRequired>
       </MemberPage>
     );
@@ -162,7 +171,7 @@ export function CreatePage() {
   return (
     <MemberPage session={session} size="NARROW">
       <PageHeading
-        title="企画を作成"
+        title={TITLE}
         subtitle="作ったあとで編集はできません。内容を確認してから作成してください"
       />
 
