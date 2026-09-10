@@ -48,6 +48,12 @@ module App
     # DBへの保存は UTC のまま(Rails の既定)。読み書きの境界で変換される
     config.time_zone = "Tokyo"
 
+    # 検証エラーの文言を日本語で返す(Issue #176)。部員が読むのは日本語の
+    # 画面なので、"Bio is too long" がそのまま出ると何を直せばよいか分からない。
+    # 訳文は config/locales/ja.yml に自分で置いている(rails-i18n は入れない)
+    config.i18n.default_locale = :ja
+    config.i18n.available_locales = [ :ja, :en ]
+
     # APIモードは session / cookie ミドルウェアを読み込まないので手で戻す。
     # 認証はサーバー側セッション + HttpOnly Cookie で行う(docs/api-spec.md §0)。
     # トークンをJSから触れる場所に置かないため、この方式を選んでいる。
