@@ -19,6 +19,8 @@ import type { ProjectSummary } from "../types/project";
 type Props = {
   events: EventSummary[];
   projects: ProjectSummary[];
+  // 0件のときの文言。「自分の企画」と「参加中の企画」で言うことが違う
+  emptyMessage: string;
 };
 
 const PROJECT_STATUS = {
@@ -27,11 +29,11 @@ const PROJECT_STATUS = {
   completed: { tone: "completed", label: "終了" },
 } as const;
 
-export function MyPostList({ events, projects }: Props) {
+export function MyPostList({ events, projects, emptyMessage }: Props) {
   if (events.length === 0 && projects.length === 0) {
     return (
       <Text size="S" color="TEXT_GREY">
-        いま募集中の企画はありません。
+        {emptyMessage}
       </Text>
     );
   }

@@ -132,7 +132,11 @@ function Profile({ id }: { id: string | undefined }) {
                 読み込み中…
               </Text>
             ) : (
-              <MyPostList events={posts.events} projects={posts.projects} />
+              <MyPostList
+                events={posts.events}
+                projects={posts.projects}
+                emptyMessage="いま募集中の企画はありません。"
+              />
             )}
           </Panel>
         </>
