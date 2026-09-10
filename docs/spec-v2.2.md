@@ -159,7 +159,15 @@ Rails の `enum` は integer カラムで持つ（PostgreSQLのENUM型は値の�
 | enrollment_year | integer | NOT NULL | |
 | graduation_year | integer | NOT NULL | 卒業判定は `User#graduated?`（4月始まりの年度で判定） |
 | suspended_at | datetime | NULL可 | **NULL = 有効。** 時刻が入っていれば停止中（0.4-1 で追加） |
+| department | string | NULL可 | 学科。自由入力・50字まで（2026-09-10 追加。`docs/spec-my-page.md`） |
+| bio | text | NULL可 | 自己紹介。500字まで。改行を含むため string ではなく text |
 | created_at / updated_at | datetime | NOT NULL | |
+
+**`department` を選択肢にしないのは、学科名が大学ごとに違い、改組でも変わるためです。**
+選択肢を持つと、変わるたびにマイグレーションが要ります（§4 が PostgreSQL の ENUM 型を避けているのと同じ理由）。
+
+どちらも NULL 可です。§0.3 の「後から追加したとき既存の全行にデータを入れ直す必要があるか」に照らして、
+学科も自己紹介も**空のまま成立します**。
 
 ```ruby
 # app/models/user.rb
@@ -171,6 +179,11 @@ class User < ApplicationRecord
   has_many :owned_projects, class_name: 'Project', foreign_key: :owner_id
   has_many :event_participations
   has_many :project_participations
+
+  # プロフィール(2026-09-10 追加)
+  has_many :user_tags,  dependent: :destroy
+  has_many :tags, through: :user_tags
+  has_many :user_links, -> { order(:position) }, dependent: :destroy
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
