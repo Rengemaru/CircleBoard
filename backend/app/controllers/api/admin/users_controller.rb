@@ -61,6 +61,8 @@ module Api
           role: user.role,
           enrollment_year: user.enrollment_year,
           graduation_year: user.graduation_year,
+          # 未入力は null。本人が /me/edit で書くもので、ここでは編集しない
+          department: user.department,
           # 卒業したかどうかは年度の切り替わりを跨ぐ判断なので、
           # 画面ごとに計算させない(User#graduated? 参照)
           graduated: user.graduated?,
