@@ -231,7 +231,10 @@ function SectionTitle({ label, count, color }: { label: string; count: number; c
     >
       <span className="h-[1.15em] w-[0.35em]" style={{ backgroundColor: color }} />
       {label}
-      <span className="ml-auto font-normal text-[#5d6474]">{count}</span>
+      {/* 数字だけだと何の数か分からない。他の画面も「4件」「7件」と
+          単位を付けている。数メートル離れて見る画面なので、なおさら
+          読み替えを挟ませない(Issue #191) */}
+      <span className="ml-auto font-normal text-[#5d6474]">{count}件</span>
     </div>
   );
 }

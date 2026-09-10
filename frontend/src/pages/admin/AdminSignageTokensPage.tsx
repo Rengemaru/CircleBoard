@@ -264,8 +264,11 @@ function TokenCard({
           : `発行：${formatDate(token.created_at)}`}
       </span>
 
+      {/* 無効化済みには「URLをコピー」を出さない。コピーしても、そのURLは
+          サーバーが404を返すので開けない。押しても断られるだけのボタンを
+          出さないのは、リンクの「行を追加」と同じ考え方(Issue #191) */}
       <span className="flex items-center gap-1.5">
-        <CopyButton text={token.url} label="URLをコピー" />
+        {!revoked && <CopyButton text={token.url} label="URLをコピー" />}
         {onRevoke !== null && (
           <Button variant="danger" size="xs" onClick={onRevoke} disabled={busy}>
             無効化
