@@ -5,7 +5,7 @@ import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { fetchAdminEvents, pinEvent, unpinEvent, type AdminEventRow } from "../../api/admin";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // 注目イベント ピン留め設定(wireframes/wireframe-admin-ver2.html ⑥)。
 //
@@ -15,12 +15,12 @@ import { AdminLayout } from "./AdminLayout";
 // 構造的に防ぐ設計。
 export function AdminPinsPage() {
   return (
-    <AdminLayout
+    <AdminOnly
       title="注目イベント ピン留め設定"
       subtitle="トップページの注目イベント枠のうち1枠を手動で固定する"
     >
       {() => <PinPicker />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 

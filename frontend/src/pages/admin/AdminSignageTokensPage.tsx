@@ -13,7 +13,7 @@ import {
   revokeSignageToken,
   type SignageTokenRow,
 } from "../../api/admin";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // サイネージトークン管理(wireframes/wireframe-admin-ver2.html ⑤)。
 // 端末ごとに発行し、漏れたらその端末の分だけ止められるようにする。
@@ -21,7 +21,7 @@ export function AdminSignageTokensPage() {
   const [issuing, setIssuing] = useState(false);
 
   return (
-    <AdminLayout
+    <AdminOnly
       title="サイネージトークン管理"
       subtitle="部室ディスプレイ用のアクセストークンを発行・管理する"
       action={
@@ -31,7 +31,7 @@ export function AdminSignageTokensPage() {
       }
     >
       {() => <TokenList issuing={issuing} onCloseForm={() => setIssuing(false)} />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 
