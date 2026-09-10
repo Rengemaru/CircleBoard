@@ -4,6 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorNote } from "../../components/ui/ErrorNote";
+import { Chip } from "../../components/ui/Chip";
 import { Note } from "../../components/ui/Note";
 import {
   fetchAdminPosts,
@@ -47,6 +48,13 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
   in_progress: "進行中",
   completed: "終了",
   trashed: "削除済み",
+};
+
+// 状態の色。文言は STATUS_LABEL と共有し、色だけをここで持つ
+const STATUS_TONE: Record<AdminPostRow["status"], "recruiting" | "inprogress" | "completed"> = {
+  recruiting: "recruiting",
+  in_progress: "inprogress",
+  completed: "completed",
 };
 
 // Select は options を配列で受け取る。ラベルの定義は表の中でも使うので
@@ -263,15 +271,19 @@ function PostRow({
       <Td>
         {/* 削除済みでも元のステータスを併記する。出さないと「復旧」を押したとき
             募集中に戻るのか終了に戻るのかが押す前に分からない(Issue #65)。
-            削除は状態を書き換えないので、trashed と status は別の軸 */}
+            削除は状態を書き換えないので、trashed と status は別の軸。
+
+            ただし StatusLabel は1オブジェクトに1つまで(components/ui/Badge.tsx)。
+            削除済みのときは「削除済み」だけを状態として出し、元の状態は
+            属性として Chip で添える(Issue #191) */}
         <span className="flex flex-wrap items-center gap-1">
-          {post.trashed && <Badge tone="trashed">削除済み</Badge>}
-          {post.status === "recruiting" ? (
-            <Badge tone="recruiting">募集中</Badge>
-          ) : post.status === "in_progress" ? (
-            <Badge tone="inprogress">進行中</Badge>
+          {post.trashed ? (
+            <>
+              <Badge tone="trashed">削除済み</Badge>
+              <Chip>{STATUS_LABEL[post.status]}</Chip>
+            </>
           ) : (
-            <Badge tone="completed">終了</Badge>
+            <Badge tone={STATUS_TONE[post.status]}>{STATUS_LABEL[post.status]}</Badge>
           )}
         </span>
       </Td>
