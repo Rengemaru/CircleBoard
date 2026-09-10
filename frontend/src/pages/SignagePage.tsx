@@ -246,26 +246,70 @@ function eventGridClass(count: number): string {
 
 function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolean }) {
   // 1件のときはフォントを段階的に拡大する。枠だけ広げて文字が小さいままだと
-  // 間の抜けた画面になる(wireframe-signage.html S2)
-  const hero = events.length === 1;
+  // 間の抜けた画面になる(wireframe-signage.html S2)。
+  // 逆に3件以上は2段組みになり、1枚あたりの高さが半分になるので縮める。
+  // 縮めないと中身が枠からはみ出し、下の段のカードに重なる(Issue #156)
+  const density = events.length === 1 ? "hero" : events.length >= 3 ? "compact" : "normal";
 
   return (
     <section className={"flex min-h-0 flex-col " + (grown ? "flex-1" : "flex-[1.35]")}>
       <SectionTitle label="注目イベント" count={events.length} color="#fcd34d" />
       <div className={"grid min-h-0 flex-1 gap-[1.1%] " + eventGridClass(events.length)}>
         {events.map((event) => (
-          <EventCard key={event.id} event={event} hero={hero} />
+          <EventCard key={event.id} event={event} density={density} />
         ))}
       </div>
     </section>
   );
 }
 
-function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
-  const qrSize = useQrSize(hero ? "hero" : "event");
+// 文字の大きさは1枚あたりの高さで決まる。下限の MIN_FONT_SIZE(1.3vw) は
+// どの段階でも下回らない(Issue #49)
+type Density = "hero" | "normal" | "compact";
+
+const COUNTDOWN_SIZE: Record<Density, string> = {
+  hero: "5.6vw",
+  normal: "2.7vw",
+  compact: "1.9vw",
+};
+
+const TITLE_SIZE: Record<Density, string> = {
+  hero: "3.2vw",
+  normal: "1.75vw",
+  compact: "1.4vw",
+};
+
+// 行間も詰める。文字だけ小さくしても、間の余白が同じだと収まらない
+const ROW_GAP: Record<Density, string> = {
+  hero: "0.6em",
+  normal: "0.6em",
+  compact: "0.35em",
+};
+
+// 枠の内側の余白。カード幅に対する % なので、上下にも同じだけ効く。
+// 2段組みでは上下で 28px 使ってしまう
+const CARD_PADDING: Record<Density, string> = {
+  hero: "1.5%",
+  normal: "1.5%",
+  compact: "1%",
+};
+
+// 1行しかない行は、既定の line-height(約1.5)だと文字の上下に無駄が出る。
+// 実測で日時の行が 24.75px の文字に対して 37px を占めていた
+const LINE_HEIGHT: Record<Density, number | undefined> = {
+  hero: undefined,
+  normal: undefined,
+  compact: 1.15,
+};
+
+function EventCard({ event, density }: { event: SignageEvent; density: Density }) {
+  const qrSize = useQrSize(density === "hero" ? "hero" : "event");
 
   return (
-    <article className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#2b2e3c] bg-white/[0.03] p-[1.5%]">
+    <article
+      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      style={{ padding: CARD_PADDING[density] }}
+    >
       <div className="min-w-0">
         <div className="flex items-baseline gap-[1em]">
           {event.pinned && (
@@ -281,27 +325,38 @@ function EventCard({ event, hero }: { event: SignageEvent; hero: boolean }) {
           )}
           <span
             className="font-bold text-[#fcd34d]"
-            style={{ fontSize: hero ? "5.6vw" : "2.7vw", lineHeight: 1 }}
+            style={{ fontSize: COUNTDOWN_SIZE[density], lineHeight: 1 }}
           >
             {formatCountdownDays(event.days_until)}
           </span>
         </div>
-        <div className="mt-[0.6em] text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
+        <div
+          className="text-[#9aa0ae]"
+          style={{
+            fontSize: MIN_FONT_SIZE,
+            marginTop: ROW_GAP[density],
+            lineHeight: LINE_HEIGHT[density],
+          }}
+        >
           {formatStartsAt(event.starts_at)} ・ {event.location}
         </div>
         <h2
-          className="mt-[0.3em] truncate font-bold"
-          style={{ fontSize: hero ? "3.2vw" : "1.75vw" }}
+          className="truncate font-bold"
+          style={{
+            fontSize: TITLE_SIZE[density],
+            marginTop: "0.3em",
+            lineHeight: LINE_HEIGHT[density],
+          }}
         >
           {event.title}
         </h2>
         {event.tags.length > 0 && (
-          <ul className="mt-[0.6em] flex flex-wrap gap-[0.5em]">
+          <ul className="flex flex-wrap gap-[0.5em]" style={{ marginTop: ROW_GAP[density] }}>
             {event.tags.map((tag) => (
               <li
                 key={tag.id}
                 className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
-                style={{ fontSize: MIN_FONT_SIZE }}
+                style={{ fontSize: MIN_FONT_SIZE, lineHeight: LINE_HEIGHT[density] }}
               >
                 {tag.name}
               </li>
