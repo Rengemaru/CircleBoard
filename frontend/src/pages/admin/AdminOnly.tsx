@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { ComponentProps } from "react";
 import { Text } from "smarthr-ui";
 import { LoginRequired } from "../../components/LoginRequired";
@@ -6,7 +5,8 @@ import { MemberPage } from "../../components/MemberPage";
 import { SessionUnavailable } from "../../components/SessionUnavailable";
 import { Note } from "../../components/ui/Note";
 import { PageHeading } from "../../components/ui/PageHeading";
-import { fetchCurrentUser, type CurrentUser } from "../../api/session";
+import { type CurrentUser } from "../../api/session";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 type Props = {
   title: string;
@@ -25,23 +25,14 @@ type Props = {
 // API 側がすべてのエンドポイントで role: admin を検証している
 // (docs/api-spec.md §6)ので、この画面を突破されても操作はできない。
 export function AdminOnly({ title, subtitle, action, size, children }: Props) {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [checked, setChecked] = useState(false);
-  // /api/session は未ログインでも 200 + null を返す(docs/api-spec.md §1)ので、
-  // 例外が飛んだときは「未ログイン」ではなく「確かめられなかった」。
-  // ここを未ログイン扱いにすると、通信が切れただけでログインを促すことになる(Issue #72)
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    fetchCurrentUser()
-      .then(setUser)
-      .catch(() => setFailed(true))
-      .finally(() => setChecked(true));
-  }, []);
+  // member 側と同じ hook を使う。ここで fetchCurrentUser を直接呼ぶと、
+  // 「未ログイン」と「確かめられなかった」の区別(Issue #72)を2箇所で
+  // 面倒みることになる
+  const { user, loading, failed } = useCurrentUser();
 
   // どの分岐でも PageHeading を通す。通さないと document.title が
   // 書き換わらず、SPA では前に開いていた画面のタブ名が残る(PR #135)
-  if (!checked) {
+  if (loading) {
     return (
       <MemberPage user={null}>
         <PageHeading title={title} />
