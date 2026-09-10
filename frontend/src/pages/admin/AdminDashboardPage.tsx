@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Td, Th } from "smarthr-ui";
+import { Cluster, Stack, Table, Td, Text, Th, useEnvironment } from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ErrorNote } from "../../components/ui/ErrorNote";
@@ -136,6 +136,9 @@ function NeedsAttention({ count }: { count: number }) {
 }
 
 function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
+  // 表と縦積みの切り替え。境界は smarthr-ui の SCREEN_SMALL(width <= 751px)
+  const { mobile } = useEnvironment();
+
   if (rows.length === 0) {
     return (
       <Panel title="最近の企画アクティビティ">
@@ -146,44 +149,70 @@ function ActivityPanel({ rows }: { rows: ActivityRow[] }) {
 
   return (
     <Panel title="最近の企画アクティビティ" className="min-w-0">
-      {/* Table は既定で reel が有効で、溢れるときだけ表自身が横スクロールする */}
-      <div>
-        <Table>
-          <thead>
-            <tr>
-              <Th>企画名</Th>
-              <Th>種別</Th>
-              <Th>状態</Th>
-              <Th>投稿者</Th>
-              {/* 「最近」が今日なのか半年前なのかが分からないと、
-                  たまにしか開かない管理者には動きの有無を判断できない(Issue #71) */}
-              <Th>投稿日</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.kind}-${row.id}`}>
-                {/* 気になった企画をその場で開けるようにする(Issue #188)。
-                    Event.active / Project.active なので削除済みは出てこない */}
-                <Td className="font-medium">
-                  <PostLink kind={row.kind} id={row.id}>
-                    {row.title}
-                  </PostLink>
-                </Td>
-                <Td className="text-gray-500">
-                  {row.kind === "event" ? "イベント" : "プロジェクト"}
-                </Td>
-                <Td>
+      {/* モバイルでは表をやめて縦に積む。SmartHR の Table は
+          「モバイルでは、画面幅を越えたテーブルは2次元スクロールを招くため、
+          垂直方向に積みあげることを推奨します」としている。
+          5列でも 375px では文字単位で折り返していた */}
+      {mobile ? (
+        <ul className="divide-y divide-gray-200">
+          {rows.map((row) => (
+            <li key={`${row.kind}-${row.id}`} className="py-3">
+              <Stack gap={0.5}>
+                <Cluster align="center" gap={0.5}>
+                  <span className="font-medium">
+                    <PostLink kind={row.kind} id={row.id}>
+                      {row.title}
+                    </PostLink>
+                  </span>
                   <StatusBadge status={row.status} />
-                </Td>
-                {/* 投稿者が退会していると null になる。空欄ではなく理由を書く */}
-                <Td className="text-gray-500">{row.owner_name ?? "（退会済み）"}</Td>
-                <Td className="text-xs text-gray-500">{formatPostedAt(row.created_at)}</Td>
+                </Cluster>
+                <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
+                  {row.kind === "event" ? "イベント" : "プロジェクト"} ・{" "}
+                  {row.owner_name ?? "（退会済み）"} ・ {formatPostedAt(row.created_at)}
+                </Text>
+              </Stack>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div>
+          <Table>
+            <thead>
+              <tr>
+                <Th>企画名</Th>
+                <Th>種別</Th>
+                <Th>状態</Th>
+                <Th>投稿者</Th>
+                {/* 「最近」が今日なのか半年前なのかが分からないと、
+                  たまにしか開かない管理者には動きの有無を判断できない(Issue #71) */}
+                <Th>投稿日</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`${row.kind}-${row.id}`}>
+                  {/* 気になった企画をその場で開けるようにする(Issue #188)。
+                    Event.active / Project.active なので削除済みは出てこない */}
+                  <Td className="font-medium">
+                    <PostLink kind={row.kind} id={row.id}>
+                      {row.title}
+                    </PostLink>
+                  </Td>
+                  <Td className="text-gray-500">
+                    {row.kind === "event" ? "イベント" : "プロジェクト"}
+                  </Td>
+                  <Td>
+                    <StatusBadge status={row.status} />
+                  </Td>
+                  {/* 投稿者が退会していると null になる。空欄ではなく理由を書く */}
+                  <Td className="text-gray-500">{row.owner_name ?? "（退会済み）"}</Td>
+                  <Td className="text-xs text-gray-500">{formatPostedAt(row.created_at)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      )}
     </Panel>
   );
 }
