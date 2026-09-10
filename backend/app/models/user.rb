@@ -23,9 +23,11 @@ class User < ApplicationRecord
   # 公開サーバーで運用するため、最初から8文字以上を必須にする（仕様書 §2.1）
   validates :password, length: { minimum: 8 }, if: -> { password.present? }
 
-  # プロフィールは全項目が任意。書かないまま使える(仕様書 §2.1)
-  validates :department, length: { maximum: 50 }, allow_blank: true
-  validates :bio, length: { maximum: 500 }, allow_blank: true
+  # プロフィールは全項目が任意。書かないまま使える(仕様書 §2.1)。
+  # allow_nil / allow_blank は付けない。maximum だけの検証では
+  # nil も空文字も長さの条件を満たすので、付けても何も変わらない
+  validates :department, length: { maximum: 50 }
+  validates :bio, length: { maximum: 500 }
   validate :tags_within_limit
   validate :links_within_limit
 
@@ -62,12 +64,12 @@ class User < ApplicationRecord
   def tags_within_limit
     return if user_tags.reject(&:marked_for_destruction?).size <= MAX_TAGS
 
-    errors.add(:tags, "は#{MAX_TAGS}件までです")
+    errors.add(:base, "スキルは#{MAX_TAGS}件までです")
   end
 
   def links_within_limit
     return if user_links.reject(&:marked_for_destruction?).size <= MAX_LINKS
 
-    errors.add(:links, "は#{MAX_LINKS}件までです")
+    errors.add(:base, "リンクは#{MAX_LINKS}件までです")
   end
 end
