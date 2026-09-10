@@ -8,10 +8,28 @@ class User < ApplicationRecord
   has_many :event_participations, dependent: :nullify
   has_many :project_participations, dependent: :nullify
 
+  # プロフィール(docs/spec-my-page.md)。参加記録が nullify なのは
+  # 「参加した事実」を残すためで、本人に属する情報はまとめて消す
+  has_many :user_tags, dependent: :destroy
+  has_many :tags, through: :user_tags
+  has_many :user_links, -> { order(:position) }, dependent: :destroy, inverse_of: :user
+
+  # 件数の上限はここで見る。DB制約で「1人5件まで」は素直に書けない
+  MAX_TAGS = 5
+  MAX_LINKS = 3
+
   validates :name, presence: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   # 公開サーバーで運用するため、最初から8文字以上を必須にする（仕様書 §2.1）
   validates :password, length: { minimum: 8 }, if: -> { password.present? }
+
+  # プロフィールは全項目が任意。書かないまま使える(仕様書 §2.1)。
+  # allow_nil / allow_blank は付けない。maximum だけの検証では
+  # nil も空文字も長さの条件を満たすので、付けても何も変わらない
+  validates :department, length: { maximum: 50 }
+  validates :bio, length: { maximum: 500 }
+  validate :tags_within_limit
+  validate :links_within_limit
 
   # 日本の学年は4月始まりで、卒業は3月。graduation_year は「卒業する年」なので、
   # 2026年3月に卒業する人は graduation_year = 2026。
@@ -37,5 +55,21 @@ class User < ApplicationRecord
     academic_year = today.month >= 4 ? today.year : today.year - 1
 
     graduation_year <= academic_year
+  end
+
+  private
+
+  # 上限を超えたことを、どちらの項目の話か分かる文言で返す。
+  # 「保存できません」だけだと、どれを減らせばよいのか分からない
+  def tags_within_limit
+    return if user_tags.reject(&:marked_for_destruction?).size <= MAX_TAGS
+
+    errors.add(:base, "スキルは#{MAX_TAGS}件までです")
+  end
+
+  def links_within_limit
+    return if user_links.reject(&:marked_for_destruction?).size <= MAX_LINKS
+
+    errors.add(:base, "リンクは#{MAX_LINKS}件までです")
   end
 end

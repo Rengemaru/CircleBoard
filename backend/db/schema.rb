@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_20_130046) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_10_173146) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -108,6 +108,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_130046) do
     t.index ["name"], name: "index_tags_on_name", unique: true
   end
 
+  create_table "user_links", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "label", null: false
+    t.string "url", null: false
+    t.integer "position", default: 0, null: false
+    t.index ["user_id", "position"], name: "index_user_links_on_user_id_and_position"
+    t.index ["user_id"], name: "index_user_links_on_user_id"
+  end
+
+  create_table "user_tags", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "tag_id", null: false
+    t.index ["tag_id"], name: "index_user_tags_on_tag_id"
+    t.index ["user_id", "tag_id"], name: "index_user_tags_on_user_id_and_tag_id", unique: true
+    t.index ["user_id"], name: "index_user_tags_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "name", null: false
     t.string "email", null: false
@@ -118,6 +135,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_130046) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "suspended_at"
+    t.string "department"
+    t.text "bio"
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
@@ -131,4 +150,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_130046) do
   add_foreign_key "project_tags", "projects", on_delete: :cascade
   add_foreign_key "project_tags", "tags", on_delete: :cascade
   add_foreign_key "projects", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "user_links", "users", on_delete: :cascade
+  add_foreign_key "user_tags", "tags", on_delete: :cascade
+  add_foreign_key "user_tags", "users", on_delete: :cascade
 end
