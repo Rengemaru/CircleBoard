@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     # プロフィール(docs/api-spec.md §4.5)。
     # /users/me を resources より先に置く。後ろだと :id に "me" が入る
     get "users/me", to: "users#me"
+    patch "users/me", to: "users#update"
     resources :users, only: [ :show ]
     # サイネージが必要とするデータを1リクエストで返す。単数形リソース
     resource :signage, only: [ :show ]
