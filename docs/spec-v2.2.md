@@ -349,6 +349,46 @@ CREATE UNIQUE INDEX index_event_participations_active
 
 ---
 
+### 2.8 user_tags / user_links
+
+マイページ（プロフィール）用。2026-09-10 追加（`docs/spec-my-page.md`）。
+
+```
+user_tags                                  # 使える技術
+- id
+- user_id  FK users ON DELETE CASCADE NOT NULL
+- tag_id   FK tags  ON DELETE CASCADE NOT NULL
+- UNIQUE (user_id, tag_id)
+- 1人あたり5件まで（アプリ側で検証）
+
+user_links                                 # 外部リンク
+- id
+- user_id  FK users ON DELETE CASCADE NOT NULL
+- label    string NOT NULL                 # 20字まで
+- url      string NOT NULL                 # http:// または https:// で始まること
+- position integer NOT NULL default: 0     # 並び順
+- INDEX (user_id, position)
+- 1人あたり3件まで（アプリ側で検証）
+```
+
+**スキルは §2.4 の `tags` を再利用します。** 企画に付けるタグ（Web開発 / ゲーム制作 / 機械学習 …）が
+そのまま「使える技術」になります。別のテーブルで持つと、「機械学習ができる人」と
+「機械学習の企画」が別の語彙になり、探すときに繋がりません。
+`tags.category` の `1:skill` は未使用のまま残します（同じタグを両方の用途で使うため）。
+
+**どちらも ON DELETE CASCADE です。** 利用者が消えたら、その人のスキルとリンクは残す意味がありません。
+§2.5 の `event_participations.user_id` が SET NULL なのは「参加した記録」を残すためで、
+**残す価値のあるものとそうでないもので向きを変えています。**
+
+**件数の上限はアプリ側で見ます。** ピン留めの一意性（§2.2 の部分ユニークインデックス）のように
+DBで表せるものはDBに寄せていますが、「1人5件まで」は素直に書けません。
+
+**`url` のスキームを検証するのは `javascript:` を弾くためです。** 利用者が入れた文字列を
+そのまま `<a href>` に置くと、他の部員がクリックしたときにスクリプトが動きます。
+フロント側でも弾きますが、**サーバー側の検証を正とします**（フロントだけだと `curl` で回避できる）。
+
+---
+
 ## 3. 注目スコア（確定版）
 
 ### 3.1 計算式
