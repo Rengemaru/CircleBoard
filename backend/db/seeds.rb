@@ -70,9 +70,12 @@ events = [
     e.location = attrs[:location]
     e.capacity = attrs[:capacity]
     e.owner = attrs[:owner]
+    # starts_at は NOT NULL。ここで入れないと作成時のバリデーションで落ちる
+    e.starts_at = attrs[:starts_at]
+    e.status = attrs[:starts_at].past? ? :completed : :recruiting
   end
-  # 開催日時は毎回入れ直す。ブロックの中に置くと作成時にしか実行されず、
-  # seed を流した日から時間が経つと4件とも過去日付になり、
+  # 2回目以降はブロックが実行されないので、開催日時はここで入れ直す。
+  # 入れ直さないと、seed を流した日から時間が経つうちに4件とも過去日付になり、
   # 注目枠・サイネージ・ピン留めの候補が全部空になる。
   # 「もう一度 db:seed を流せば直る」状態にしておく
   event.update!(
