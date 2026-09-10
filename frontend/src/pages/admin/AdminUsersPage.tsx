@@ -14,7 +14,7 @@ import {
   unsuspendUser,
   type AdminUserRow,
 } from "../../api/admin";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // ユーザー管理(wireframes/wireframe-admin-ver2.html ②)。
 //
@@ -24,7 +24,7 @@ export function AdminUsersPage() {
   const navigate = useNavigate();
 
   return (
-    <AdminLayout
+    <AdminOnly
       title="ユーザー管理"
       subtitle="アカウントの発行・停止・削除を行う"
       action={
@@ -32,9 +32,11 @@ export function AdminUsersPage() {
           ＋ アカウントを発行
         </Button>
       }
+      // 6列の表。DEFAULT だと横スクロールが常態化する
+      size="WIDE"
     >
       {(currentUser) => <UserList currentUserId={currentUser.id} />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 

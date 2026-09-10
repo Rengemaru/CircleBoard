@@ -12,7 +12,7 @@ import {
   type AdminPostRow,
   type PostKind,
 } from "../../api/admin";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // 企画一覧・全件管理(wireframes/wireframe-admin-ver2.html ④)。
 //
@@ -21,9 +21,14 @@ import { AdminLayout } from "./AdminLayout";
 // 管理者用の編集フォームを新設すると、あとで作るメンバー用の編集画面と二重になる。
 export function AdminPostsPage() {
   return (
-    <AdminLayout title="企画一覧（全件）" subtitle="全メンバーの投稿を管理・削除・復旧できる">
+    <AdminOnly
+      title="企画一覧（全件）"
+      subtitle="全メンバーの投稿を管理・削除・復旧できる"
+      // 7列の表。DEFAULT だと横スクロールが常態化する
+      size="WIDE"
+    >
       {() => <PostList />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 

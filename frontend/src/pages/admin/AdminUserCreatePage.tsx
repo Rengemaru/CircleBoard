@@ -8,7 +8,7 @@ import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { createUser, type NewUserInput } from "../../api/admin";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // アカウント発行(wireframes/wireframe-admin-ver2.html ③)。
 //
@@ -25,9 +25,9 @@ const ROLE_OPTIONS: { label: string; value: NewUserInput["role"] }[] = [
 
 export function AdminUserCreatePage() {
   return (
-    <AdminLayout title="アカウント発行" subtitle="新しいメンバーのアカウントを作成する">
+    <AdminOnly title="アカウント発行" subtitle="新しいメンバーのアカウントを作成する">
       {() => <IssueForm />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 

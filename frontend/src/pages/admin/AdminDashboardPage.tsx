@@ -7,7 +7,7 @@ import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Panel } from "../../components/ui/Panel";
 import { fetchDashboard, type ActivityRow, type Dashboard } from "../../api/admin";
 import { formatCountdownDays } from "../../lib/countdown";
-import { AdminLayout } from "./AdminLayout";
+import { AdminOnly } from "./AdminOnly";
 
 // 管理者トップ(wireframes/wireframe-admin-ver2.html ①)。
 //
@@ -15,9 +15,9 @@ import { AdminLayout } from "./AdminLayout";
 // 常に「特になし」と書いてある枠は、見る習慣がつかないぶん有害。
 export function AdminDashboardPage() {
   return (
-    <AdminLayout title="ダッシュボード" subtitle="サークル全体の状況を確認する">
+    <AdminOnly title="ダッシュボード" subtitle="サークル全体の状況を確認する">
       {() => <DashboardBody />}
-    </AdminLayout>
+    </AdminOnly>
   );
 }
 
