@@ -10,9 +10,14 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { MyPostList } from "../components/MyPostList";
+import { fetchEvents } from "../api/events";
+import { fetchProjects } from "../api/projects";
 import { fetchMyProfile } from "../api/users";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import type { CurrentUser } from "../api/session";
+import type { EventSummary } from "../types/event";
+import type { ProjectSummary } from "../types/project";
 import type { Profile } from "../types/user";
 
 // マイページ(docs/spec-my-page.md §4.1)。ログイン必須。
@@ -39,12 +44,37 @@ export function MyPage() {
   const navigate = useNavigate();
   const [saved] = useState(() => isSaved(location.state));
   const [profile, setProfile] = useState<Profile | null>(null);
+  // 自分が owner の企画。一覧APIを引いて自分の分だけ残す。
+  // 「自分の企画」専用のエンドポイントは無い(docs/api-spec.md §2/§3)。
+  //
+  // 初期値を空配列にしない。読み込み中に「企画はありません」と
+  // 断定してしまう。null は「まだ読んでいない」
+  const [myPosts, setMyPosts] = useState<{
+    events: EventSummary[];
+    projects: ProjectSummary[];
+  } | null>(null);
+  const [postsError, setPostsError] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     if (loading || user === null) return;
 
     fetchMyProfile().then(setProfile).catch(setError);
+  }, [loading, user]);
+
+  useEffect(() => {
+    if (loading || user === null) return;
+
+    // 失敗を空配列に倒すと、通信できなかったのか企画が0件なのかを
+    // 見分けられない。再試行の手がかりも消える(Issue #52)
+    Promise.all([fetchEvents(), fetchProjects()])
+      .then(([events, projects]) => {
+        setMyPosts({
+          events: events.filter((event) => event.owner?.id === user.id),
+          projects: projects.filter((project) => project.owner?.id === user.id),
+        });
+      })
+      .catch(() => setPostsError(true));
   }, [loading, user]);
 
   // 出したら履歴から消す。state は history.state に入るので、
@@ -133,6 +163,20 @@ export function MyPage() {
           </Text>
         ) : (
           <ProfileBody profile={profile} />
+        )}
+      </Panel>
+
+      <Panel title="自分の企画">
+        {postsError ? (
+          <Text size="S" color="TEXT_GREY">
+            企画を読み込めませんでした。ページを再読み込みしてください。
+          </Text>
+        ) : myPosts === null ? (
+          <Text size="S" color="TEXT_GREY">
+            読み込み中…
+          </Text>
+        ) : (
+          <MyPostList events={myPosts.events} projects={myPosts.projects} />
         )}
       </Panel>
     </MemberPage>
