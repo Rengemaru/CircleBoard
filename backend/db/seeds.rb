@@ -68,11 +68,17 @@ events = [
   event = Event.find_or_create_by!(title: attrs[:title]) do |e|
     e.description = attrs[:description]
     e.location = attrs[:location]
-    e.starts_at = attrs[:starts_at]
     e.capacity = attrs[:capacity]
     e.owner = attrs[:owner]
-    e.status = attrs[:starts_at].past? ? :completed : :recruiting
   end
+  # 開催日時は毎回入れ直す。ブロックの中に置くと作成時にしか実行されず、
+  # seed を流した日から時間が経つと4件とも過去日付になり、
+  # 注目枠・サイネージ・ピン留めの候補が全部空になる。
+  # 「もう一度 db:seed を流せば直る」状態にしておく
+  event.update!(
+    starts_at: attrs[:starts_at],
+    status: attrs[:starts_at].past? ? :completed : :recruiting
+  )
   event.tags = attrs[:tags].map { |name| tags[name] }
   event
 end
