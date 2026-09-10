@@ -31,12 +31,6 @@ class User < ApplicationRecord
   validate :tags_within_limit
   validate :links_within_limit
 
-  # 日本の学年は4月始まりで、卒業は3月。graduation_year は「卒業する年」なので、
-  # 2026年3月に卒業する人は graduation_year = 2026。
-  # 1〜3月はまだ前年度に属するため、先に年度を出してから比べる。
-  #
-  # 画面側で計算しない。ユーザー管理画面とダッシュボードの両方が必要とするので、
-  # RubyとTypeScriptに同じ規則を2本置くことになる
   # NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)。
   # 真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れる
   scope :suspended, -> { where.not(suspended_at: nil) }
@@ -52,9 +46,52 @@ class User < ApplicationRecord
   end
 
   def graduated?(today = Date.current)
-    academic_year = today.month >= 4 ? today.year : today.year - 1
+    graduation_year <= self.class.academic_year(today)
+  end
 
-    graduation_year <= academic_year
+  # 学年の表記(B1 / M1 / D2 …)。
+  #
+  # 入学年度からの通算年数で決める。1〜4年目が B、5〜6年目が M、
+  # 7〜9年目が D(オーナー決定 2026-09-11)。
+  #
+  # **学部で留年した5年目の人も M1 と出る。** データからは在学中の課程を
+  # 区別できないため。「運営でどうにでもなる」という判断で、この形にしている。
+  # 正確に出すなら users に課程の列が要る。
+  #
+  # 卒業後は学年を出さない。B5 や M3 のような存在しない学年になるため。
+  # 呼び出し側は graduated? で先に振り分ける。
+  #
+  # 画面側で計算しない。年度の切り替わり(4月始まり)を跨ぐ規則なので、
+  # RubyとTypeScriptに同じものを2本置くことになる(graduated? と同じ理由)
+  PROGRAMS = [
+    { prefix: "B", years: 4 },
+    { prefix: "M", years: 2 },
+    { prefix: "D", years: 3 }
+  ].freeze
+
+  def grade(today = Date.current)
+    return nil if graduated?(today)
+
+    years = self.class.academic_year(today) - enrollment_year + 1
+    # 入学年度が未来のときは在学していない。0 や負の学年を出さない
+    return nil if years < 1
+
+    remaining = years
+    PROGRAMS.each do |program|
+      return "#{program[:prefix]}#{remaining}" if remaining <= program[:years]
+
+      remaining -= program[:years]
+    end
+
+    # 10年目以降。博士の3年を超えているが卒業年度は先、という状態。
+    # 当てずっぽうの表記を出すより、出さない方がよい
+    nil
+  end
+
+  # 年度。4月始まりなので、1〜3月はまだ前年度に属する。
+  # 2026年3月に卒業する人は graduation_year = 2026
+  def self.academic_year(today = Date.current)
+    today.month >= 4 ? today.year : today.year - 1
   end
 
   private
