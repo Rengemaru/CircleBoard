@@ -4,7 +4,7 @@ import { Text } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
 import { MyPostList } from "../components/MyPostList";
-import { ProfileBody } from "../components/ProfileBody";
+import { ProfileHeader } from "../components/ProfileHeader";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { ErrorNote } from "../components/ui/ErrorNote";
 import { PageHeading } from "../components/ui/PageHeading";
@@ -104,21 +104,36 @@ function Profile({ id }: { id: string | undefined }) {
 
   return (
     <MemberPage session={session}>
-      <PageHeading title={title} />
+      {/* 名前が分かったら名札の中の h1 が document.title を書き換える。
+          分かるまでと、そもそも出せないときは、ここで画面名を出す */}
+      {profile === null && <PageHeading title={title} />}
 
       {!validId ? (
         <ErrorNote error={null} fallback="ユーザーが見つかりません" />
       ) : error !== null ? (
         <ErrorNote error={error} fallback="プロフィールを読み込めませんでした" />
+      ) : profile === null ? (
+        <Panel>
+          <Text size="S" color="TEXT_GREY">
+            読み込み中…
+          </Text>
+        </Panel>
       ) : (
         <>
-          <Panel title="プロフィール">
-            {profile === null ? (
-              <Text size="S" color="TEXT_GREY">
-                読み込み中…
-              </Text>
+          {/* 名前・学科・年度・スキル・リンクを1つの名札にまとめる。
+              項目名を立てて縦に並べるより、その人の情報が主に見える */}
+          <ProfileHeader profile={profile} />
+
+          {/* 自己紹介は分量が読めないので別の面に置く。
+              名札の中に入れると、長い人と短い人で高さが大きく変わる */}
+          <Panel title="自己紹介">
+            {profile.bio !== null && profile.bio !== "" ? (
+              // 改行はそのまま出すが、HTML としては解釈しない
+              <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
             ) : (
-              <ProfileBody profile={profile} emptyMessage="まだ何も書かれていません。" />
+              <Text size="S" color="TEXT_GREY">
+                まだ書かれていません。
+              </Text>
             )}
           </Panel>
 

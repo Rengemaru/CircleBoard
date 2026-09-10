@@ -28,6 +28,28 @@ RSpec.describe "Api::Users", type: :request do
       expect(body["department"]).to eq "情報工学科"
     end
 
+    # 学年は年度の切り替わりを跨ぐ規則なのでサーバーが出す。
+    # 時刻を固定しないと、1〜3月に実行したときだけ1つ手前の学年になる
+    it "学年を返す" do
+      travel_to(Date.new(2026, 9, 1)) do
+        me.update!(enrollment_year: 2024, graduation_year: 2099)
+        login(me)
+        get "/api/users/me"
+
+        expect(response.parsed_body["grade"]).to eq("B3")
+      end
+    end
+
+    it "卒業していれば学年は null" do
+      travel_to(Date.new(2026, 9, 1)) do
+        me.update!(enrollment_year: 2018, graduation_year: 2022)
+        login(me)
+        get "/api/users/me"
+
+        expect(response.parsed_body["grade"]).to be_nil
+      end
+    end
+
     it "自分にはメールアドレスを返す" do
       login(me)
       get "/api/users/me"

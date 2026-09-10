@@ -1,5 +1,6 @@
-import { DefinitionList, DefinitionListItem, Cluster, Text, TextLink } from "smarthr-ui";
+import { DefinitionList, DefinitionListItem, Cluster, Text } from "smarthr-ui";
 import { Chip } from "./ui/Chip";
+import { ProfileLinks } from "./ProfileLinks";
 import type { Profile } from "../types/user";
 
 // プロフィールの中身(docs/spec-my-page.md §4.1、§4.3)。
@@ -49,7 +50,7 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
         )}
       </DefinitionListItem>
       <DefinitionListItem term="リンク" maxColumns={1}>
-        {profile.links.length === 0 ? "—" : <ProfileLinks profile={profile} />}
+        {profile.links.length === 0 ? "—" : <ProfileLinks links={profile.links} />}
       </DefinitionListItem>
     </DefinitionList>
   );
@@ -57,32 +58,6 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
 
 // リンクの並びは箇条書きなので ul/li で出す。
 //
-// inline-flex を当てているのは、Tailwind の preflight が svg を
-// display: block にしているため。TextLink の「別タブで開く」アイコンが
-// ブロックになり、そのままだとラベルの下に落ちてリンクが2行になる
-// （実測 47x35px）。リンクを1つずつ確認したときに見つけた
-function ProfileLinks({ profile }: { profile: Profile }) {
-  return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1">
-      {profile.links.map((link) => (
-        // 画面に出すのはラベル。URL をそのまま出さない(docs/spec-my-page.md §6.2)。
-        // noopener が無いと、開いた先から元のタブを操作できる
-        <li key={link.id}>
-          <TextLink
-            href={link.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            size="S"
-            className="inline-flex items-center"
-          >
-            {link.label}
-          </TextLink>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 // 4項目すべてが未入力かどうか。department と bio は API が null で返すが、
 // 画面から空文字が入ることもあるので両方を空として扱う
 function isEmpty(profile: Profile): boolean {

@@ -16,6 +16,12 @@ export type Profile = {
   bio: string | null;
   enrollment_year: number;
   graduation_year: number;
+  // 学年(B1 / M1 / D2 …)。年度の切り替わりを跨ぐ規則なのでサーバーが出す。
+  // 卒業後と算出できないときは null(backend の User#grade)
+  grade: string | null;
+  // 卒業したかどうか。grade が null のとき、卒業なのか算出できないだけなのかを
+  // 区別するために要る。年度の規則を画面側に持たない(backend の User#graduated?)
+  graduated: boolean;
   // スキルは企画のタグと同じ語彙を使う(docs/spec-my-page.md §2)
   tags: Tag[];
   links: ProfileLink[];

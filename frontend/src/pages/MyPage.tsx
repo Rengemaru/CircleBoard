@@ -114,10 +114,20 @@ export function MyPage() {
           <DefinitionListItem term="メールアドレス" maxColumns={2}>
             {profile?.email ?? "—"}
           </DefinitionListItem>
-          <DefinitionListItem term="入学・卒業年度" maxColumns={2}>
-            {profile === null
-              ? "—"
-              : `${profile.enrollment_year}年入学 / ${profile.graduation_year}年卒業`}
+          {/* 学年を主にし、年度はその下に添える。学年は他の画面でも出るので
+              こちらを先に置き、年度は登録内容の確認として残す。
+              学年の算出はサーバー側(backend の User#grade) */}
+          <DefinitionListItem term="学年" maxColumns={2}>
+            {profile === null ? (
+              "—"
+            ) : (
+              <>
+                {profile.grade ?? (profile.graduated ? "卒業生" : "—")}
+                <span className="ml-2 text-xs text-gray-500">
+                  {profile.enrollment_year}年入学 / {profile.graduation_year}年卒業
+                </span>
+              </>
+            )}
           </DefinitionListItem>
           <DefinitionListItem term="権限" maxColumns={2}>
             <Chip>{ROLE_LABEL[user.role]}</Chip>
