@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Cluster, SearchInput, Select, Table, Td, Th } from "smarthr-ui";
+import {
+  Cluster,
+  SearchInput,
+  Select,
+  Stack,
+  Table,
+  Td,
+  Text,
+  Th,
+  useEnvironment,
+} from "smarthr-ui";
 import { Badge } from "../../components/ui/Badge";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
@@ -63,6 +73,8 @@ const FILTER_OPTIONS = (Object.keys(FILTER_LABEL) as Filter[]).map((key) => ({
 }));
 
 function UserList({ currentUserId }: { currentUserId: number }) {
+  // 表と縦積みの切り替え。境界は smarthr-ui の SCREEN_SMALL(width <= 751px)
+  const { mobile } = useEnvironment();
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -165,40 +177,63 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           <span className="text-xs text-gray-500">卒業年度が新しい順</span>
         </div>
 
-        {/* Table は既定で reel が有効で、横に溢れるときだけ自分でスクロールさせる。
-            ページ全体が横スクロールしないのは今までと同じ */}
-        <div>
-          <Table>
-            <thead>
-              <tr>
-                <Th>名前</Th>
-                <Th>メールアドレス</Th>
-                <Th>学科</Th>
-                <Th>入学 / 卒業</Th>
-                {/* 権限と状態は別の軸。1列にまとめて排他で出すと、
+        {/* モバイルでは表をやめて縦に積む。SmartHR の Table は
+            「モバイルでは、画面幅を越えたテーブルは2次元スクロールを招くため、
+            垂直方向に積みあげることを推奨します」としている。
+            実際 375px では、7列が潰れて「山田/太郎」「（自/分）」のように
+            文字単位で折り返していた。
+            境界は smarthr-ui の SCREEN_SMALL(width <= 751px)に合わせる。
+            CSS で2つ書くと DOM が二重になるので、描き分けは React で行う */}
+        {mobile ? (
+          <ul className="divide-y divide-gray-200">
+            {visible.map((user) => (
+              <UserCard
+                key={user.id}
+                user={user}
+                isSelf={user.id === currentUserId}
+                onDelete={() => setDeleting(user)}
+                onSuspend={() => setSuspending(user)}
+                onUnsuspend={() =>
+                  run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
+                }
+                busy={busy}
+              />
+            ))}
+          </ul>
+        ) : (
+          <div>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>名前</Th>
+                  <Th>メールアドレス</Th>
+                  <Th>学科</Th>
+                  <Th>入学 / 卒業</Th>
+                  {/* 権限と状態は別の軸。1列にまとめて排他で出すと、
                     停止中の管理者から「管理者」が消える(Issue #64) */}
-                <Th>権限</Th>
-                <Th>状態</Th>
-                <Th>操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((user) => (
-                <UserRow
-                  key={user.id}
-                  user={user}
-                  isSelf={user.id === currentUserId}
-                  onDelete={() => setDeleting(user)}
-                  onSuspend={() => setSuspending(user)}
-                  onUnsuspend={() =>
-                    run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
-                  }
-                  busy={busy}
-                />
-              ))}
-            </tbody>
-          </Table>
-        </div>
+                  <Th>権限</Th>
+                  <Th>状態</Th>
+                  <Th>操作</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    isSelf={user.id === currentUserId}
+                    onDelete={() => setDeleting(user)}
+                    onSuspend={() => setSuspending(user)}
+                    onUnsuspend={() =>
+                      run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
+                    }
+                    busy={busy}
+                  />
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
 
         {visible.length === 0 && (
           <p className="px-4 py-6 text-[13px] text-gray-500">該当するメンバーがいません。</p>
@@ -256,6 +291,74 @@ function UserList({ currentUserId }: { currentUserId: number }) {
         </Modal>
       )}
     </>
+  );
+}
+
+// モバイル1件分。SmartHR の「よくあるリスト」の並びに合わせる。
+// 識別子（名前）→ 属性（状態・権限・メール・年度）→ 操作 の順。
+//
+// 操作はアイコンボタン1つではなく、文言のままのボタンを2つ置く。
+// リストの指針はアイコンボタン1つを勧めているが、停止と完全削除は
+// 取り違えると取り返しが付かない。何が起きるかを文字で読めることを優先した。
+function UserCard({
+  user,
+  isSelf,
+  onDelete,
+  onSuspend,
+  onUnsuspend,
+  busy,
+}: {
+  user: AdminUserRow;
+  isSelf: boolean;
+  onDelete: () => void;
+  onSuspend: () => void;
+  onUnsuspend: () => void;
+  busy: boolean;
+}) {
+  return (
+    // 表の行と同じ背景で状態を示す。色だけに頼らずバッジも出す(Issue #68)
+    <li className={`py-3 ${user.suspended ? "bg-red-50" : user.graduated ? "bg-gray-100" : ""}`}>
+      <Stack gap={0.5}>
+        <Cluster align="center" gap={0.5}>
+          <span className={isSelf ? "font-bold" : ""}>
+            <UserLink id={user.id} name={user.name} />
+          </span>
+          {isSelf && <span className="text-[11px] text-gray-500">（自分）</span>}
+          {user.suspended ? (
+            <Badge tone="suspended">停止中</Badge>
+          ) : user.graduated ? (
+            <Badge tone="grad">卒業生</Badge>
+          ) : (
+            <Badge tone="active">現役</Badge>
+          )}
+          {user.role === "admin" && <Chip>管理者</Chip>}
+        </Cluster>
+
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
+          {user.email}
+        </Text>
+        <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
+          {user.department ?? "学科未入力"} ・ {user.enrollment_year} / {user.graduation_year}
+        </Text>
+
+        {!isSelf && (
+          <Cluster gap={0.5}>
+            {user.suspended ? (
+              <Button variant="success" size="xs" onClick={onUnsuspend} disabled={busy}>
+                停止解除
+              </Button>
+            ) : (
+              <Button variant="danger" size="xs" onClick={onSuspend} disabled={busy}>
+                停止
+              </Button>
+            )}
+            <Button variant="danger" size="xs" onClick={onDelete} disabled={busy}>
+              完全に削除
+            </Button>
+          </Cluster>
+        )}
+      </Stack>
+    </li>
   );
 }
 
