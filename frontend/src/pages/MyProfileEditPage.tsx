@@ -243,8 +243,14 @@ export function MyProfileEditPage() {
           <Stack gap={1}>
             {links.map((row, index) => (
               // key に index を使う。行そのものに id が無く、
-              // ラベルは書き換わるので他に安定した値がない
-              <Cluster key={index} align="flex-end" gap={0.5}>
+              // ラベルは書き換わるので他に安定した値がない。
+              //
+              // 行を fieldset で囲み、視覚的に隠した legend で何行目かを伝える。
+              // 3行あると「ラベル」「URL」「削除」が同じ名前で3回ずつ読み上げられ、
+              // どの行のものか分からなかった(Issue #189)。
+              // 見た目は変えず、支援技術に届く名前だけを足す
+              <Cluster key={index} as="fieldset" align="flex-end" gap={0.5}>
+                <legend className="sr-only">{index + 1}つ目のリンク</legend>
                 <FormControl label="ラベル" statusLabels={OPTIONAL} className="grow">
                   <Input
                     value={row.label}
@@ -260,7 +266,15 @@ export function MyProfileEditPage() {
                     width="100%"
                   />
                 </FormControl>
-                <Button variant="ghost" size="sm" onClick={() => removeLink(index)}>
+                {/* 押すと行が消える操作なので、名前だけは行を特定できる形にする。
+                    legend の読み上げは支援技術によって差があり、「削除」が
+                    3つ並ぶと取り返しの付かない操作を選び間違える */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeLink(index)}
+                  aria-label={`${index + 1}つ目のリンクを削除`}
+                >
                   削除
                 </Button>
               </Cluster>
