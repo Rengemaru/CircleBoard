@@ -51,17 +51,8 @@ export function SiteHeader({
             </LinkButton>
           ) : (
             <>
-              {/* 管理画面への入口。admin のときだけ出す。
-                  これは表示の話であって制限ではない。管理APIは全て
-                  サーバー側で role を検証している(docs/api-spec.md §6)ので、
-                  リンクを知られても操作はできない。
-                  出しっぱなしにしないのは、押しても断られるだけのリンクを
-                  全員に見せる意味がないため */}
-              {user.role === "admin" && (
-                <LinkButton to="/admin" size="sm" variant="ghost">
-                  管理
-                </LinkButton>
-              )}
+              {/* 管理画面への入口はナビゲーションの「管理」に集約した。
+                  ここにも置くと、同じ場所へ行く導線が1画面に2つ並ぶ */}
               <span className="text-gray-700">{user.name}</span>
               <LogoutButton />
             </>
