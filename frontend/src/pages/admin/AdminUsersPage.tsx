@@ -18,8 +18,12 @@ import { AdminOnly } from "./AdminOnly";
 
 // ユーザー管理(wireframes/wireframe-admin-ver2.html ②)。
 //
-// ワイヤーフレームにある「学科」列は作っていない。users に department が無く、
-// 追加には spec-v2.2.md §2 の変更が要る。
+// 学科の列はワイヤーフレーム ② のとおり出す。users.department は
+// マイページ(M-2)で追加済み。
+//
+// **編集はここではできない。** 学科は本人が /me/edit で書くもので、
+// 管理者用にもう1本の編集経路を作る理由がない。氏名の変更は引き続き
+// rails console で対応する(CLAUDE.md §10、Issue #4)。
 export function AdminUsersPage() {
   const navigate = useNavigate();
 
@@ -168,6 +172,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
               <tr>
                 <Th>名前</Th>
                 <Th>メールアドレス</Th>
+                <Th>学科</Th>
                 <Th>入学 / 卒業</Th>
                 {/* 権限と状態は別の軸。1列にまとめて排他で出すと、
                     停止中の管理者から「管理者」が消える(Issue #64) */}
@@ -277,6 +282,8 @@ function UserRow({
         {isSelf && <span className="ml-2 text-[11px] text-gray-500">（自分）</span>}
       </Td>
       <Td className="text-xs text-gray-500">{user.email}</Td>
+      {/* 未入力を空欄にしない。値が無いのか列がずれているのか分からなくなる */}
+      <Td className="text-gray-500">{user.department ?? "—"}</Td>
       <Td className="text-gray-500">
         {user.enrollment_year} / {user.graduation_year}
       </Td>

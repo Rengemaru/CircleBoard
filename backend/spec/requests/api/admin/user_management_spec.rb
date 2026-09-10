@@ -31,10 +31,31 @@ RSpec.describe "ユーザー管理", type: :request do
       row = response.parsed_body["users"].find { _1["id"] == member.id }
       # 公開APIの UserSerializer は email を返さない。この画面だけが受け取る
       expect(row.keys).to contain_exactly(
-        "id", "name", "email", "role", "enrollment_year", "graduation_year", "graduated",
-        "suspended", "suspended_at"
+        "id", "name", "email", "role", "enrollment_year", "graduation_year", "department",
+        "graduated", "suspended", "suspended_at"
       )
       expect(row["email"]).to eq(member.email)
+    end
+
+    # ワイヤーフレーム ② の「学科」列に出す(Issue #4)。
+    # 本人が /me/edit で書くもので、この画面からは編集しない
+    it "学科を返す" do
+      member.update!(department: "情報工学科")
+      sign_in(admin)
+      get "/api/admin/users"
+
+      row = response.parsed_body["users"].find { _1["id"] == member.id }
+      expect(row["department"]).to eq("情報工学科")
+    end
+
+    it "学科が未入力なら null を返す" do
+      # let は遅延評価なので、GET より先に触って作っておく
+      member
+      sign_in(admin)
+      get "/api/admin/users"
+
+      row = response.parsed_body["users"].find { _1["id"] == member.id }
+      expect(row["department"]).to be_nil
     end
 
     it "パスワードは一切返さない" do

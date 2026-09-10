@@ -35,6 +35,8 @@ export type AdminUserRow = {
   role: "admin" | "member" | "demo";
   enrollment_year: number;
   graduation_year: number;
+  // 未入力は null。本人が /me/edit で書くもので、管理画面からは編集しない
+  department: string | null;
   // 卒業したかどうかはサーバーが判断する。年度の切り替わり(4月始まり)を
   // 跨ぐ規則なので、画面ごとに計算しない(backend の User#graduated?)
   graduated: boolean;
