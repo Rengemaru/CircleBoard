@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { AppNavi, AppNaviCustomTag } from "smarthr-ui";
+import { AppNavi, AppNaviCustomTag, AppNaviDropdown, Stack } from "smarthr-ui";
 import { Button } from "./ui/Button";
 import { LinkButton } from "./ui/LinkButton";
 import { logout, type CurrentUser } from "../api/session";
@@ -11,6 +11,20 @@ import { loginPathFrom } from "../lib/redirectTo";
 // 見た目は wireframes/wireframe-admin-ver2.html の .admin-topbar に合わせている。
 // member 用の新しいワイヤーフレームは無いので、管理画面と同じ寸法・色・字送りを
 // 使うことで「同じプロダクトの画面」に見せる(docs/instructions.md Phase 7 T7-5)。
+// サイドバーが付けていたグループ見出し（メイン / 管理 / サイネージ /
+// アカウント）は引き継がない。5項目に見出しが4つあり、分類が項目数に
+// 見合っていなかった。
+//
+// 「トークン管理」を「サイネージトークン」にしているのは、グループ見出し
+// 「サイネージ」が無くなると何のトークンか分からなくなるため
+const ADMIN_ITEMS = [
+  { to: "/admin", label: "ダッシュボード" },
+  { to: "/admin/users", label: "ユーザー管理" },
+  { to: "/admin/posts", label: "企画一覧（全件）" },
+  { to: "/admin/pin", label: "ピン留め設定" },
+  { to: "/admin/signage", label: "サイネージトークン" },
+];
+
 export function SiteHeader({
   user,
   sessionFailed = false,
@@ -62,6 +76,12 @@ export function SiteHeader({
         <NavItem to="/">ホーム</NavItem>
         <NavItem to="/projects">プロジェクト</NavItem>
         <NavItem to="/events">イベント</NavItem>
+        {/* 管理者にだけ出す。SmartHR の「権限による表示制御」は
+            権限が無い機能の操作UIを非表示にする（パターンA: 非表示・理由なし）。
+            これは表示の話であって制限ではない。管理APIはサーバー側で
+            role を検証している(docs/api-spec.md §6)ので、URLを直接開いても
+            操作はできない(CLAUDE.md §3-2) */}
+        {user?.role === "admin" && <AdminMenu />}
       </AppNavi>
     </header>
   );
@@ -79,6 +99,33 @@ function LogoutButton() {
     <Button size="sm" variant="ghost" onClick={submit}>
       ログアウト
     </Button>
+  );
+}
+
+// 管理機能はドロップダウンにまとめる。平らに並べると8項目になり、
+// 毎日使う3つと部長だけが時々使う5つが同じ重みで並んでしまう
+// (docs/spec-layout-unification.md §4)
+function AdminMenu() {
+  const { pathname } = useLocation();
+
+  return (
+    <AppNaviDropdown
+      // /admin/users/new のような配下の画面でも選択状態にする。
+      // 選択状態を持てるのは AppNaviDropdown だけで、
+      // AppNaviDropdownMenuButton には current が無い
+      current={pathname === "/admin" || pathname.startsWith("/admin/")}
+      dropdownContent={
+        <Stack gap={0} className="p-1">
+          {ADMIN_ITEMS.map((item) => (
+            <Link key={item.to} to={item.to} className="px-3 py-2 text-sm hover:bg-gray-100">
+              {item.label}
+            </Link>
+          ))}
+        </Stack>
+      }
+    >
+      管理
+    </AppNaviDropdown>
   );
 }
 
