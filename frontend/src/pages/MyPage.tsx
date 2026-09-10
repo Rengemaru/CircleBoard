@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DefinitionList, DefinitionListItem, Cluster, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Chip } from "../components/ui/Chip";
 import { ErrorNote } from "../components/ui/ErrorNote";
+import { LinkButton } from "../components/ui/LinkButton";
+import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { fetchMyProfile } from "../api/users";
@@ -29,6 +32,12 @@ const ROLE_LABEL: Record<CurrentUser["role"], string> = {
 
 export function MyPage() {
   const { user, loading, failed } = useCurrentUser();
+  // 編集画面から戻ってきたときだけ「保存しました」を出す。
+  // 保存したかどうかは遷移した側しか知らないので、遷移の state で受け取る。
+  // クエリパラメータにすると、URLを共有したときにも出てしまう
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [saved] = useState(() => isSaved(location.state));
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -37,6 +46,16 @@ export function MyPage() {
 
     fetchMyProfile().then(setProfile).catch(setError);
   }, [loading, user]);
+
+  // 出したら履歴から消す。state は history.state に入るので、
+  // そのままだと再読み込みのたびに「保存しました」が出続ける（実際に出た）。
+  // 表示そのものは saved を useState で受け取った時点で確定しているので、
+  // ここで state を落としても消えない
+  useEffect(() => {
+    if (!isSaved(location.state)) return;
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location, navigate]);
 
   // どの分岐でも PageHeading を通す。通さないと document.title が
   // 書き換わらず、SPA では前の画面のタブ名が残る(PR #135)
@@ -74,6 +93,7 @@ export function MyPage() {
     <MemberPage user={user}>
       <PageHeading title={TITLE} subtitle="自分のアカウントとプロフィールを確認します" />
 
+      {saved && <Note tone="success">プロフィールを保存しました。</Note>}
       {error !== null && <ErrorNote error={error} fallback="プロフィールを読み込めませんでした" />}
 
       <Panel title="アカウント">
@@ -99,7 +119,14 @@ export function MyPage() {
         </Text>
       </Panel>
 
-      <Panel title="プロフィール">
+      <Panel
+        title="プロフィール"
+        action={
+          <LinkButton to="/me/edit" size="sm">
+            編集する
+          </LinkButton>
+        }
+      >
         {profile === null ? (
           <Text size="S" color="TEXT_GREY">
             読み込み中…
@@ -187,4 +214,10 @@ function isEmpty(profile: Profile): boolean {
     profile.tags.length === 0 &&
     profile.links.length === 0
   );
+}
+
+// react-router の state は any なので、そのまま .saved を読むと型が消える
+// (CLAUDE.md §4「any 禁止。unknown + 絞り込み」)
+function isSaved(state: unknown): boolean {
+  return typeof state === "object" && state !== null && "saved" in state && state.saved === true;
 }
