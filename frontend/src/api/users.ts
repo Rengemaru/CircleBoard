@@ -18,6 +18,10 @@ export async function fetchMyProfile(): Promise<Profile> {
 export type ProfileInput = {
   department?: string;
   bio?: string;
+  // 送った配列でまるごと置き換わる。空配列は「全部消す」
+  tag_ids?: number[];
+  // id は送らない。サーバーが作り直すので、送っても使われない
+  links?: { label: string; url: string }[];
 };
 
 export async function updateMyProfile(input: ProfileInput): Promise<Profile> {
