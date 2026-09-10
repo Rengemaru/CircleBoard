@@ -252,6 +252,76 @@ enum の整数（0:recruiting 1:in_progress 2:completed）がそのままこの�
 
 ---
 
+## 4.5 プロフィール 🔒すべてログイン必須
+
+2026-09-10 追加（`docs/spec-my-page.md`）。**未ログインには一切返さない**（`spec-v2.2.md` §4.1）。
+
+> 節番号を 4.5 にしているのは、コード中のコメントが「api-spec.md §5」「§6」で
+> サイネージと管理者APIを指しているため。5 以降を繰り下げると、その参照が全部ずれる。
+
+### `GET /api/users/me` — 自分
+
+```json
+// 200
+{
+  "id": 2,
+  "name": "山田太郎",
+  "email": "taro@example.ac.jp",
+  "department": "情報工学科",
+  "bio": "Webアプリを作っています。
+React と Rails を触っています。",
+  "enrollment_year": 2026,
+  "graduation_year": 2030,
+  "tags": [{ "id": 1, "name": "Web開発" }],
+  "links": [{ "id": 1, "label": "GitHub", "url": "https://github.com/xxx" }]
+}
+```
+
+### `GET /api/users/:id` — 他の人
+
+`GET /api/users/me` と同じ形だが、**`email` を返さない。** 他人のメールアドレスを配る理由がない。
+
+`role` と `suspended_at` は**どちらでも返さない。** 管理画面の情報であって、プロフィールではない。
+
+`links` は `position` の昇順。
+
+### `PATCH /api/users/me` — 更新
+
+```json
+// リクエスト
+{
+  "department": "情報工学科",
+  "bio": "…",
+  "tag_ids": [1, 4],
+  "links": [{ "label": "GitHub", "url": "https://github.com/xxx" }]
+}
+```
+
+- **`name` / `email` / `role` / `enrollment_year` / `graduation_year` は受け付けない。**
+  名前を変えられると、参加者一覧でも主催欄でも他人になりすませる。変更は管理者の仕事（Issue #4）。
+  `event_params` で `owner_id` を許可していないのと同じ考え方（§2）
+- **更新対象は必ず `current_user`。** パスは `/me` の1本だけで、他人を指せる形を作らない
+- `links` は**丸ごと置き換え**。配列の順序がそのまま `position` になる。
+  行ごとのAPIにすると画面の操作と1対1にならず往復が増える
+- 置き換えはトランザクションの中で行う。途中で失敗したときに、
+  古い行が消えて新しい行が入っていない状態を残さないため
+
+検証に失敗したら **422**。
+
+| 対象 | 制約 |
+|---|---|
+| `department` | 50字まで |
+| `bio` | 500字まで |
+| `tag_ids` | 5件まで。存在するタグのIDのみ |
+| `links` | 3件まで |
+| `links[].label` | 必須・20字まで |
+| `links[].url` | 必須・`http://` または `https://` で始まること |
+
+**`url` のスキームを見るのは `javascript:` を弾くため。** フロントでも弾くが、
+`curl` で回避できるので**サーバー側を正とする**。
+
+---
+
 ## 5. サイネージ
 
 ### `GET /api/signage?token=xxx` 🎫トークン認証
@@ -556,5 +626,8 @@ admin以外のログインユーザーは **403**、未ログインは **401**�
 | `POST /events/:id/participation` | ❌ | ✅ | ✅ | ✅ | — |
 | `GET /projects` `GET /projects/:id` | ❌ | ✅ | ✅ | ✅ | — |
 | `GET /tags` | ✅ | ✅ | ✅ | ✅ | — |
+| `GET /users/me` `GET /users/:id` | ❌ | ✅ | ✅ | ✅ | ❌ |
+| └ レスポンスに `email` を含む | ❌ | **本人のみ** | 本人のみ | 本人のみ | ❌ |
+| `PATCH /users/me` | ❌ | **本人のみ** | 本人のみ | 本人のみ | ❌ |
 | `GET /api/signage` | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `/api/admin/*` | ❌ | ❌ | ❌ | ✅ | ❌ |
