@@ -159,7 +159,15 @@ Rails の `enum` は integer カラムで持つ（PostgreSQLのENUM型は値の�
 | enrollment_year | integer | NOT NULL | |
 | graduation_year | integer | NOT NULL | 卒業判定は `User#graduated?`（4月始まりの年度で判定） |
 | suspended_at | datetime | NULL可 | **NULL = 有効。** 時刻が入っていれば停止中（0.4-1 で追加） |
+| department | string | NULL可 | 学科。自由入力・50字まで（2026-09-10 追加。`docs/spec-my-page.md`） |
+| bio | text | NULL可 | 自己紹介。500字まで。改行を含むため string ではなく text |
 | created_at / updated_at | datetime | NOT NULL | |
+
+**`department` を選択肢にしないのは、学科名が大学ごとに違い、改組でも変わるためです。**
+選択肢を持つと、変わるたびにマイグレーションが要ります（§4 が PostgreSQL の ENUM 型を避けているのと同じ理由）。
+
+どちらも NULL 可です。§0.3 の「後から追加したとき既存の全行にデータを入れ直す必要があるか」に照らして、
+学科も自己紹介も**空のまま成立します**。
 
 ```ruby
 # app/models/user.rb
@@ -171,6 +179,11 @@ class User < ApplicationRecord
   has_many :owned_projects, class_name: 'Project', foreign_key: :owner_id
   has_many :event_participations
   has_many :project_participations
+
+  # プロフィール(2026-09-10 追加)
+  has_many :user_tags,  dependent: :destroy
+  has_many :tags, through: :user_tags
+  has_many :user_links, -> { order(:position) }, dependent: :destroy
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
@@ -336,6 +349,46 @@ CREATE UNIQUE INDEX index_event_participations_active
 
 ---
 
+### 2.8 user_tags / user_links
+
+マイページ（プロフィール）用。2026-09-10 追加（`docs/spec-my-page.md`）。
+
+```
+user_tags                                  # 使える技術
+- id
+- user_id  FK users ON DELETE CASCADE NOT NULL
+- tag_id   FK tags  ON DELETE CASCADE NOT NULL
+- UNIQUE (user_id, tag_id)
+- 1人あたり5件まで（アプリ側で検証）
+
+user_links                                 # 外部リンク
+- id
+- user_id  FK users ON DELETE CASCADE NOT NULL
+- label    string NOT NULL                 # 20字まで
+- url      string NOT NULL                 # http:// または https:// で始まること
+- position integer NOT NULL default: 0     # 並び順
+- INDEX (user_id, position)
+- 1人あたり3件まで（アプリ側で検証）
+```
+
+**スキルは §2.4 の `tags` を再利用します。** 企画に付けるタグ（Web開発 / ゲーム制作 / 機械学習 …）が
+そのまま「使える技術」になります。別のテーブルで持つと、「機械学習ができる人」と
+「機械学習の企画」が別の語彙になり、探すときに繋がりません。
+`tags.category` の `1:skill` は未使用のまま残します（同じタグを両方の用途で使うため）。
+
+**どちらも ON DELETE CASCADE です。** 利用者が消えたら、その人のスキルとリンクは残す意味がありません。
+§2.5 の `event_participations.user_id` が SET NULL なのは「参加した記録」を残すためで、
+**残す価値のあるものとそうでないもので向きを変えています。**
+
+**件数の上限はアプリ側で見ます。** ピン留めの一意性（§2.2 の部分ユニークインデックス）のように
+DBで表せるものはDBに寄せていますが、「1人5件まで」は素直に書けません。
+
+**`url` のスキームを検証するのは `javascript:` を弾くためです。** 利用者が入れた文字列を
+そのまま `<a href>` に置くと、他の部員がクリックしたときにスクリプトが動きます。
+フロント側でも弾きますが、**サーバー側の検証を正とします**（フロントだけだと `curl` で回避できる）。
+
+---
+
 ## 3. 注目スコア（確定版）
 
 ### 3.1 計算式
@@ -433,9 +486,16 @@ VPS公開により「未ログインで見える」が実質「全世界に見�
 | イベント参加者一覧 | ❌ | ✅ | ❌ |
 | イベント参加表明 | ❌ | ✅ | — |
 | プロジェクト全般 | ❌ | ✅ | ✅ 表示のみ |
+| **プロフィール**（学科・自己紹介・スキル・リンク） | **❌** | ✅ 閲覧 | ❌ |
+| プロフィールの編集 | ❌ | **本人のみ** | ❌ |
 | 管理者機能 | ❌ | admin のみ | ❌ |
 
 **サイネージは「トークン認証は通っているがユーザーではない」状態。** `current_user` は nil。ここを混同すると事故る。
+
+**プロフィールは管理者にも特別扱いをしない。** 管理者も「ログインした人」として同じものを見る。
+編集できるのは本人だけで、`name` / `email` / `role` / 年度はプロフィールからは変更できない
+（名前を変えられると、参加者一覧でも主催欄でも他人になりすませる）。
+氏名・学科の管理者による修正は Issue #4 の範囲（2026-09-10 追加。`docs/spec-my-page.md`）。
 
 ### 4.2 シリアライザ層で出し分ける
 

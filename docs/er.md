@@ -17,6 +17,10 @@ erDiagram
     projects ||--o{ project_participations : "SET NULL"
     tags ||--o{ project_tags : "CASCADE"
 
+    users ||--o{ user_tags : "CASCADE"
+    users ||--o{ user_links : "CASCADE"
+    tags ||--o{ user_tags : "CASCADE"
+
     users {
         bigint id PK
         string name
@@ -26,6 +30,8 @@ erDiagram
         integer enrollment_year
         integer graduation_year
         datetime suspended_at "null = 有効"
+        string department "学科。50字まで"
+        text bio "自己紹介。500字まで"
     }
 
     events {
@@ -92,6 +98,20 @@ erDiagram
         datetime approved_at
     }
 
+    user_tags {
+        bigint id PK
+        bigint user_id FK
+        bigint tag_id FK
+    }
+
+    user_links {
+        bigint id PK
+        bigint user_id FK
+        string label "20字まで"
+        string url "http(s) のみ"
+        integer position "並び順"
+    }
+
     signage_tokens {
         bigint id PK
         string token UK "SecureRandom.hex(16)"
@@ -103,6 +123,9 @@ erDiagram
 `signage_tokens` はどのテーブルとも関連を持たない。端末を識別するだけで、
 ユーザーとは結びつかないため（サイネージは「認証は通っているがユーザーではない」状態）。
 
+`user_tags` は企画と同じ `tags` を指す。「機械学習ができる人」と「機械学習の企画」を
+同じ語彙で扱うため（2026-09-10 追加。`docs/spec-my-page.md`）。
+
 ## 説明が必要な設計判断
 
 ### ON DELETE を意図的に分けている
@@ -112,8 +135,12 @@ erDiagram
 | `event_participations.event_id` | **CASCADE** | イベントは単発で復旧の概念が薄く、参加履歴を残す価値が低い |
 | `project_participations.project_id` | **SET NULL** | プロジェクトは論理削除後も参加者一覧を閲覧でき、復旧時にメンバーがそのまま戻る必要がある |
 | `*.user_id`、`*.owner_id` | SET NULL | 退会しても企画と参加記録は残す |
+| `user_tags.user_id`、`user_links.user_id` | **CASCADE** | 本人が消えたら、その人のスキルとリンクは残す意味がない |
 
 この2つを取り違えると、プロジェクトを消したときにメンバーが失われる。
+
+**`user_id` でも向きが違うことに注意。** 参加記録は「誰かが参加した事実」として残す価値があるので
+SET NULL、プロフィールは本人に属する情報なので CASCADE。
 
 ### 部分ユニークインデックスを2本使っている
 
