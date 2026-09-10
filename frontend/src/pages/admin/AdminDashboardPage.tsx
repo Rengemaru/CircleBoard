@@ -77,7 +77,10 @@ function DashboardBody() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* 2列を等分にすると、左の表が 455px まで狭まって
+          「Webアプリ開発 / チーム」のように列が折り返す。
+          読むのは表の方なので 2:1 にする */}
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <ActivityPanel rows={data.recent_activity} />
         <div className="min-w-0">
           <QuickActions />
