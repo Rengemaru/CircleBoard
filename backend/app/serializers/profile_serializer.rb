@@ -28,6 +28,14 @@ class ProfileSerializer
       bio: @user.bio,
       enrollment_year: @user.enrollment_year,
       graduation_year: @user.graduation_year,
+      # 学年(B1 / M1 / D2 …)。年度の切り替わり(4月始まり)を跨ぐ規則なので
+      # サーバーが出す。画面ごとに計算させると、RubyとTypeScriptに同じものが
+      # 2本並ぶ(graduated? と同じ理由)。卒業後と算出できないときは null。
+      #
+      # grade だけだと「卒業した」と「算出できない(入学年度が未来・10年目以降)」
+      # の区別が付かないので、graduated も返す。管理APIも同じ形で返している
+      grade: @user.grade,
+      graduated: @user.graduated?,
       tags: @user.tags.map { TagSerializer.new(_1).as_json },
       links: @user.user_links.map { link_json(_1) }
     }
