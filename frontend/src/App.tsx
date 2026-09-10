@@ -35,8 +35,8 @@ export function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
 
-        {/* 管理画面はナビもフッターも AdminLayout が持つ */}
-        {/* URLは wireframe-admin-ver2.html に合わせる */}
+        {/* 管理画面。外枠は member 側と同じで、AdminOnly が管理者かどうかだけ
+            見る。URLは wireframe-admin-ver2.html に合わせる */}
         <Route path="/admin" element={<AdminDashboardPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
