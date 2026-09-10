@@ -45,9 +45,14 @@ export function MyPage() {
   const [saved] = useState(() => isSaved(location.state));
   const [profile, setProfile] = useState<Profile | null>(null);
   // 自分が owner の企画。一覧APIを引いて自分の分だけ残す。
-  // 「自分の企画」専用のエンドポイントは無い(docs/api-spec.md §2/§3)
-  const [myEvents, setMyEvents] = useState<EventSummary[]>([]);
-  const [myProjects, setMyProjects] = useState<ProjectSummary[]>([]);
+  // 「自分の企画」専用のエンドポイントは無い(docs/api-spec.md §2/§3)。
+  //
+  // 初期値を空配列にしない。読み込み中に「企画はありません」と
+  // 断定してしまう。null は「まだ読んでいない」
+  const [myPosts, setMyPosts] = useState<{
+    events: EventSummary[];
+    projects: ProjectSummary[];
+  } | null>(null);
   const [postsError, setPostsError] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -64,8 +69,10 @@ export function MyPage() {
     // 見分けられない。再試行の手がかりも消える(Issue #52)
     Promise.all([fetchEvents(), fetchProjects()])
       .then(([events, projects]) => {
-        setMyEvents(events.filter((event) => event.owner?.id === user.id));
-        setMyProjects(projects.filter((project) => project.owner?.id === user.id));
+        setMyPosts({
+          events: events.filter((event) => event.owner?.id === user.id),
+          projects: projects.filter((project) => project.owner?.id === user.id),
+        });
       })
       .catch(() => setPostsError(true));
   }, [loading, user]);
@@ -164,8 +171,12 @@ export function MyPage() {
           <Text size="S" color="TEXT_GREY">
             企画を読み込めませんでした。ページを再読み込みしてください。
           </Text>
+        ) : myPosts === null ? (
+          <Text size="S" color="TEXT_GREY">
+            読み込み中…
+          </Text>
         ) : (
-          <MyPostList events={myEvents} projects={myProjects} />
+          <MyPostList events={myPosts.events} projects={myPosts.projects} />
         )}
       </Panel>
     </MemberPage>
