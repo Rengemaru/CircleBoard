@@ -26,7 +26,12 @@ export function Note({ tone = "info", children }: { tone?: Tone; children: React
     // overflow: hidden なので margin が中に取り込まれて余白にならない
     <div className="mb-4">
       <NotificationBar type={TONE[tone]} base="base">
-        {children}
+        {/* 子をひとつの span にまとめる。NotificationBar の本文は flex なので、
+            文字列と <code> を並べて渡すとそれぞれが flex の子になり、
+            ブロック化して文字単位で折り返す。375px では「パスワードの/
+            再発行と権/限の変更」のように6文字幅まで潰れていた。
+            span を1枚挟むと、その中は通常の行内フローに戻る */}
+        <span>{children}</span>
       </NotificationBar>
     </div>
   );
