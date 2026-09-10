@@ -12,6 +12,7 @@ import { Panel } from "../components/ui/Panel";
 import { fetchTags } from "../api/tags";
 import { fetchMyProfile, updateMyProfile } from "../api/users";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { flashState } from "../lib/flash";
 import { MAX_LINKS, emptyRow, toPayload, validateLinks, type LinkRow } from "../lib/profileLinks";
 import type { Tag } from "../types/event";
 import type { Profile } from "../types/user";
@@ -102,7 +103,7 @@ export function MyProfileEditPage() {
       });
       // 保存した結果は /me で見せる。編集画面に留まると、
       // 反映されたのかどうかが分からない(Issue #43)
-      navigate("/me", { state: { saved: true } });
+      navigate("/me", { state: flashState("プロフィールを保存しました。") });
     } catch (e: unknown) {
       setError(e);
       setBusy(false);

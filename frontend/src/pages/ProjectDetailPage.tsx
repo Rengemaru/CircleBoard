@@ -14,6 +14,7 @@ import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useFlash } from "../lib/flash";
 import type { ProjectSummary } from "../types/project";
 
 // プロジェクト詳細(wireframes/wireframe-member.html ⑤)。要ログイン。
@@ -29,6 +30,7 @@ export function ProjectDetailPage() {
   const { id } = useParams();
   const session = useCurrentUser();
   const { user, loading, failed } = session;
+  const flash = useFlash();
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -123,6 +125,9 @@ export function ProjectDetailPage() {
           ← プロジェクト一覧
         </TextLink>
       </div>
+
+      {/* 作成直後だけ出す。画面が変わるだけでは「作られた」と言い切れない */}
+      {flash !== null && <Note tone="success">{flash}</Note>}
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">

@@ -13,6 +13,7 @@ import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useFlash } from "../lib/flash";
 import { formatCountdown } from "../lib/countdown";
 import { loginPathFrom } from "../lib/redirectTo";
 import type { EventDetail } from "../types/event";
@@ -30,6 +31,7 @@ export function EventDetailPage() {
   const { id } = useParams();
   const session = useCurrentUser();
   const { user, failed } = session;
+  const flash = useFlash();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,6 +105,9 @@ export function EventDetailPage() {
           ← イベント一覧
         </TextLink>
       </div>
+
+      {/* 作成直後だけ出す。画面が変わるだけでは「作られた」と言い切れない */}
+      {flash !== null && <Note tone="success">{flash}</Note>}
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
