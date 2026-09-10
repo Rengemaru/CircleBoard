@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text } from "smarthr-ui";
+import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -249,10 +249,14 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
           </Text>
         </Cluster>
 
+        {/* 一覧から詳細へ行く導線はこの企画名だけ。自前の Link に
+            font-bold だけを当てていたときは、本文と同じ色で下線も無く、
+            ホバーするまでリンクだと分からなかった(Issue #186)。
+            TextLink にしてトップページと同じ見た目に揃える */}
         <Text size="M" leading="NORMAL">
-          <Link to={`/projects/${project.id}`} className="font-bold hover:underline">
+          <TextLink elementAs={Link} to={`/projects/${project.id}`} className="font-bold">
             {project.title}
-          </Link>
+          </TextLink>
         </Text>
 
         {project.tags.length > 0 && (
