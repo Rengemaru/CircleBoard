@@ -46,15 +46,12 @@ export function MyPage() {
   const navigate = useNavigate();
   const [saved] = useState(() => isSaved(location.state));
   const [profile, setProfile] = useState<Profile | null>(null);
-  // 自分が owner の企画。一覧APIを引いて自分の分だけ残す。
-  // 「自分の企画」専用のエンドポイントは無い(docs/api-spec.md §2/§3)。
+  // 自分が owner の企画と、参加中の企画。一覧APIを1回ずつ引いて振り分ける。
+  // 専用のエンドポイントは無い(docs/api-spec.md §2/§3)。
   //
   // 初期値を空配列にしない。読み込み中に「企画はありません」と
   // 断定してしまう。null は「まだ読んでいない」
-  const [myPosts, setMyPosts] = useState<{
-    events: EventSummary[];
-    projects: ProjectSummary[];
-  } | null>(null);
+  const [posts, setPosts] = useState<MyPosts | null>(null);
   const [postsError, setPostsError] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -70,12 +67,7 @@ export function MyPage() {
     // 失敗を空配列に倒すと、通信できなかったのか企画が0件なのかを
     // 見分けられない。再試行の手がかりも消える(Issue #52)
     Promise.all([fetchEvents(), fetchProjects()])
-      .then(([events, projects]) => {
-        setMyPosts({
-          events: events.filter((event) => event.owner?.id === user.id),
-          projects: projects.filter((project) => project.owner?.id === user.id),
-        });
-      })
+      .then(([events, projects]) => setPosts(splitPosts(events, projects, user.id)))
       .catch(() => setPostsError(true));
   }, [loading, user]);
 
@@ -172,17 +164,19 @@ export function MyPage() {
       </Panel>
 
       <Panel title="自分の企画">
-        {postsError ? (
-          <Text size="S" color="TEXT_GREY">
-            企画を読み込めませんでした。ページを再読み込みしてください。
-          </Text>
-        ) : myPosts === null ? (
-          <Text size="S" color="TEXT_GREY">
-            読み込み中…
-          </Text>
-        ) : (
-          <MyPostList events={myPosts.events} projects={myPosts.projects} />
-        )}
+        <PostsSection
+          error={postsError}
+          group={posts?.mine ?? null}
+          empty="いま募集中の企画はありません。"
+        />
+      </Panel>
+
+      <Panel title="参加中の企画">
+        <PostsSection
+          error={postsError}
+          group={posts?.joined ?? null}
+          empty="いま参加中の企画はありません。"
+        />
       </Panel>
     </MemberPage>
   );
@@ -192,4 +186,71 @@ export function MyPage() {
 // (CLAUDE.md §4「any 禁止。unknown + 絞り込み」)
 function isSaved(state: unknown): boolean {
   return typeof state === "object" && state !== null && "saved" in state && state.saved === true;
+}
+
+type PostGroup = {
+  events: EventSummary[];
+  projects: ProjectSummary[];
+};
+
+type MyPosts = {
+  mine: PostGroup;
+  joined: PostGroup;
+};
+
+// 一覧APIの結果を「自分の企画」と「参加中の企画」に振り分ける。
+//
+// 自分が owner のものは参加中に入れない。owner は自動で参加者になる
+// わけではないが、自分の企画に参加表明することはできる。両方に出すと
+// 同じ企画が1画面に2回並ぶ。
+//
+// current_user_joined は未ログインではキーごと存在しないが、この画面は
+// ログイン必須なので必ず入っている(docs/api-spec.md §2/§3)
+function splitPosts(events: EventSummary[], projects: ProjectSummary[], userId: number): MyPosts {
+  const ownsEvent = (event: EventSummary) => event.owner?.id === userId;
+  const ownsProject = (project: ProjectSummary) => project.owner?.id === userId;
+
+  return {
+    mine: {
+      events: events.filter(ownsEvent),
+      projects: projects.filter(ownsProject),
+    },
+    joined: {
+      events: events.filter((event) => event.current_user_joined === true && !ownsEvent(event)),
+      projects: projects.filter(
+        (project) => project.current_user_joined === true && !ownsProject(project),
+      ),
+    },
+  };
+}
+
+// 読み込み中・失敗・0件・一覧の4つの状態を1箇所で出し分ける。
+// 「自分の企画」と「参加中の企画」で同じ分岐を2回書くと、片方だけ
+// 直し忘れる
+function PostsSection({
+  error,
+  group,
+  empty,
+}: {
+  error: boolean;
+  group: PostGroup | null;
+  empty: string;
+}) {
+  if (error) {
+    return (
+      <Text size="S" color="TEXT_GREY">
+        企画を読み込めませんでした。ページを再読み込みしてください。
+      </Text>
+    );
+  }
+
+  if (group === null) {
+    return (
+      <Text size="S" color="TEXT_GREY">
+        読み込み中…
+      </Text>
+    );
+  }
+
+  return <MyPostList events={group.events} projects={group.projects} emptyMessage={empty} />;
 }
