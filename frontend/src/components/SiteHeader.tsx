@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { AppNavi, AppNaviCustomTag } from "smarthr-ui";
 import { Button } from "./ui/Button";
 import { LinkButton } from "./ui/LinkButton";
 import { logout, type CurrentUser } from "../api/session";
@@ -26,11 +27,6 @@ export function SiteHeader({
         <Link to="/" className="text-base font-bold tracking-tight">
           CircleBoard
         </Link>
-        <nav className="flex gap-4 text-[13px]">
-          <NavLink to="/">ホーム</NavLink>
-          <NavLink to="/projects">プロジェクト</NavLink>
-          <NavLink to="/events">イベント</NavLink>
-        </nav>
         <div className="ml-auto flex items-center gap-3 text-[13px]">
           {/* ログイン状態が分からないときは、ログインボタンも名前も出さない。
               本文が「確認できませんでした」と言っている横で「ログイン」を出すと、
@@ -58,6 +54,15 @@ export function SiteHeader({
           )}
         </div>
       </div>
+
+      {/* 主要機能を切り替える段。自前の下線と太字で選択状態を作っていたが、
+          smarthr-ui の AppNavi に寄せる。管理のドロップダウンを足すときに
+          選択状態の表現が2通りになるのを避けるため(Issue #142) */}
+      <AppNavi>
+        <NavItem to="/">ホーム</NavItem>
+        <NavItem to="/projects">プロジェクト</NavItem>
+        <NavItem to="/events">イベント</NavItem>
+      </AppNavi>
     </header>
   );
 }
@@ -77,20 +82,14 @@ function LogoutButton() {
   );
 }
 
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+// AppNavi の項目。tag に react-router の Link を渡して SPA 遷移を保つ
+// （既定の a タグだと画面全体が再読み込みされる）
+function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const active = pathname === to;
 
   return (
-    <Link
-      to={to}
-      className={
-        active
-          ? "border-b-2 border-gray-900 pb-0.5 font-bold"
-          : "border-b-2 border-transparent pb-0.5 text-gray-500 hover:text-gray-900"
-      }
-    >
+    <AppNaviCustomTag tag={Link} to={to} current={pathname === to}>
       {children}
-    </Link>
+    </AppNaviCustomTag>
   );
 }
