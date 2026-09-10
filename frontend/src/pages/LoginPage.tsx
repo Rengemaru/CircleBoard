@@ -46,7 +46,7 @@ export function LoginPage() {
   }
 
   return (
-    <MemberPage user={user} width="narrow" sessionFailed={failed}>
+    <MemberPage user={user} size="NARROW" sessionFailed={failed}>
       {/* 画面名は PageHeading で出す。Panel の title は見出しに見えるが
           h1 ではなく、document.title も書き換えない。SPA なので前の画面の
           タブ名が残ったままになる */}

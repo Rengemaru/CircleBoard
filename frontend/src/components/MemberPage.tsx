@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { Container } from "smarthr-ui";
 import { SiteHeader } from "./SiteHeader";
 import type { CurrentUser } from "../api/session";
@@ -7,16 +8,17 @@ import type { CurrentUser } from "../api/session";
 // 各ページが自前で <main className="mx-auto max-w-3xl …"> を書いていると、
 // 画面ごとに余白がずれる（実際に p-6 と px-6 py-6 が混在していた）。
 //
-// width="narrow" はログインと企画作成のようなフォーム1枚の画面用。
+// size="NARROW" はログインのようなフォーム1枚の画面用。
 // 入力欄が画面幅いっぱいに伸びると、どこを読めばよいのか分からなくなる。
+// size="WIDE" は列の多い表の画面用(docs/spec-layout-unification.md §5)。
 export function MemberPage({
   user,
-  width = "wide",
+  size = "DEFAULT",
   sessionFailed = false,
   children,
 }: {
   user: CurrentUser | null;
-  width?: "wide" | "narrow";
+  size?: ComponentProps<typeof Container>["size"];
   // ログイン状態を確かめられなかったとき。未ログインとは区別する(Issue #72)
   sessionFailed?: boolean;
   children: React.ReactNode;
@@ -28,7 +30,7 @@ export function MemberPage({
           SmartHR の基準（デスクトップ 2=32px、モバイルは上下 1.5・左右 1）と
           同じなので、画面側で書かなくて済む(Issue #143) */}
       <main>
-        <Container size={width === "narrow" ? "NARROW" : "DEFAULT"}>{children}</Container>
+        <Container size={size}>{children}</Container>
       </main>
     </>
   );
