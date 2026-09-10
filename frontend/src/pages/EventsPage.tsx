@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text } from "smarthr-ui";
+import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
@@ -168,10 +168,14 @@ function EventRow({ event }: { event: EventSummary }) {
           {event.pinned && <Chip size="S">📌 ピン留め</Chip>}
         </Cluster>
 
+        {/* 一覧から詳細へ行く導線はこの企画名だけ。自前の Link に
+            font-bold だけを当てていたときは、本文と同じ色で下線も無く、
+            ホバーするまでリンクだと分からなかった(Issue #186)。
+            TextLink にしてトップページと同じ見た目に揃える */}
         <Text size="M" leading="NORMAL">
-          <Link to={`/events/${event.id}`} className="font-bold hover:underline">
+          <TextLink elementAs={Link} to={`/events/${event.id}`} className="font-bold">
             {event.title}
-          </Link>
+          </TextLink>
         </Text>
 
         {event.tags.length > 0 && (
