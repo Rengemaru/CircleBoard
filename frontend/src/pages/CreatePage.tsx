@@ -54,6 +54,18 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 const TITLE = "企画を作成";
 
 const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
+
+// 文字数の上限。サーバー側の検証と同じ値にする
+// (backend の Event::MAX_TITLE_LENGTH ほか。2026-09-12 の監査)。
+//
+// 打ち込めなくするのは1行の欄だけにしている。概要は貼り付けて書く欄で、
+// 上限で切ると末尾が黙って消えるため、残り字数を見せるだけにする
+// (マイページの自己紹介と同じ扱い)
+const TITLE_MAX = 100;
+const DESCRIPTION_MAX = 2000;
+const LOCATION_MAX = 100;
+const SCHEDULE_MAX = 100;
+const EXTERNAL_URL_MAX = 2000;
 const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
 export function CreatePage() {
@@ -218,6 +230,7 @@ export function CreatePage() {
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={TITLE_MAX}
                 required
                 width="100%"
               />
@@ -234,6 +247,7 @@ export function CreatePage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={10}
+                maxLetters={DESCRIPTION_MAX}
                 placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
                 required
                 width="100%"
@@ -250,6 +264,7 @@ export function CreatePage() {
                   <Input
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    maxLength={LOCATION_MAX}
                     required
                     width="100%"
                   />
@@ -273,6 +288,7 @@ export function CreatePage() {
                 <Input
                   value={meetingSchedule}
                   onChange={(e) => setMeetingSchedule(e.target.value)}
+                  maxLength={SCHEDULE_MAX}
                   width="100%"
                 />
               </FormControl>
@@ -306,6 +322,7 @@ export function CreatePage() {
                   type="url"
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
+                  maxLength={EXTERNAL_URL_MAX}
                   width="100%"
                 />
               </FormControl>

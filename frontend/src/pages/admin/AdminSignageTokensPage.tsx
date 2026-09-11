@@ -17,6 +17,10 @@ import { AdminOnly } from "./AdminOnly";
 
 // サイネージトークン管理(wireframes/wireframe-admin-ver2.html ⑤)。
 // 端末ごとに発行し、漏れたらその端末の分だけ止められるようにする。
+
+// サーバー側の検証と同じ値(backend の SignageToken::MAX_NAME_LENGTH)
+const NAME_MAX = 50;
+
 export function AdminSignageTokensPage() {
   const [issuing, setIssuing] = useState(false);
 
@@ -151,7 +155,13 @@ function TokenList({ issuing, onCloseForm }: { issuing: boolean; onCloseForm: ()
               exampleMessage="部室メインディスプレイ"
               className="mb-4"
             >
-              <Input value={name} onChange={(e) => setName(e.target.value)} required width="100%" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={NAME_MAX}
+                required
+                width="100%"
+              />
             </FormControl>
             <Note>
               発行するとランダムな32文字のトークンが生成されます。URLをディスプレイのブラウザに設定してください。
