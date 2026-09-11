@@ -1,6 +1,7 @@
 module Api
   class ProjectsController < ApplicationController
     include TagFilterable
+    include TitleSearchable
 
     # イベントと違い、一覧・詳細もログイン必須(docs/api-spec.md §3)。
     # プロジェクトは継続的に成果物を作る活動で、参加者や進行状況が
@@ -14,6 +15,7 @@ module Api
       projects = Project.active.includes(:tags, :owner, project_participations: :user)
       projects = filter_by_status(projects)
       projects = filter_by_tag(projects)
+      projects = filter_by_title(projects)
       projects = sort_projects(projects)
 
       render json: { projects: projects.map { ProjectSerializer.new(_1, current_user: current_user).as_json } }
