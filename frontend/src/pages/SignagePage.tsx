@@ -31,6 +31,15 @@ const REFRESH_INTERVAL_SECONDS = 60;
 // 16:9 ちょうどなら min() は 1vw を選ぶので、1920×1080 での見た目は変わらない。
 const SIGNAGE_UNIT = "min(1vw, 1vh * 16 / 9)";
 
+// サイネージだけのフォント。指定が無いと smarthr-ui.css の system-ui が効き、
+// Windows では線の細い Yu Gothic UI、和文フォントの無い Linux 端末では豆腐になる。
+// system-ui は「机の前で操作する業務アプリ」向けの指定で、3mから読む画面のために
+// 選ばれたものではない(Issue #220)。
+//
+// palt は wireframe-signage.html にあった詰め設定。実装で落ちていたので戻す。
+// weight を 500 にするのは、遠距離では線の細さがそのまま読めなさになるため
+const SIGNAGE_FONT_FAMILY = '"Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", sans-serif';
+
 // 1920px 幅を基準に書かれていた「Xvw」を、そのまま su(X) に置き換えられる。
 // min() を各所に展開せず var() を参照するのは、どこが基準なのかを1か所に残すため
 function su(n: number): string {
@@ -174,7 +183,15 @@ function Screen({ children }: { children: React.ReactNode }) {
       // padding の % は上下も「幅」に対して効く(CSSの仕様)。横長のディスプレイでは
       // 上下の余白だけが増え、中身の入る高さを奪っていた。
       // gap は行方向だけ高さに対して効くので、% のままでよい
-      style={{ "--sg-u": SIGNAGE_UNIT, padding: `${su(2.2)} ${su(2.6)}` } as React.CSSProperties}
+      style={
+        {
+          "--sg-u": SIGNAGE_UNIT,
+          padding: `${su(2.2)} ${su(2.6)}`,
+          fontFamily: SIGNAGE_FONT_FAMILY,
+          fontFeatureSettings: '"palt"',
+          fontWeight: 500,
+        } as React.CSSProperties
+      }
     >
       {children}
     </div>
