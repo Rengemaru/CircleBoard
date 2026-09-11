@@ -29,10 +29,14 @@ Rails.application.routes.draw do
       resource :dashboard, only: [ :show ]
 
       # ユーザー管理(wireframes/wireframe-admin-ver2.html ②③)。
-      # 編集(氏名・学科)はまだ持たない。学科は users に列が無い
-      resources :users, only: [ :index, :create, :destroy ] do
+      # update が扱うのは権限と学年だけ。氏名・メールはまだ持たない
+      # (docs/spec-admin-operations.md §3.3)。学科は本人が /me/edit で書く
+      resources :users, only: [ :index, :create, :update, :destroy ] do
         # 1人につき1つの状態なので単数形。停止と解除だけを持つ
         resource :suspension, only: [ :update, :destroy ], controller: "suspensions"
+        # 卒業したかどうかは graduation_year からの計算結果で、列ではない。
+        # 一覧のバッジを押したときに年度を動かす入口をここに置く
+        resource :graduation, only: [ :update, :destroy ], controller: "graduations"
       end
       resources :signage_tokens, only: [ :index, :create, :destroy ]
       # タグは「直す場所」。作成は持たない。タグは企画かプロフィールに

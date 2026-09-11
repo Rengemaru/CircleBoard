@@ -87,11 +87,10 @@ class User < ApplicationRecord
   def grade(today = Date.current)
     return nil if graduated?(today)
 
-    years = self.class.academic_year(today) - enrollment_year + 1
     # 入学年度が未来のときは在学していない。0 や負の学年を出さない
-    return nil if years < 1
+    remaining = grade_years(today)
+    return nil if remaining < 1
 
-    remaining = years
     PROGRAMS.each do |program|
       return "#{program[:prefix]}#{remaining}" if remaining <= program[:years]
 
@@ -101,6 +100,47 @@ class User < ApplicationRecord
     # 10年目以降。博士の3年を超えているが卒業年度は先、という状態。
     # 当てずっぽうの表記を出すより、出さない方がよい
     nil
+  end
+
+  # 在学何年目か。1 が B1、5 が M1、9 が D3 で、grade の表記と1対1に対応する。
+  #
+  # **管理画面が入力するのはこの数字で、入学年度ではない**（オーナー決定 2026-09-11）。
+  # 部員ぶんの入学年度と卒業年度を人手で入れるのは現実的でない、という指摘による。
+  #
+  # それでも列は enrollment_year のまま持つ。「3年目」をそのまま保存すると
+  # 翌年度には嘘になり、毎年全員を入れ直すことになるため。入り口で年度に直せば、
+  # 4月を跨いだ時点で全員が自動で1つ上がる。
+  def grade_years(today = Date.current)
+    self.class.academic_year(today) - enrollment_year + 1
+  end
+
+  # 入力できる範囲。0 と 10 以上は受け取らない（同上）。
+  # 10年目以降は grade が表記を決められず、0 以下は在学していない
+  GRADE_YEARS_RANGE = (1..PROGRAMS.sum { |program| program[:years] }).freeze
+
+  # grade_years の裏返し。管理画面から来た「3年目」を入学年度に直す
+  def self.enrollment_year_for(grade_years, today = Date.current)
+    academic_year(today) - grade_years + 1
+  end
+
+  # **いま在籍している課程が終わる年度末に卒業する、とみなす。**
+  # B3 なら学部の4年目、M1 なら修士の6年目が終わり。
+  #
+  # 進学・留年・中退でずれるが、卒業年度を人手で入れない以上、どこかで
+  # 決め打つしかない。ずれたときは一覧の現役/卒業生バッジで直せる。
+  # graduation_year は NOT NULL なので、発行時に値が要る（spec-v2.2.md §2.1）
+  def self.graduation_year_for(grade_years, today = Date.current)
+    academic_year(today) + (program_end_years(grade_years) - grade_years) + 1
+  end
+
+  # その年数が属する課程の、最後の年。B なら4、M なら6、D なら9
+  def self.program_end_years(grade_years)
+    total = 0
+    PROGRAMS.each do |program|
+      total += program[:years]
+      return total if grade_years <= total
+    end
+    total
   end
 
   # 年度。4月始まりなので、1〜3月はまだ前年度に属する。
