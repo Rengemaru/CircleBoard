@@ -8,6 +8,7 @@ import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
 import { TagFilter } from "../components/TagFilter";
+import { TitleSearch } from "../components/TitleSearch";
 import { Note } from "../components/ui/Note";
 import { fetchProjects } from "../api/projects";
 import { fetchTags } from "../api/tags";
@@ -40,6 +41,8 @@ export function ProjectsPage() {
   // useMemo で参照を安定させる。毎レンダリングで新しい配列を作ると、
   // useEffect の依存として使えない
   const selectedTagIds = useMemo(() => parseTagIds(searchParams.get("tag_ids")), [searchParams]);
+  // 企画名の部分一致。絞り込むのはサーバー(?q=)で、ここは語を持つだけ
+  const query = searchParams.get("q") ?? "";
 
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -66,6 +69,7 @@ export function ProjectsPage() {
     fetchProjects({
       status: status === "all" ? undefined : status,
       tagIds: selectedTagIds,
+      q: query,
     })
       .then((result) => {
         if (cancelled) return;
@@ -81,13 +85,17 @@ export function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, [loading, user, status, selectedTagIds]);
+  }, [loading, user, status, selectedTagIds, query]);
 
   // 絞り込みは片方を変えても、もう片方を保つ
-  function updateParams(next: { status?: StatusFilter; tagIds?: number[] }) {
+  function updateParams(
+    next: { status?: StatusFilter; tagIds?: number[]; q?: string },
+    replace = false,
+  ) {
     const params = new URLSearchParams(searchParams);
     const nextStatus = next.status ?? status;
     const nextTagIds = next.tagIds ?? selectedTagIds;
+    const nextQuery = next.q ?? query;
 
     if (nextStatus === "all") params.delete("status");
     else params.set("status", nextStatus);
@@ -96,11 +104,20 @@ export function ProjectsPage() {
     if (nextTagIds.length === 0) params.delete("tag_ids");
     else params.set("tag_ids", nextTagIds.join(","));
 
-    setSearchParams(params);
+    if (nextQuery.trim() === "") params.delete("q");
+    else params.set("q", nextQuery);
+
+    setSearchParams(params, { replace });
   }
 
   function setTagIds(next: number[]) {
     updateParams({ tagIds: next });
+  }
+
+  // 検索語だけは履歴を積まない。1語打つたびに戻る先が増えると、
+  // 戻るボタンで一覧の前に戻れなくなる
+  function setQuery(next: string) {
+    updateParams({ q: next }, true);
   }
 
   if (loading) {
@@ -149,6 +166,12 @@ export function ProjectsPage() {
         {/* リスト操作エリア（作成）は Base の外、一時操作エリア（絞り込み）は
             Base の中の上部。「よくあるリスト」パターン(smarthr-list.mdx) */}
         <Base overflow="hidden">
+          {/* 検索は状態やタグより先に置く。どちらも決められた語からしか
+              選べないので、名前を覚えている企画を探す入口はこちらになる */}
+          <FilterRow label="企画名">
+            <TitleSearch value={query} onChange={setQuery} label="企画名で検索" />
+          </FilterRow>
+
           <FilterRow label="状態">
             {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((key) => (
               <FilterButton
@@ -187,7 +210,7 @@ export function ProjectsPage() {
             <EmptyRow>
               {/* 一覧は募集中と進行中の両方を出す。「募集中はありません」だと、
                   進行中があるのに隠れていると誤読される(Issue #53) */}
-              {status === "all" && selectedTagIds.length === 0
+              {status === "all" && selectedTagIds.length === 0 && query === ""
                 ? "参加できるプロジェクトはありません。"
                 : "条件に合うプロジェクトはありません。条件を変えて試してください。"}
             </EmptyRow>

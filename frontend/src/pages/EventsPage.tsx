@@ -6,6 +6,7 @@ import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { FilterRow } from "../components/ui/FilterRow";
 import { TagFilter } from "../components/TagFilter";
+import { TitleSearch } from "../components/TitleSearch";
 import { Note } from "../components/ui/Note";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
@@ -31,6 +32,8 @@ export function EventsPage() {
   // useMemo で参照を安定させる。毎レンダリングで新しい配列を作ると、
   // useEffect の依存として使えない
   const selectedTagIds = useMemo(() => parseTagIds(searchParams.get("tag_ids")), [searchParams]);
+  // 企画名の部分一致。絞り込むのはサーバー(?q=)で、ここは語を持つだけ
+  const query = searchParams.get("q") ?? "";
 
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -50,7 +53,7 @@ export function EventsPage() {
     // 届いた結果で置き換える。切り替えのたびに一瞬空になるのを避ける
     let cancelled = false;
 
-    fetchEvents({ tagIds: selectedTagIds })
+    fetchEvents({ tagIds: selectedTagIds, q: query })
       .then((result) => {
         if (cancelled) return;
         setEvents(result);
@@ -65,11 +68,28 @@ export function EventsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedTagIds]);
+  }, [selectedTagIds, query]);
 
-  // 選択が0件のときは絞り込まない（＝全件）。URLからもキーごと消す
-  function setTagIds(next: number[]) {
-    setSearchParams(next.length === 0 ? {} : { tag_ids: next.join(",") });
+  // 片方を変えても、もう片方を保つ。
+  // 何も指定していない項目は URL からキーごと消す（＝全件）
+  function updateParams(next: { tagIds?: number[]; q?: string }, replace = false) {
+    const params = new URLSearchParams(searchParams);
+    const nextTagIds = next.tagIds ?? selectedTagIds;
+    const nextQuery = next.q ?? query;
+
+    if (nextTagIds.length === 0) params.delete("tag_ids");
+    else params.set("tag_ids", nextTagIds.join(","));
+
+    if (nextQuery.trim() === "") params.delete("q");
+    else params.set("q", nextQuery);
+
+    setSearchParams(params, { replace });
+  }
+
+  // 検索語だけは履歴を積まない。1語打つたびに戻る先が増えると、
+  // 戻るボタンで一覧の前に戻れなくなる
+  function setQuery(next: string) {
+    updateParams({ q: next }, true);
   }
 
   return (
@@ -99,11 +119,21 @@ export function EventsPage() {
             </div>
           )}
 
+          {/* 検索はタグより先に置く。タグは決められた語からしか選べないので、
+              名前を覚えている企画を探すときの入口はこちらになる */}
+          <FilterRow label="企画名">
+            <TitleSearch value={query} onChange={setQuery} label="企画名で検索" />
+          </FilterRow>
+
           {/* 候補が増えても破綻しないよう、並べずに検索させる。
               ここでは新しいタグを作らせない(docs/spec-tags.md §3.6) */}
           {tags.length > 0 && (
             <FilterRow label="タグ">
-              <TagFilter candidates={tags} selectedIds={selectedTagIds} onChange={setTagIds} />
+              <TagFilter
+                candidates={tags}
+                selectedIds={selectedTagIds}
+                onChange={(next) => updateParams({ tagIds: next })}
+              />
             </FilterRow>
           )}
 
@@ -116,9 +146,9 @@ export function EventsPage() {
           ) : events.length === 0 ? (
             <EmptyRow>
               {/* 絞り込みの結果0件のときは、やり直せることを伝える(Issue #53) */}
-              {selectedTagIds.length === 0
+              {selectedTagIds.length === 0 && query === ""
                 ? "開催予定のイベントはありません。"
-                : "このタグのイベントはありません。別のタグを試してください。"}
+                : "条件に合うイベントはありません。条件を変えて試してください。"}
             </EmptyRow>
           ) : (
             <ul className="divide-y divide-gray-200">
