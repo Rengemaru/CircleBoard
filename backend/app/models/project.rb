@@ -28,6 +28,28 @@ class Project < ApplicationRecord
   validates :activity_schedule, length: { maximum: MAX_SCHEDULE_LENGTH }
   validates :meeting_schedule, length: { maximum: MAX_SCHEDULE_LENGTH }
 
+  # 定員の範囲(2026-09-12 の監査で追加。オーナー承認済み)。
+  #
+  # 検証が1つも無く、capacity: -5 が 201 で保存できていた。負の定員は
+  # full? が `参加者数 >= -5` で常に true になるので、**誰も参加できない企画**
+  # ができる。0 も同じ。
+  #
+  # 上限を 1000 にしているのは、int4 の限界(2_147_483_647)を超える値を送られると
+  # ActiveModel::RangeError が投げられ、422 ではなく 500 になっていたため。
+  # サークルの規模から現実的な値で、限界のずっと手前で止める。
+  #
+  # allow_nil は要る。nil = 無制限が仕様(spec-v2.2.md §2.3)で、
+  # numericality は presence と違い nil をそのまま不正として弾く
+  MAX_CAPACITY = 1000
+
+  validates :capacity,
+            numericality: {
+              only_integer: true,
+              greater_than: 0,
+              less_than_or_equal_to: MAX_CAPACITY
+            },
+            allow_nil: true
+
   has_many :project_tags, dependent: :destroy
   has_many :tags, through: :project_tags
   # プロジェクトを消しても参加レコードは残す（project_id が NULL になる）ため
