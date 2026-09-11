@@ -5,8 +5,12 @@
 module TitleSearchable
   extend ActiveSupport::Concern
 
-  # これより長い語は受けない。企画名は100字までなので(spec-v2.2.md §2.2/§2.3)、
-  # 超える語はどのみち0件になる。長い文字列で LIKE を走らせない
+  # これより長い語は受けない。企画名の上限と同じ値にしてあるので
+  # (Event::MAX_TITLE_LENGTH / Project::MAX_TITLE_LENGTH)、超える語は
+  # どのみち0件になる。長い文字列で LIKE を走らせない。
+  #
+  # この検索を入れた時点では「企画名は100字まで」と書いていたが、当時その上限は
+  # 存在しなかった(2026-09-12 の監査 V-09)。上限を入れたので根拠を付け替えている
   MAX_QUERY_LENGTH = 100
 
   private
