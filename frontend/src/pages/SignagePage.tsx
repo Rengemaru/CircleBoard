@@ -10,7 +10,8 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // 16:9 以外のディスプレイに繋がれても崩れないよう、寸法は SIGNAGE_UNIT で測る。
 // ナビゲーションは一切置かない。ヘッダー・フッター・リンクも表示しない
 // (wireframes/wireframe-signage.html「共通仕様」)。
-// 視認距離2〜3mを想定し、最小フォントは24px相当。
+// 視認距離2.5m(55型・1080p)を想定し、最小フォントは38px相当
+// (docs/spec-signage-style-v2.md 案B)。
 // 60秒ごとに更新する(wireframe-signage.html「共通仕様」)。
 // WebSocket は不採用。1台のディスプレイが1分遅れて更新されることに実害は無く、
 // 常時接続を維持する仕組みを持つと、切れたときに気づけない方が問題になる。
@@ -31,18 +32,30 @@ const REFRESH_INTERVAL_SECONDS = 60;
 // 16:9 ちょうどなら min() は 1vw を選ぶので、1920×1080 での見た目は変わらない。
 const SIGNAGE_UNIT = "min(1vw, 1vh * 16 / 9)";
 
+// サイネージだけのフォント。指定が無いと smarthr-ui.css の system-ui が効き、
+// Windows では線の細い Yu Gothic UI、和文フォントの無い Linux 端末では豆腐になる。
+// system-ui は「机の前で操作する業務アプリ」向けの指定で、3mから読む画面のために
+// 選ばれたものではない(Issue #220)。
+//
+// palt は wireframe-signage.html にあった詰め設定。実装で落ちていたので戻す。
+// weight を 500 にするのは、遠距離では線の細さがそのまま読めなさになるため
+const SIGNAGE_FONT_FAMILY = '"Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", sans-serif';
+
 // 1920px 幅を基準に書かれていた「Xvw」を、そのまま su(X) に置き換えられる。
 // min() を各所に展開せず var() を参照するのは、どこが基準なのかを1か所に残すため
 function su(n: number): string {
   return `calc(${n} * var(--sg-u))`;
 }
 
-// 視認距離2〜3mで読める文字の下限。1920×1080 で約25px にあたり、
-// ファイル冒頭の「最小フォントは24px相当」を満たす。
+// 視認距離2.5mで読める文字の下限。1920×1080 で約38px にあたる。
+//
+// 1080p の 1px が何ミリになるかは画面の対角で倍以上変わる。55型なら 1px = 0.634mm で、
+// 「視距離3mにつき文字高25mm」に当てると 38.4px が 2.5m ぶん。
+// 旧値の 25px は 1.6m までしか届いていなかった(Issue #219)。
 //
 // className に書くと Tailwind の任意値がリテラルになり、下回っていても
 // レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
-const MIN_FONT_SIZE = su(1.3);
+const MIN_FONT_SIZE = su(2.0);
 
 // QRの大きさ。1920px 幅を基準にして、画面幅で拡縮する。
 //
@@ -50,7 +63,10 @@ const MIN_FONT_SIZE = su(1.3);
 // 残り、2〜3mからスマホで読めない。QRは寸法が読み取り距離を直接決める。
 // 逆に小さいモニタではQRがカードを圧迫する(Issue #50)
 const SIGNAGE_BASE_WIDTH = 1920;
-const QR_SIZE_AT_BASE = { hero: 220, event: 110, project: 90, empty: 200 } as const;
+// 読み取り距離はコード幅の10倍まで(10:1 則)。55型なら 165px = 105mm = 1.1m。
+// 2〜3m から読める QR は 300mm(520px 相当)で、カードには物理的に入らない。
+// この画面は「遠くで読み、近づいて撮る」動線を前提にする(Issue #222)
+const QR_SIZE_AT_BASE = { hero: 320, normal: 221, compact: 165, project: 125, empty: 300 } as const;
 
 // SIGNAGE_UNIT と同じ計算。QR は <svg> に実ピクセルを渡すので CSS 変数では届かない。
 // 画面幅のままだと、横長のディスプレイでQRだけが高さを無視して大きくなる
@@ -167,14 +183,53 @@ export function SignagePage() {
   );
 }
 
+// 焼き付き対策。部室のディスプレイは終日点けっぱなしで、データが変わらなければ
+// 描画も1ピクセルも変わらない。黄色のセクションバーやピン留めバッジのような
+// 固定位置の高輝度な要素が、同じ画素に焼き付き続ける(Issue #223)。
+//
+// 60秒ごとに 2px の範囲で描画位置を回す。3m先からは分からない。
+// 左右・上下で足した値が一定になるよう padding を振り分けるので、
+// 中身の入る幅と高さは変わらない（ずらしたせいではみ出すことがない）
+const BURN_IN_OFFSETS = [
+  { x: 0, y: 0 },
+  { x: 2, y: 0 },
+  { x: 2, y: 2 },
+  { x: 0, y: 2 },
+] as const;
+
+function useBurnInOffset(): (typeof BURN_IN_OFFSETS)[number] {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setStep((s) => s + 1), REFRESH_INTERVAL_SECONDS * 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return BURN_IN_OFFSETS[step % BURN_IN_OFFSETS.length];
+}
+
 function Screen({ children }: { children: React.ReactNode }) {
+  const offset = useBurnInOffset();
+
   return (
     <div
       className="flex h-screen w-screen flex-col gap-[1.6%] bg-[linear-gradient(135deg,#0f0f15_0%,#1a1a24_100%)] text-[#f2f3f7]"
       // padding の % は上下も「幅」に対して効く(CSSの仕様)。横長のディスプレイでは
       // 上下の余白だけが増え、中身の入る高さを奪っていた。
       // gap は行方向だけ高さに対して効くので、% のままでよい
-      style={{ "--sg-u": SIGNAGE_UNIT, padding: `${su(2.2)} ${su(2.6)}` } as React.CSSProperties}
+      style={
+        {
+          "--sg-u": SIGNAGE_UNIT,
+          paddingTop: `calc(${su(2.2)} + ${offset.y}px)`,
+          paddingBottom: `calc(${su(2.2)} - ${offset.y}px)`,
+          paddingLeft: `calc(${su(2.6)} + ${offset.x}px)`,
+          paddingRight: `calc(${su(2.6)} - ${offset.x}px)`,
+          fontFamily: SIGNAGE_FONT_FAMILY,
+          fontFeatureSettings: '"palt"',
+          fontWeight: 500,
+        } as React.CSSProperties
+      }
     >
       {children}
     </div>
@@ -195,15 +250,15 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failure | null }) {
   return (
     <header
-      className="flex items-end justify-between border-b border-[#2b2e3c]"
+      className="flex items-end justify-between border-b border-[#676f88]"
       // 1.04 は 16:9 のときの pb-[1.1%] と同じ値。% のままだと横長で下線だけが下がる
       style={{ paddingBottom: su(1.04) }}
     >
       <div>
-        <div className="font-bold tracking-tight" style={{ fontSize: su(2.1) }}>
+        <div className="font-bold tracking-tight" style={{ fontSize: su(2.4) }}>
           CircleBoard
         </div>
-        <div className="mt-1 text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+        <div className="mt-1 text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
           情報系学生サークル
         </div>
       </div>
@@ -222,7 +277,7 @@ function FetchStatus({ fetchedAt, failure }: { fetchedAt: Date | null; failure: 
 
   return (
     <div className="text-right leading-snug" style={{ fontSize: MIN_FONT_SIZE, maxWidth: su(26) }}>
-      <div className="text-[#5d6474]">最終更新 {formatClock(fetchedAt)}</div>
+      <div className="text-[#8b93a4]">最終更新 {formatClock(fetchedAt)}</div>
       {failure !== null && (
         // 更新できていないことは、色だけでなく文言でも伝える
         <div className="mt-1 text-[#fca5a5]">{FAILURE_MESSAGE[failure]}</div>
@@ -247,18 +302,18 @@ function Clock() {
     <div className="text-right">
       <div
         className="font-mono font-bold leading-none tracking-tight"
-        style={{ fontSize: su(3.1) }}
+        style={{ fontSize: su(3.6) }}
       >
         {formatClock(now)}
         {/* 秒を小さく添える。毎秒更新しているのに分単位の表示だと、
             画面が固まっているのか動いているのかが遠目に分からない。
             「動いている時計＝生きている画面」の証拠にならなかった(Issue #69) */}
         {/* 区切りを入れないと 02:46 と 01秒 が「02:461」に見える */}
-        <span className="ml-[0.15em] text-[0.45em] font-normal text-[#5d6474]">
+        <span className="ml-[0.15em] text-[0.45em] font-normal text-[#8b93a4]">
           :{formatSeconds(now)}
         </span>
       </div>
-      <div className="mt-[0.35em] text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+      <div className="mt-[0.35em] text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
         {formatToday(now)}
       </div>
     </div>
@@ -277,7 +332,7 @@ function SectionTitle({ label, count, color }: { label: string; count: number; c
       {/* 数字だけだと何の数か分からない。他の画面も「4件」「7件」と
           単位を付けている。数メートル離れて見る画面なので、なおさら
           読み替えを挟ませない(Issue #191) */}
-      <span className="ml-auto font-normal text-[#5d6474]">{count}件</span>
+      <span className="ml-auto font-normal text-[#8b93a4]">{count}件</span>
     </div>
   );
 }
@@ -298,7 +353,7 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
   const density = events.length === 1 ? "hero" : events.length >= 3 ? "compact" : "normal";
 
   return (
-    <section className={"flex min-h-0 flex-col " + (grown ? "flex-1" : "flex-[1.35]")}>
+    <section className={"flex min-h-0 flex-col " + (grown ? "flex-1" : "flex-[1.75]")}>
       <SectionTitle label="注目イベント" count={events.length} color="#fcd34d" />
       <div className={"grid min-h-0 flex-1 gap-[1.1%] " + eventGridClass(events.length)}>
         {events.map((event) => (
@@ -314,21 +369,21 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
 type Density = "hero" | "normal" | "compact";
 
 const COUNTDOWN_SIZE: Record<Density, string> = {
-  hero: su(5.6),
-  normal: su(2.7),
-  compact: su(1.9),
+  hero: su(7.0),
+  normal: su(4.8),
+  compact: su(3.2),
 };
 
 const TITLE_SIZE: Record<Density, string> = {
-  hero: su(3.2),
-  normal: su(1.75),
-  compact: su(1.4),
+  hero: su(3.8),
+  normal: su(3.2),
+  compact: su(2.5),
 };
 
 // 行間も詰める。文字だけ小さくしても、間の余白が同じだと収まらない
 const ROW_GAP: Record<Density, string> = {
-  hero: "0.6em",
-  normal: "0.6em",
+  hero: "0.5em",
+  normal: "0.5em",
   compact: "0.35em",
 };
 
@@ -342,19 +397,16 @@ const CARD_PADDING: Record<Density, string> = {
 };
 
 // 1行しかない行は、既定の line-height(約1.5)だと文字の上下に無駄が出る。
-// 実測で日時の行が 24.75px の文字に対して 37px を占めていた
-const LINE_HEIGHT: Record<Density, number | undefined> = {
-  hero: undefined,
-  normal: undefined,
-  compact: 1.15,
-};
+// v2.2 では compact だけ詰めていたが、文字を大きくした v2.3 では
+// hero・normal でも無駄が効くので、全段階に同じ値を効かせる
+const CARD_LINE_HEIGHT = 1.15;
 
 function EventCard({ event, density }: { event: SignageEvent; density: Density }) {
-  const qrSize = useQrSize(density === "hero" ? "hero" : "event");
+  const qrSize = useQrSize(density);
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#676f88] bg-white/[0.03]"
       style={{ padding: CARD_PADDING[density] }}
     >
       <div className="min-w-0">
@@ -365,7 +417,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
             // 語は CLAUDE.md §9 の用語表と /events・/ に揃える(Issue #70)
             <span
               className="rounded bg-[#fcd34d] px-2 py-0.5 font-bold text-[#0f0f15]"
-              style={{ fontSize: MIN_FONT_SIZE }}
+              style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
             >
               📌 ピン留め
             </span>
@@ -382,7 +434,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
           style={{
             fontSize: MIN_FONT_SIZE,
             marginTop: ROW_GAP[density],
-            lineHeight: LINE_HEIGHT[density],
+            lineHeight: CARD_LINE_HEIGHT,
           }}
         >
           {formatStartsAt(event.starts_at)} ・ {event.location}
@@ -391,19 +443,22 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
           className="truncate font-bold"
           style={{
             fontSize: TITLE_SIZE[density],
-            marginTop: "0.3em",
-            lineHeight: LINE_HEIGHT[density],
+            marginTop: density === "compact" ? "0.25em" : "0.3em",
+            lineHeight: CARD_LINE_HEIGHT,
           }}
         >
           {event.title}
         </h2>
-        {event.tags.length > 0 && (
+        {/* 3〜4件のときはタグを出さない。最小フォントを 38px に上げた結果、
+            残り日数・日時・タイトルで1枚の高さを使い切る。タグを残すと必ずはみ出す
+            (docs/spec-signage-style-v2.md §1 案B) */}
+        {density !== "compact" && event.tags.length > 0 && (
           <ul className="flex flex-wrap gap-[0.5em]" style={{ marginTop: ROW_GAP[density] }}>
             {event.tags.map((tag) => (
               <li
                 key={tag.id}
                 className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
-                style={{ fontSize: MIN_FONT_SIZE, lineHeight: LINE_HEIGHT[density] }}
+                style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
               >
                 {tag.name}
               </li>
@@ -436,7 +491,7 @@ function ProjectCard({ project }: { project: SignageProject }) {
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#676f88] bg-white/[0.03]"
       // 0.46 は 16:9・3列のときの p-[1.5%] と同じ値
       style={{ padding: su(0.46) }}
     >
@@ -445,22 +500,27 @@ function ProjectCard({ project }: { project: SignageProject }) {
           className="rounded px-[0.6em] py-[0.2em] font-bold"
           style={{
             fontSize: MIN_FONT_SIZE,
+            lineHeight: CARD_LINE_HEIGHT,
             backgroundColor: project.status === "recruiting" ? "#4ade80" : "#5eb3f5",
             color: "#0f0f15",
           }}
         >
           {project.status === "recruiting" ? "募集中" : "進行中"}
         </span>
-        <h2 className="mt-[0.4em] truncate font-bold" style={{ fontSize: su(1.5) }}>
+        {/* 3列だと1枚の幅が足りず、1行では名前がほぼ残らない。2行まで許す */}
+        <h2
+          className="mt-[0.4em] line-clamp-2 font-bold"
+          style={{ fontSize: su(2.2), lineHeight: CARD_LINE_HEIGHT }}
+        >
           {project.title}
         </h2>
-        {project.meeting_schedule !== null && (
-          <div className="mt-[0.3em] truncate text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
-            {project.meeting_schedule}
-          </div>
-        )}
-        <div className="mt-[0.3em] text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
-          {formatMembers(project)}
+        {/* 予定と人数を1行にまとめる。イベント枠に高さを回したぶん、
+            プロジェクト枠は1行ぶん削る必要がある */}
+        <div
+          className="mt-[0.3em] truncate text-[#9aa0ae]"
+          style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
+        >
+          {formatProjectMeta(project)}
         </div>
       </div>
       <QRCodeSVG value={project.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
@@ -474,10 +534,10 @@ function EmptyState() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[2vh]">
-      <div className="font-bold" style={{ fontSize: su(4) }}>
+      <div className="font-bold" style={{ fontSize: su(4.6) }}>
         CircleBoard
       </div>
-      <p className="text-[#9aa0ae]" style={{ fontSize: su(2.4) }}>
+      <p className="text-[#9aa0ae]" style={{ fontSize: su(2.8) }}>
         いま募集中の企画はありません
       </p>
       <QRCodeSVG
@@ -488,7 +548,7 @@ function EmptyState() {
         bgColor="#f2f3f7"
         level="M"
       />
-      <p className="text-[#5d6474]" style={{ fontSize: su(1.4) }}>
+      <p className="text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
         企画の投稿はこちらから
       </p>
     </div>
@@ -533,6 +593,14 @@ function formatStartsAt(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+// 予定が無いプロジェクトもあるので、中黒だけが残らないようにする
+function formatProjectMeta(project: SignageProject): string {
+  const members = formatMembers(project);
+  if (project.meeting_schedule === null) return members;
+
+  return `${project.meeting_schedule} ・ ${members}`;
 }
 
 // capacity が null のときは無制限。「8 / null名」と出さない
