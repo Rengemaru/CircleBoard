@@ -62,6 +62,23 @@ class User < ApplicationRecord
   validate :tags_within_limit
   validate :links_within_limit
 
+  # 年度の範囲(2026-09-12 の監査で追加。オーナー承認済み)。
+  #
+  # NOT NULL なだけで、0 でも 99999 でも通っていた。学年表記(B1〜D3)も卒業判定も
+  # 年度から計算するので、そこが壊れると両方おかしくなる。int4 を超える値では
+  # 保存時に ActiveModel::RangeError が飛んで 500 になっていた。
+  #
+  # **値を変えたときだけ見る。** 10年以上前に入学した卒業生の記録は範囲の外に
+  # いることがあり、毎回見ると停止・権限変更といった無関係な更新まで通らなくなる。
+  ENROLLMENT_YEARS_BACK = 10
+  # 翌年度の入学者を先に登録できるようにする
+  ENROLLMENT_YEARS_AHEAD = 1
+  MAX_YEARS_TO_GRADUATION = 10
+
+  validate :enrollment_year_within_range, if: :enrollment_year_changed?
+  validate :graduation_year_within_range,
+           if: -> { enrollment_year_changed? || graduation_year_changed? }
+
   # NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)。
   # 真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れる
   scope :suspended, -> { where.not(suspended_at: nil) }
@@ -166,6 +183,30 @@ class User < ApplicationRecord
   end
 
   private
+
+  # 在学は最長でも9年目まで(GRADE_YEARS_RANGE)。それより古い入学年度は
+  # 打ち間違いとみなす
+  def enrollment_year_within_range
+    return if enrollment_year.nil?
+
+    this_year = self.class.academic_year
+    range = (this_year - ENROLLMENT_YEARS_BACK)..(this_year + ENROLLMENT_YEARS_AHEAD)
+    return if range.cover?(enrollment_year)
+
+    errors.add(:enrollment_year, "は#{range.first}〜#{range.last}で入力してください")
+  end
+
+  # 下限を「入学年度と同じ年」にしているのは、一覧の「卒業生にする」が
+  # 卒業年度を今の年度まで引き寄せるため(graduations_controller)。
+  # 入学した年度に辞めた人は、入学年度と卒業年度が同じになる
+  def graduation_year_within_range
+    return if enrollment_year.nil? || graduation_year.nil?
+
+    range = enrollment_year..(enrollment_year + MAX_YEARS_TO_GRADUATION)
+    return if range.cover?(graduation_year)
+
+    errors.add(:graduation_year, "は#{range.first}〜#{range.last}で入力してください")
+  end
 
   def nullify_blank_profile_fields
     BLANKABLE_PROFILE_FIELDS.each do |field|
