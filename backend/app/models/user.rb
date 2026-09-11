@@ -62,6 +62,25 @@ class User < ApplicationRecord
   validate :tags_within_limit
   validate :links_within_limit
 
+  # 年度の範囲(2026-09-12 の監査で追加。オーナー承認済み)。
+  #
+  # NOT NULL なだけで、0 でも 99999 でも通っていた。学年表記(B1〜D3)も卒業判定も
+  # 年度から計算するので、そこが壊れると両方おかしくなる。int4 を超える値では
+  # 保存時に ActiveModel::RangeError が飛んで 500 になっていた。
+  #
+  # **値を変えたときだけ見る。** 10年以上前に入学した卒業生の記録は範囲の外に
+  # いることがあり、毎回見ると停止・権限変更といった無関係な更新まで通らなくなる。
+  ENROLLMENT_YEARS_BACK = 10
+  # 翌年度の入学者を先に登録できるようにする
+  ENROLLMENT_YEARS_AHEAD = 1
+  MAX_YEARS_TO_GRADUATION = 10
+
+  validate :enrollment_year_within_range, if: :enrollment_year_changed?
+  validate :graduation_year_within_range,
+           if: -> { enrollment_year_changed? || graduation_year_changed? }
+  validate :graduation_year_after_enrollment,
+           if: -> { enrollment_year_changed? || graduation_year_changed? }
+
   # NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)。
   # 真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れる
   scope :suspended, -> { where.not(suspended_at: nil) }
@@ -166,6 +185,51 @@ class User < ApplicationRecord
   end
 
   private
+
+  # 在学は最長でも9年目まで(GRADE_YEARS_RANGE)。それより古い入学年度は
+  # 打ち間違いとみなす
+  def enrollment_year_within_range
+    return if enrollment_year.nil? || enrollment_year_in_range?
+
+    this_year = self.class.academic_year
+    errors.add(:enrollment_year,
+               "は#{this_year - ENROLLMENT_YEARS_BACK}〜#{this_year + ENROLLMENT_YEARS_AHEAD}で入力してください")
+  end
+
+  # 卒業年度そのものの妥当性。0 や 99999、int4 を超える値を弾く。
+  #
+  # **入学年度を基準にしない。** 基準にすると、10年以上前に入学した卒業生を
+  # 「現役に戻す」ときに落ちる。あの操作は卒業年度を今の年度の次に置き直すので、
+  # 古い入学年度から見れば必ず範囲の外になる(graduations_controller#destroy)。
+  # 入学年度との前後関係は graduation_year_after_enrollment が別に見る
+  def graduation_year_within_range
+    return if graduation_year.nil?
+
+    this_year = self.class.academic_year
+    range = (this_year - MAX_YEARS_TO_GRADUATION)..(this_year + MAX_YEARS_TO_GRADUATION)
+    return if range.cover?(graduation_year)
+
+    errors.add(:graduation_year, "は#{range.first}〜#{range.last}で入力してください")
+  end
+
+  # 入学より前には卒業できない。同じ年は通す。一覧の「卒業生にする」が卒業年度を
+  # 今の年度まで引き寄せるので、入学した年度に辞めた人は両方が同じ年になる。
+  #
+  # **入学年度が自分の範囲の外にあるときは見ない。** 古い卒業生の記録は入学年度も
+  # 範囲の外にいることがあり、基準として信用できない。ここで止めると、その人を
+  # 現役に戻すことも学年を入れ直すこともできなくなる
+  def graduation_year_after_enrollment
+    return if enrollment_year.nil? || graduation_year.nil?
+    return unless enrollment_year_in_range?
+    return if graduation_year >= enrollment_year
+
+    errors.add(:graduation_year, "は入学年度以降にしてください")
+  end
+
+  def enrollment_year_in_range?
+    this_year = self.class.academic_year
+    ((this_year - ENROLLMENT_YEARS_BACK)..(this_year + ENROLLMENT_YEARS_AHEAD)).cover?(enrollment_year)
+  end
 
   def nullify_blank_profile_fields
     BLANKABLE_PROFILE_FIELDS.each do |field|
