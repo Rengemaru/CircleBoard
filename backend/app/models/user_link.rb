@@ -8,7 +8,12 @@ class UserLink < ApplicationRecord
   belongs_to :user
 
   validates :label, presence: true, length: { maximum: 20 }
-  validates :url, presence: true, format: { with: ALLOWED_URL_SCHEME, message: "は http:// または https:// で始めてください" }
+  # 形式は最初から見ていたが長さは見ていなかった(2026-09-12 の監査)。
+  # 2000 はブラウザが扱える URL の実務上の上限
+  MAX_URL_LENGTH = 2000
+
+  validates :url, presence: true, length: { maximum: MAX_URL_LENGTH },
+                  format: { with: ALLOWED_URL_SCHEME, message: "は http:// または https:// で始めてください" }
   validate :user_within_link_limit, on: :create
 
   private
