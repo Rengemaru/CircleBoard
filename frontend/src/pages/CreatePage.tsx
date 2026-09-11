@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
@@ -66,6 +66,13 @@ export function CreatePage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  // 送信は名前で行う。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)。
+  // 選択のキーはIDのまま残している。入力欄そのものを MultiCombobox に替えるのは Issue #230
+  const selectedTagNames = useMemo(
+    () => tags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => tag.name),
+    [tags, selectedTagIds],
+  );
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -101,7 +108,7 @@ export function CreatePage() {
               capacity: capacity === "" ? null : Number(capacity),
               // 空欄は null。空文字を送ると「空文字のリンク」が保存される
               external_url: externalUrl === "" ? null : externalUrl,
-              tag_ids: selectedTagIds,
+              tag_names: selectedTagNames,
             },
           }),
         });
@@ -117,7 +124,7 @@ export function CreatePage() {
               description,
               meeting_schedule: meetingSchedule,
               capacity: capacity === "" ? null : Number(capacity),
-              tag_ids: selectedTagIds,
+              tag_names: selectedTagNames,
             },
           }),
         });

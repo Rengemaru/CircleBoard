@@ -170,11 +170,15 @@ AND だとタグを足すほど結果が減り、0件になりやすい。
     "starts_at": "2026-10-05T19:00:00+09:00",
     "capacity": 30,
     "external_url": null,
-    "tag_ids": [5, 9]
+    "tag_names": ["LT", "初心者歓迎"]
   }
 }
 ```
 → 201。`owner_id` は `current_user` から設定する（**リクエストの値を信用しない**）。
+
+`tag_names` は**名前**で受け取る。**まだ存在しないタグはIDを持てない**ため
+（`docs/spec-tags.md` §3.7）。正規化してから引き、無ければその場で作る（`category: project_event`）。
+5件まで・1件20字まで。超えると 422。**絞り込みの `?tag_ids=` は据え置き**で、こちらは作成を伴わないため ID のまま。
 
 ### `PATCH /api/events/:id` — 編集 🔒owner / admin
 
@@ -256,7 +260,11 @@ enum の整数（0:recruiting 1:in_progress 2:completed）がそのままこの�
 { "tags": [{ "id": 1, "name": "Web開発" }] }
 ```
 
-`category: project_event` のみ返す。**タグの作成APIは作らない**（`seeds.rb` と `rails console` で管理）。
+`?category=project_event|profile` で語彙を絞る。省略時と知らない値は `project_event`
+（企画用とプロフィール用で語彙を分ける。`docs/spec-tags.md` §3.4）。
+
+**タグ単体を作るAPIは作りません。** タグは企画かプロフィールに付ける過程で生まれます（`docs/spec-tags.md` §3.5）。
+こうすると、どこにも付いていないタグが生まれにくくなります。改名と削除は管理画面が持ちます（§3.8）。
 
 ---
 
@@ -300,7 +308,7 @@ React と Rails を触っています。",
 {
   "department": "情報工学科",
   "bio": "…",
-  "tag_ids": [1, 4],
+  "tag_names": ["3D", "Blender"],
   "links": [{ "label": "GitHub", "url": "https://github.com/xxx" }]
 }
 ```
@@ -320,7 +328,7 @@ React と Rails を触っています。",
 |---|---|
 | `department` | 50字まで |
 | `bio` | 500字まで |
-| `tag_ids` | 5件まで。存在するタグのIDのみ |
+| `tag_names` | 5件まで。1件20字まで。無い名前はその場で作られる（`category: profile`） |
 | `links` | 3件まで |
 | `links[].label` | 必須・20字まで |
 | `links[].url` | 必須・`http://` または `https://` で始まること |

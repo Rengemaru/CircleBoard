@@ -16,8 +16,10 @@ module Api
     # 参加者一覧も主催欄も名前で出ているので他人になりすませる。
     # 変更は管理者の仕事(Issue #4)
     def update
-      tags = resolve_tags(params[:tag_ids])
-      return render_error(:unprocessable_entity, "タグの指定が正しくありません") if params[:tag_ids] && tags.nil?
+      # プロフィールのタグは企画と語彙を分ける(docs/spec-tags.md §3.4)。
+      # 企画側の category を渡すと、3Dの人のプロフィールに企画用の語彙が混ざる
+      tags = resolve_tag_names(params[:tag_names], category: :profile)
+      return render_error(:unprocessable_entity, "タグの指定が正しくありません") if params[:tag_names] && tags.nil?
 
       links = links_param
       return render_error(:unprocessable_entity, "リンクの形式が正しくありません") if links == :invalid
@@ -26,7 +28,7 @@ module Api
       # 途中で失敗したときに、古いリンクが消えて新しいリンクが入っていない
       # 状態を残さないため(EventsController#update と同じ)
       ActiveRecord::Base.transaction do
-        current_user.tags = tags if params[:tag_ids]
+        current_user.tags = tags if params[:tag_names]
         replace_links!(links) if links
         current_user.update!(profile_params)
       end

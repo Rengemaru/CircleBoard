@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cluster, FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
@@ -49,6 +49,13 @@ export function MyProfileEditPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  // 送信は名前で行う。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)。
+  // 選択のキーはIDのまま残している。入力欄そのものを MultiCombobox に替えるのは Issue #230
+  const selectedTagNames = useMemo(
+    () => tags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => tag.name),
+    [tags, selectedTagIds],
+  );
+
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -80,7 +87,7 @@ export function MyProfileEditPage() {
 
     // 失敗を空配列に倒すと「選べるタグがありません」と断定してしまう。
     // 実際は通信できていないだけかもしれない(Issue #52)
-    fetchTags()
+    fetchTags("profile")
       .then(setTags)
       .catch(() => setTagsError(true));
   }, [loading, user]);
@@ -102,7 +109,7 @@ export function MyProfileEditPage() {
         department,
         pronouns,
         bio,
-        tag_ids: selectedTagIds,
+        tag_names: selectedTagNames,
         links: toPayload(links),
       });
       // 保存した結果は /me で見せる。編集画面に留まると、

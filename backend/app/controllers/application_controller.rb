@@ -42,24 +42,44 @@ class ApplicationController < ActionController::API
     current_user.admin? || resource.owner_id == current_user.id
   end
 
-  # tag_ids で指定されたタグを引く。イベントとプロジェクトで同じ処理になるためここに置く。
+  # 1つの企画・プロフィールに付けられるタグの数(docs/spec-tags.md §3.2)。
+  # User::MAX_TAGS と同じ値だが、あちらは「その人のスキル」、こちらは
+  # 「企画の分野」で意味が違うので、同じ定数を共有しない
+  MAX_TAGS_PER_RESOURCE = 5
+
+  # tag_names で指定されたタグを引く。無ければその場で作る(docs/spec-tags.md §3.5)。
+  # イベント・プロジェクト・プロフィールで同じ処理になるためここに置く。
   #
-  # 存在しないIDや category: skill が混ざっていたら nil を返す(呼び出し側で422にする)。
-  # 黙って無視すると、タグを付けたつもりが付いていない状態に気づけないため。
-  # 重複は取り除く。UNIQUE(event_id, tag_id) があるので同じIDを2回渡されても
-  # DBは壊れないが、その手前で整えておく
-  def resolve_tags(raw_ids)
-    return [] if raw_ids.blank?
-    # 配列以外(ハッシュなど)で渡された場合は弾く。to_i を呼んで
+  # **名前で受け取るのは、まだ存在しないタグがIDを持てないため。** 以前は tag_ids
+  # だったが、自由記述にした時点でIDでは表現できなくなった(§3.7)。
+  #
+  # 形が違うもの・空・長すぎるもの・多すぎるものは nil を返す(呼び出し側で422にする)。
+  # 黙って無視すると、タグを付けたつもりが付いていない状態に気づけない。
+  #
+  # category を必ず受け取るのは、企画とプロフィールで語彙を分けているため(§3.4)。
+  # 既定値を持たせると、付け忘れた側が企画用の語彙に混ざる
+  def resolve_tag_names(raw_names, category:)
+    return [] if raw_names.blank?
+    # 配列以外(ハッシュなど)で渡された場合は弾く。map を呼んで
     # NoMethodError で 500 にしない
-    return nil unless raw_ids.is_a?(Array)
+    return nil unless raw_names.is_a?(Array)
+    return nil unless raw_names.all? { |name| name.is_a?(String) }
 
-    ids = raw_ids.map { |id| Integer(id, exception: false) }
-    return nil if ids.any?(&:nil?)
+    names = raw_names.map { |name| Tag.normalize_name(name) }.reject(&:blank?).uniq
+    return nil if names.size > MAX_TAGS_PER_RESOURCE
+    return nil if names.any? { |name| name.length > Tag::MAX_NAME_LENGTH }
 
-    ids = ids.uniq
-    tags = Tag.project_event.where(id: ids).to_a
-    tags.size == ids.size ? tags : nil
+    find_or_create_tags(names, category)
+  end
+
+  # 同じ名前を同時に2人が送ると、どちらも「無い」と判断して両方 INSERT する。
+  # UNIQUE(name, category) が片方を弾くので、そこだけ拾って引き直す
+  def find_or_create_tags(names, category)
+    names.map do |name|
+      Tag.find_or_create_by!(name: name, category: category)
+    rescue ActiveRecord::RecordNotUnique
+      Tag.find_by!(name: name, category: category)
+    end
   end
 
   # エラーレスポンスの形は docs/api-spec.md §0 の
