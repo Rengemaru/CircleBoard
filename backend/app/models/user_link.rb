@@ -1,19 +1,15 @@
 class UserLink < ApplicationRecord
-  # http(s) 以外を弾く。利用者が入れた文字列をそのまま <a href> に置くので、
-  # javascript: を通すと、他の部員がクリックしたときにスクリプトが動く。
-  # フロント側でも弾くが、curl で回避できるのでここを正とする
-  # (docs/spec-my-page.md §6.1)
-  ALLOWED_URL_SCHEME = %r{\Ahttps?://}
+  # 2000 はブラウザが扱える URL の実務上の上限。
+  # 形式は最初から見ていたが、長さは見ていなかった(2026-09-12 の監査)
+  MAX_URL_LENGTH = 2000
 
   belongs_to :user
 
   validates :label, presence: true, length: { maximum: 20 }
-  # 形式は最初から見ていたが長さは見ていなかった(2026-09-12 の監査)。
-  # 2000 はブラウザが扱える URL の実務上の上限
-  MAX_URL_LENGTH = 2000
-
+  # スキームの判定は ApplicationRecord::HTTP_URL_SCHEME に移した。
+  # イベントの外部リンクが同じ判断を必要としたため(docs/spec-my-page.md §6.1)
   validates :url, presence: true, length: { maximum: MAX_URL_LENGTH },
-                  format: { with: ALLOWED_URL_SCHEME, message: "は http:// または https:// で始めてください" }
+                  format: { with: HTTP_URL_SCHEME, message: "は http:// または https:// で始めてください" }
   validate :user_within_link_limit, on: :create
 
   private

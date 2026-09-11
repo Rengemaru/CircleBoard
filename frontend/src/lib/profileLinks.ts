@@ -9,7 +9,7 @@ export type LinkRow = {
 
 export const MAX_LINKS = 3;
 
-// サーバー側の UserLink::ALLOWED_URL_SCHEME と同じ条件。
+// サーバー側の ApplicationRecord::HTTP_URL_SCHEME と同じ条件。
 // **こちらは正ではない。** フロントだけの検証は curl で回避できるので、
 // サーバー側を正とする(docs/spec-my-page.md §6.1)。
 // ここで見るのは、送ってから断られるまで待たせないため

@@ -129,8 +129,22 @@ class Event < ApplicationRecord
   validates :description, presence: true, length: { maximum: MAX_DESCRIPTION_LENGTH }
   validates :location, presence: true, length: { maximum: MAX_LOCATION_LENGTH }
   validates :starts_at, presence: true
-  # 任意項目。maximum だけの検証は nil も空文字も通すので allow_nil は付けない
-  validates :external_url, length: { maximum: MAX_EXTERNAL_URL_LENGTH }
+  # 任意項目。maximum だけの検証は nil も空文字も通すので allow_nil は付けない。
+  #
+  # 形式は2026-09-12 の監査で追加。javascript: で始まる文字列が保存でき、
+  # 詳細画面がそれをそのまま <a href> に渡していた。
+  # **実際には発火しなかった**(React 19 が描画時に差し替えていた)が、
+  # 止めていたのはフレームワークであってこちらのコードではない状態だった。
+  # プロフィールのリンクには最初から同じ検証がある(UserLink)。
+  #
+  # format には allow_blank が要る。未入力・空文字は「リンク無し」で通す
+  validates :external_url,
+            length: { maximum: MAX_EXTERNAL_URL_LENGTH },
+            format: {
+              with: HTTP_URL_SCHEME,
+              message: "は http:// または https:// で始めてください",
+              allow_blank: true
+            }
 
   # 定員の範囲(2026-09-12 の監査で追加。オーナー承認済み)。
   #
