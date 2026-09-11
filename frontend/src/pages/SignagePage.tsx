@@ -10,7 +10,8 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // 16:9 以外のディスプレイに繋がれても崩れないよう、寸法は SIGNAGE_UNIT で測る。
 // ナビゲーションは一切置かない。ヘッダー・フッター・リンクも表示しない
 // (wireframes/wireframe-signage.html「共通仕様」)。
-// 視認距離2〜3mを想定し、最小フォントは24px相当。
+// 視認距離2.5m(55型・1080p)を想定し、最小フォントは38px相当
+// (docs/spec-signage-style-v2.md 案B)。
 // 60秒ごとに更新する(wireframe-signage.html「共通仕様」)。
 // WebSocket は不採用。1台のディスプレイが1分遅れて更新されることに実害は無く、
 // 常時接続を維持する仕組みを持つと、切れたときに気づけない方が問題になる。
@@ -46,12 +47,15 @@ function su(n: number): string {
   return `calc(${n} * var(--sg-u))`;
 }
 
-// 視認距離2〜3mで読める文字の下限。1920×1080 で約25px にあたり、
-// ファイル冒頭の「最小フォントは24px相当」を満たす。
+// 視認距離2.5mで読める文字の下限。1920×1080 で約38px にあたる。
+//
+// 1080p の 1px が何ミリになるかは画面の対角で倍以上変わる。55型なら 1px = 0.634mm で、
+// 「視距離3mにつき文字高25mm」に当てると 38.4px が 2.5m ぶん。
+// 旧値の 25px は 1.6m までしか届いていなかった(Issue #219)。
 //
 // className に書くと Tailwind の任意値がリテラルになり、下回っていても
 // レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
-const MIN_FONT_SIZE = su(1.3);
+const MIN_FONT_SIZE = su(2.0);
 
 // QRの大きさ。1920px 幅を基準にして、画面幅で拡縮する。
 //
@@ -59,7 +63,10 @@ const MIN_FONT_SIZE = su(1.3);
 // 残り、2〜3mからスマホで読めない。QRは寸法が読み取り距離を直接決める。
 // 逆に小さいモニタではQRがカードを圧迫する(Issue #50)
 const SIGNAGE_BASE_WIDTH = 1920;
-const QR_SIZE_AT_BASE = { hero: 220, event: 110, project: 90, empty: 200 } as const;
+// 読み取り距離はコード幅の10倍まで(10:1 則)。55型なら 165px = 105mm = 1.1m。
+// 2〜3m から読める QR は 300mm(520px 相当)で、カードには物理的に入らない。
+// この画面は「遠くで読み、近づいて撮る」動線を前提にする(Issue #222)
+const QR_SIZE_AT_BASE = { hero: 320, normal: 221, compact: 165, project: 125, empty: 300 } as const;
 
 // SIGNAGE_UNIT と同じ計算。QR は <svg> に実ピクセルを渡すので CSS 変数では届かない。
 // 画面幅のままだと、横長のディスプレイでQRだけが高さを無視して大きくなる
@@ -217,7 +224,7 @@ function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failu
       style={{ paddingBottom: su(1.04) }}
     >
       <div>
-        <div className="font-bold tracking-tight" style={{ fontSize: su(2.1) }}>
+        <div className="font-bold tracking-tight" style={{ fontSize: su(2.4) }}>
           CircleBoard
         </div>
         <div className="mt-1 text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
@@ -264,7 +271,7 @@ function Clock() {
     <div className="text-right">
       <div
         className="font-mono font-bold leading-none tracking-tight"
-        style={{ fontSize: su(3.1) }}
+        style={{ fontSize: su(3.6) }}
       >
         {formatClock(now)}
         {/* 秒を小さく添える。毎秒更新しているのに分単位の表示だと、
@@ -315,7 +322,7 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
   const density = events.length === 1 ? "hero" : events.length >= 3 ? "compact" : "normal";
 
   return (
-    <section className={"flex min-h-0 flex-col " + (grown ? "flex-1" : "flex-[1.35]")}>
+    <section className={"flex min-h-0 flex-col " + (grown ? "flex-1" : "flex-[1.75]")}>
       <SectionTitle label="注目イベント" count={events.length} color="#fcd34d" />
       <div className={"grid min-h-0 flex-1 gap-[1.1%] " + eventGridClass(events.length)}>
         {events.map((event) => (
@@ -331,21 +338,21 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
 type Density = "hero" | "normal" | "compact";
 
 const COUNTDOWN_SIZE: Record<Density, string> = {
-  hero: su(5.6),
-  normal: su(2.7),
-  compact: su(1.9),
+  hero: su(7.0),
+  normal: su(4.8),
+  compact: su(3.2),
 };
 
 const TITLE_SIZE: Record<Density, string> = {
-  hero: su(3.2),
-  normal: su(1.75),
-  compact: su(1.4),
+  hero: su(3.8),
+  normal: su(3.2),
+  compact: su(2.5),
 };
 
 // 行間も詰める。文字だけ小さくしても、間の余白が同じだと収まらない
 const ROW_GAP: Record<Density, string> = {
-  hero: "0.6em",
-  normal: "0.6em",
+  hero: "0.5em",
+  normal: "0.5em",
   compact: "0.35em",
 };
 
@@ -359,15 +366,12 @@ const CARD_PADDING: Record<Density, string> = {
 };
 
 // 1行しかない行は、既定の line-height(約1.5)だと文字の上下に無駄が出る。
-// 実測で日時の行が 24.75px の文字に対して 37px を占めていた
-const LINE_HEIGHT: Record<Density, number | undefined> = {
-  hero: undefined,
-  normal: undefined,
-  compact: 1.15,
-};
+// v2.2 では compact だけ詰めていたが、文字を大きくした v2.3 では
+// hero・normal でも無駄が効くので、全段階に同じ値を効かせる
+const CARD_LINE_HEIGHT = 1.15;
 
 function EventCard({ event, density }: { event: SignageEvent; density: Density }) {
-  const qrSize = useQrSize(density === "hero" ? "hero" : "event");
+  const qrSize = useQrSize(density);
 
   return (
     <article
@@ -382,7 +386,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
             // 語は CLAUDE.md §9 の用語表と /events・/ に揃える(Issue #70)
             <span
               className="rounded bg-[#fcd34d] px-2 py-0.5 font-bold text-[#0f0f15]"
-              style={{ fontSize: MIN_FONT_SIZE }}
+              style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
             >
               📌 ピン留め
             </span>
@@ -399,7 +403,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
           style={{
             fontSize: MIN_FONT_SIZE,
             marginTop: ROW_GAP[density],
-            lineHeight: LINE_HEIGHT[density],
+            lineHeight: CARD_LINE_HEIGHT,
           }}
         >
           {formatStartsAt(event.starts_at)} ・ {event.location}
@@ -408,19 +412,22 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
           className="truncate font-bold"
           style={{
             fontSize: TITLE_SIZE[density],
-            marginTop: "0.3em",
-            lineHeight: LINE_HEIGHT[density],
+            marginTop: density === "compact" ? "0.25em" : "0.3em",
+            lineHeight: CARD_LINE_HEIGHT,
           }}
         >
           {event.title}
         </h2>
-        {event.tags.length > 0 && (
+        {/* 3〜4件のときはタグを出さない。最小フォントを 38px に上げた結果、
+            残り日数・日時・タイトルで1枚の高さを使い切る。タグを残すと必ずはみ出す
+            (docs/spec-signage-style-v2.md §1 案B) */}
+        {density !== "compact" && event.tags.length > 0 && (
           <ul className="flex flex-wrap gap-[0.5em]" style={{ marginTop: ROW_GAP[density] }}>
             {event.tags.map((tag) => (
               <li
                 key={tag.id}
                 className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
-                style={{ fontSize: MIN_FONT_SIZE, lineHeight: LINE_HEIGHT[density] }}
+                style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
               >
                 {tag.name}
               </li>
@@ -462,22 +469,27 @@ function ProjectCard({ project }: { project: SignageProject }) {
           className="rounded px-[0.6em] py-[0.2em] font-bold"
           style={{
             fontSize: MIN_FONT_SIZE,
+            lineHeight: CARD_LINE_HEIGHT,
             backgroundColor: project.status === "recruiting" ? "#4ade80" : "#5eb3f5",
             color: "#0f0f15",
           }}
         >
           {project.status === "recruiting" ? "募集中" : "進行中"}
         </span>
-        <h2 className="mt-[0.4em] truncate font-bold" style={{ fontSize: su(1.5) }}>
+        {/* 3列だと1枚の幅が足りず、1行では名前がほぼ残らない。2行まで許す */}
+        <h2
+          className="mt-[0.4em] line-clamp-2 font-bold"
+          style={{ fontSize: su(2.2), lineHeight: CARD_LINE_HEIGHT }}
+        >
           {project.title}
         </h2>
-        {project.meeting_schedule !== null && (
-          <div className="mt-[0.3em] truncate text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
-            {project.meeting_schedule}
-          </div>
-        )}
-        <div className="mt-[0.3em] text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
-          {formatMembers(project)}
+        {/* 予定と人数を1行にまとめる。イベント枠に高さを回したぶん、
+            プロジェクト枠は1行ぶん削る必要がある */}
+        <div
+          className="mt-[0.3em] truncate text-[#9aa0ae]"
+          style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
+        >
+          {formatProjectMeta(project)}
         </div>
       </div>
       <QRCodeSVG value={project.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
@@ -491,10 +503,10 @@ function EmptyState() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[2vh]">
-      <div className="font-bold" style={{ fontSize: su(4) }}>
+      <div className="font-bold" style={{ fontSize: su(4.6) }}>
         CircleBoard
       </div>
-      <p className="text-[#9aa0ae]" style={{ fontSize: su(2.4) }}>
+      <p className="text-[#9aa0ae]" style={{ fontSize: su(2.8) }}>
         いま募集中の企画はありません
       </p>
       <QRCodeSVG
@@ -505,7 +517,7 @@ function EmptyState() {
         bgColor="#f2f3f7"
         level="M"
       />
-      <p className="text-[#8b93a4]" style={{ fontSize: su(1.4) }}>
+      <p className="text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
         企画の投稿はこちらから
       </p>
     </div>
@@ -550,6 +562,14 @@ function formatStartsAt(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+// 予定が無いプロジェクトもあるので、中黒だけが残らないようにする
+function formatProjectMeta(project: SignageProject): string {
+  const members = formatMembers(project);
+  if (project.meeting_schedule === null) return members;
+
+  return `${project.meeting_schedule} ・ ${members}`;
 }
 
 // capacity が null のときは無制限。「8 / null名」と出さない
