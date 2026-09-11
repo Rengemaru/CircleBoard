@@ -23,25 +23,27 @@ import {
   fetchAdminUsers,
   suspendUser,
   unsuspendUser,
+  updateUser,
   type AdminUserRow,
+  type UpdateUserInput,
 } from "../../api/admin";
 import { AdminOnly } from "./AdminOnly";
+import { AdminUserEditDialog } from "./AdminUserEditDialog";
 
 // ユーザー管理(wireframes/wireframe-admin-ver2.html ②)。
 //
 // 学科の列はワイヤーフレーム ② のとおり出す。users.department は
 // マイページ(M-2)で追加済み。
 //
-// **編集はここではできない。** 学科は本人が /me/edit で書くもので、
-// 管理者用にもう1本の編集経路を作る理由がない。氏名の変更は引き続き
-// rails console で対応する(CLAUDE.md §10、Issue #4)。
+// **編集できるのは権限と学年だけ。** 学科と氏名は本人が /me/edit で書くもので、
+// 管理者用にもう1本の編集経路を作る理由がない(docs/spec-admin-operations.md §3.3)。
 export function AdminUsersPage() {
   const navigate = useNavigate();
 
   return (
     <AdminOnly
       title="ユーザー管理"
-      subtitle="アカウントの発行・停止・削除を行う"
+      subtitle="アカウントの発行・編集・停止・削除を行う"
       action={
         <Button variant="primary" size="sm" onClick={() => navigate("/admin/users/new")}>
           ＋ アカウントを発行
@@ -79,6 +81,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [deleting, setDeleting] = useState<AdminUserRow | null>(null);
+  const [editing, setEditing] = useState<AdminUserRow | null>(null);
   // 停止も相手のセッションを即座に切るので、削除と同じく確認を挟む
   const [suspending, setSuspending] = useState<AdminUserRow | null>(null);
   // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
@@ -113,6 +116,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
       setSuccess(message);
       setDeleting(null);
       setSuspending(null);
+      setEditing(null);
       load();
     } catch (e: unknown) {
       setError(e);
@@ -192,6 +196,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                 user={user}
                 isSelf={user.id === currentUserId}
                 onDelete={() => setDeleting(user)}
+                onEdit={() => setEditing(user)}
                 onSuspend={() => setSuspending(user)}
                 onUnsuspend={() =>
                   run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
@@ -208,7 +213,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                   <Th>名前</Th>
                   <Th>メールアドレス</Th>
                   <Th>学科</Th>
-                  <Th>入学 / 卒業</Th>
+                  <Th>学年</Th>
                   {/* 権限と状態は別の軸。1列にまとめて排他で出すと、
                     停止中の管理者から「管理者」が消える(Issue #64) */}
                   <Th>権限</Th>
@@ -223,6 +228,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                     user={user}
                     isSelf={user.id === currentUserId}
                     onDelete={() => setDeleting(user)}
+                    onEdit={() => setEditing(user)}
                     onSuspend={() => setSuspending(user)}
                     onUnsuspend={() =>
                       run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
@@ -244,7 +250,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           読まれない(SmartHR feedback.mdx「直前に操作した要素の近く」)。
           ここに残すのは、操作の前提として知っておく話だけ(Issue #61) */}
       <Note>
-        パスワードの再発行と権限の変更は、この画面からはできません。
+        パスワードの再発行は、この画面からはできません。
         <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
         で対応します(CLAUDE.md §10)。
       </Note>
@@ -270,6 +276,19 @@ function UserList({ currentUserId }: { currentUserId: number }) {
             過去の参加履歴は名前が空欄のまま残ります。
           </p>
         </Modal>
+      )}
+
+      {editing !== null && (
+        <AdminUserEditDialog
+          user={editing}
+          isSelf={editing.id === currentUserId}
+          busy={busy}
+          error={error}
+          onCancel={() => setEditing(null)}
+          onSave={(input: UpdateUserInput) =>
+            run(() => updateUser(editing.id, input), `${editing.name} を更新しました`)
+          }
+        />
       )}
 
       {suspending !== null && (
@@ -304,6 +323,7 @@ function UserCard({
   user,
   isSelf,
   onDelete,
+  onEdit,
   onSuspend,
   onUnsuspend,
   busy,
@@ -311,6 +331,7 @@ function UserCard({
   user: AdminUserRow;
   isSelf: boolean;
   onDelete: () => void;
+  onEdit: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
   busy: boolean;
@@ -338,8 +359,16 @@ function UserCard({
           {user.email}
         </Text>
         <Text size="S" color="TEXT_GREY" leading="TIGHT" as="p">
-          {user.department ?? "学科未入力"} ・ {user.enrollment_year} / {user.graduation_year}
+          {user.department ?? "学科未入力"} ・ {user.grade ?? "学年なし"}
         </Text>
+
+        <Cluster gap={0.5}>
+          {/* 自分自身も編集できる。権限だけはサーバーが弾くので、
+              ダイアログ側で選べないようにしてある */}
+          <Button variant="default" size="xs" onClick={onEdit} disabled={busy}>
+            編集
+          </Button>
+        </Cluster>
 
         {!isSelf && (
           <Cluster gap={0.5}>
@@ -366,6 +395,7 @@ function UserRow({
   user,
   isSelf,
   onDelete,
+  onEdit,
   onSuspend,
   onUnsuspend,
   busy,
@@ -373,6 +403,7 @@ function UserRow({
   user: AdminUserRow;
   isSelf: boolean;
   onDelete: () => void;
+  onEdit: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
   busy: boolean;
@@ -393,8 +424,13 @@ function UserRow({
       <Td className="text-xs text-gray-500">{user.email}</Td>
       {/* 未入力を空欄にしない。値が無いのか列がずれているのか分からなくなる */}
       <Td className="text-gray-500">{user.department ?? "—"}</Td>
-      <Td className="text-gray-500">
-        {user.enrollment_year} / {user.graduation_year}
+      {/* 学年(B3 / M1)を出す。年度そのものは、この画面から入力しなくなった
+          時点で「逆算した値」になったので、見出しの主役から外した */}
+      <Td
+        className="text-gray-500"
+        title={`${user.enrollment_year} 年入学 / ${user.graduation_year} 年卒業`}
+      >
+        {user.grade ?? "—"}
       </Td>
       <Td>
         {/* 権限。停止中でも卒業生でも、その人が管理者であることは変わらない */}
@@ -413,11 +449,14 @@ function UserRow({
       <Td>
         {/* 自分自身は停止も削除もできない。APIも 422 で拒否する。
             自分を停止すると、その場でセッションが切れて解除もできなくなる */}
-        {isSelf ? (
-          <span className="text-gray-400">—</span>
-        ) : (
-          <span className="flex gap-1.5">
-            {user.suspended ? (
+        <span className="flex gap-1.5">
+          {/* 自分自身も編集できる。権限だけはサーバーが弾くので、
+              ダイアログ側で選べないようにしてある */}
+          <Button variant="default" size="xs" onClick={onEdit} disabled={busy}>
+            編集
+          </Button>
+          {!isSelf &&
+            (user.suspended ? (
               <Button variant="success" size="xs" onClick={onUnsuspend} disabled={busy}>
                 停止解除
               </Button>
@@ -425,12 +464,13 @@ function UserRow({
               <Button variant="danger" size="xs" onClick={onSuspend} disabled={busy}>
                 停止
               </Button>
-            )}
+            ))}
+          {!isSelf && (
             <Button variant="danger" size="xs" onClick={onDelete} disabled={busy}>
               完全に削除
             </Button>
-          </span>
-        )}
+          )}
+        </span>
       </Td>
     </tr>
   );

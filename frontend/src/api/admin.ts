@@ -40,6 +40,10 @@ export type AdminUserRow = {
   // 卒業したかどうかはサーバーが判断する。年度の切り替わり(4月始まり)を
   // 跨ぐ規則なので、画面ごとに計算しない(backend の User#graduated?)
   graduated: boolean;
+  // 学年の表記(B3 / M1 …)。卒業生と10年目以降は null
+  grade: string | null;
+  // 在学何年目か。編集ダイアログが入力するのはこの数字(backend の User#grade_years)
+  grade_years: number;
   // NULL = 有効。時刻が入っていれば停止中(spec-v2.2.md §2.1)
   suspended: boolean;
   suspended_at: string | null;
@@ -121,6 +125,21 @@ export async function suspendUser(id: number): Promise<void> {
 
 export async function unsuspendUser(id: number): Promise<void> {
   await apiFetch<unknown>(`/api/admin/users/${id}/suspension`, { method: "DELETE" });
+}
+
+// 権限と学年の変更(docs/spec-admin-operations.md §3.3)。
+// 変えない項目は送らない。demo は選べない
+export type UpdateUserInput = {
+  role?: "admin" | "member";
+  // 在学何年目か。入学年度と卒業年度はサーバーがここから逆算する
+  grade_years?: number;
+};
+
+export async function updateUser(id: number, input: UpdateUserInput): Promise<void> {
+  await apiFetch<unknown>(`/api/admin/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ user: input }),
+  });
 }
 
 export async function fetchDashboard(): Promise<Dashboard> {
