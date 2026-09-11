@@ -29,6 +29,15 @@ RSpec.describe "検証エラーの文言" do
     expect(messages_for(user)).to include(a_string_including("72バイト"))
   end
 
+  # 上限側を足したときに下限側を壊していないこと。
+  # 同じ属性に2つの文言がぶら下がっているので、片方を足すときにもう片方の
+  # キーを踏み替えてしまうことがある
+  it "パスワードが短すぎるときの文言は変わっていない" do
+    user = build(:user, password: "short")
+
+    expect(messages_for(user)).to include("パスワードは8文字以上で入力してください")
+  end
+
   it "定員が整数でないときは日本語で返す" do
     event = build(:event, capacity: 1.5)
 
