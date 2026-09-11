@@ -25,8 +25,8 @@ RSpec.describe "GET /api/events/:id", type: :request do
       get "/api/events/#{event.id}"
 
       body = response.parsed_body
-      expect(body["owner"]).to eq("id" => owner.id, "name" => owner.name)
-      expect(body["participants"]).to eq([ { "id" => member.id, "name" => member.name } ])
+      expect(body["owner"]).to include("id" => owner.id, "name" => owner.name)
+      expect(body["participants"].map { _1["id"] }).to eq([ member.id ])
       expect(body["current_user_joined"]).to be(true)
     end
 

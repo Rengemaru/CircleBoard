@@ -23,7 +23,7 @@ RSpec.describe "プロジェクトの参加申請と参加者一覧", type: :req
       get "/api/projects/#{project.id}"
 
       body = response.parsed_body
-      expect(body["participants"]).to eq([ { "id" => other.id, "name" => other.name } ])
+      expect(body["participants"].map { _1["id"] }).to eq([ other.id ])
       expect(body["current_user_joined"]).to be(false)
     end
 

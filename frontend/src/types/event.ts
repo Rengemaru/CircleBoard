@@ -7,6 +7,15 @@ export type Tag = {
   name: string;
 };
 
+// 参加者・主催のカードに出す1人分(backend の UserCardSerializer)。
+// ログイン時のみサーバーが返す。role や email は含まれない
+export type UserCard = {
+  id: number;
+  name: string;
+  department: string | null;
+  pronouns: string | null;
+};
+
 // 型名を Event にすると DOM の組み込み型 Event を隠してしまうため避けている。
 export type EventSummary = {
   id: number;
@@ -24,12 +33,12 @@ export type EventSummary = {
   // owner と current_user_joined はログイン時のみサーバーが返す。
   // 未ログインではキーごと存在しない(docs/spec-v2.2.md §4.2)。
   // 省略可能であることを型でも表す
-  owner?: { id: number; name: string };
+  owner?: UserCard;
   current_user_joined?: boolean;
 };
 
 // 詳細API。一覧と同じ EventSerializer が detail: true で返す形。
 // participants だけは詳細にしか無い。名前の並びは一覧の1行に入れるものではない
 export type EventDetail = EventSummary & {
-  participants?: { id: number; name: string }[];
+  participants?: UserCard[];
 };
