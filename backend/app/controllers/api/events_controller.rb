@@ -1,6 +1,7 @@
 module Api
   class EventsController < ApplicationController
     include TagFilterable
+    include TitleSearchable
 
     before_action :require_login, only: [ :create, :update, :destroy ]
     before_action :set_event, only: [ :show, :update, :destroy ]
@@ -11,6 +12,7 @@ module Api
       events = Event.active.includes(:tags, :owner, :active_event_participations)
       events = filter_by_status(events)
       events = filter_by_tag(events)
+      events = filter_by_title(events)
       events = sort_events(events)
 
       render json: { events: events.map { EventSerializer.new(_1, current_user: current_user).as_json } }
