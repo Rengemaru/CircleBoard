@@ -183,7 +183,35 @@ export function SignagePage() {
   );
 }
 
+// 焼き付き対策。部室のディスプレイは終日点けっぱなしで、データが変わらなければ
+// 描画も1ピクセルも変わらない。黄色のセクションバーやピン留めバッジのような
+// 固定位置の高輝度な要素が、同じ画素に焼き付き続ける(Issue #223)。
+//
+// 60秒ごとに 2px の範囲で描画位置を回す。3m先からは分からない。
+// 左右・上下で足した値が一定になるよう padding を振り分けるので、
+// 中身の入る幅と高さは変わらない（ずらしたせいではみ出すことがない）
+const BURN_IN_OFFSETS = [
+  { x: 0, y: 0 },
+  { x: 2, y: 0 },
+  { x: 2, y: 2 },
+  { x: 0, y: 2 },
+] as const;
+
+function useBurnInOffset(): (typeof BURN_IN_OFFSETS)[number] {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setStep((s) => s + 1), REFRESH_INTERVAL_SECONDS * 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return BURN_IN_OFFSETS[step % BURN_IN_OFFSETS.length];
+}
+
 function Screen({ children }: { children: React.ReactNode }) {
+  const offset = useBurnInOffset();
+
   return (
     <div
       className="flex h-screen w-screen flex-col gap-[1.6%] bg-[linear-gradient(135deg,#0f0f15_0%,#1a1a24_100%)] text-[#f2f3f7]"
@@ -193,7 +221,10 @@ function Screen({ children }: { children: React.ReactNode }) {
       style={
         {
           "--sg-u": SIGNAGE_UNIT,
-          padding: `${su(2.2)} ${su(2.6)}`,
+          paddingTop: `calc(${su(2.2)} + ${offset.y}px)`,
+          paddingBottom: `calc(${su(2.2)} - ${offset.y}px)`,
+          paddingLeft: `calc(${su(2.6)} + ${offset.x}px)`,
+          paddingRight: `calc(${su(2.6)} - ${offset.x}px)`,
           fontFamily: SIGNAGE_FONT_FAMILY,
           fontFeatureSettings: '"palt"',
           fontWeight: 500,
