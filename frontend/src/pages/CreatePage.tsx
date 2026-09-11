@@ -66,6 +66,11 @@ const DESCRIPTION_MAX = 2000;
 const LOCATION_MAX = 100;
 const SCHEDULE_MAX = 100;
 const EXTERNAL_URL_MAX = 2000;
+
+// 定員の範囲。サーバー側の検証と同じ値(backend の Event::MAX_CAPACITY)。
+// 空欄は無制限なので、min を付けても未入力は通る
+const CAPACITY_MIN = 1;
+const CAPACITY_MAX = 1000;
 const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
 export function CreatePage() {
@@ -306,6 +311,8 @@ export function CreatePage() {
                 type="number"
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
+                min={CAPACITY_MIN}
+                max={CAPACITY_MAX}
                 width="100%"
               />
             </FormControl>
