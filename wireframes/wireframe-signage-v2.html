@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircleBoard ワイヤーフレーム — サイネージ v2.3 案（視認性改修）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ink:#1b1d21; --ink-2:#5a5f68; --ink-3:#8b9098;
+    --line:#d5d8dd; --line-2:#e8eaee;
+    --paper:#fbfbfc; --surface:#ffffff;
+    --spec:#0a6cba; --spec-bg:#eaf3fb;
+    --warn:#a8560c; --warn-bg:#fdf4e9;
+    --bad:#b3261e; --bad-bg:#fbeceb;
+    --ok:#1c7048; --ok-bg:#e9f4ee;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+
+    /* signage palette — spec §5.3 + 改修分(F-3 / F-4) */
+    --sg-bg1:#0f0f15; --sg-bg2:#1a1a24;
+    --sg-fg:#f2f3f7; --sg-fg2:#9aa0ae;
+    --sg-fg3:#8b93a4;          /* was #5d6474 — 2.69:1 → 5.17:1 (F-3) */
+    --sg-line:#676f88;         /* was #2b2e3c — 1.18:1 → 3.19:1 (F-3) */
+    --sg-tag:#2b2e3c;
+    --sg-ev:#fcd34d;
+    --sg-pj:#5eb3f5;
+    --sg-rec:#4ade80;
+    --sg-alert:#fca5a5;
+    /* F-4: サイネージ専用のフォントスタック。system-ui に任せない */
+    --sg-font:"Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 24px 120px;}
+
+  .doc{border-bottom:2px solid var(--ink);padding-bottom:24px;}
+  .doc .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--spec);}
+  .doc h1{font-size:26px;font-weight:700;margin:8px 0 6px;letter-spacing:-.01em;}
+  .doc p{margin:0;color:var(--ink-2);font-size:13px;}
+  .doc .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+  .callout{margin:24px 0 40px;padding:16px 18px;background:var(--spec-bg);border-left:3px solid var(--spec);font-size:13px;}
+  .callout b{color:var(--spec);}
+
+  .screen{margin:0 0 56px;}
+  .screen-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--ink);}
+  .screen-no{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 7px;}
+  .screen-nm{font-size:16px;font-weight:700;}
+  .screen-url{font-family:var(--mono);font-size:12px;color:var(--spec);}
+  .screen-cond{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--line);padding:1px 8px;}
+
+  .note{font-family:var(--mono);font-size:11.5px;color:var(--spec);background:var(--spec-bg);border-left:2px solid var(--spec);padding:7px 10px;margin:10px 0;}
+  .note.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn);}
+  .note.bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad);}
+  .note b{font-weight:700;}
+
+  /* ---------- signage canvas (16:9 実寸比) ----------
+     単位は cqw = キャンバス幅の1%。実装の su(n) は 16:9 のとき n vw と等しいので、
+     ここに書いた数値はそのまま SignagePage.tsx の su(n) の n になる。 */
+  .cqw{container-type:inline-size;}
+  .canvas{
+    aspect-ratio:16/9; width:100%;
+    background:linear-gradient(135deg,var(--sg-bg1) 0%,var(--sg-bg2) 100%);
+    color:var(--sg-fg);
+    font-family:var(--sg-font);
+    font-weight:500;                 /* F-4: 細いままにしない */
+    font-feature-settings:"palt";    /* F-4: ワイヤーフレーム v2.2 にあった詰めを復活 */
+    padding:2.2cqw 2.6cqw;           /* F-1: % をやめる。上下の余白が幅に引きずられるため */
+    display:flex; flex-direction:column; gap:1.6%;
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+
+  .cv-hd{display:flex;align-items:flex-end;justify-content:space-between;
+         border-bottom:1px solid var(--sg-line);padding-bottom:1.04cqw;}
+  .cv-logo{font-size:2.4cqw;font-weight:700;letter-spacing:-.01em;line-height:1.2;}
+  .cv-sub{font-size:2.0cqw;color:var(--sg-fg3);line-height:1.2;margin-top:.2em;}
+  .cv-hd-r{display:flex;align-items:flex-end;gap:2cqw;}
+  .cv-status{font-size:2.0cqw;color:var(--sg-fg3);text-align:right;line-height:1.25;}
+  .cv-status .alert{color:var(--sg-alert);display:block;}
+  .cv-clock{font-size:3.6cqw;font-weight:700;line-height:1;letter-spacing:-.02em;text-align:right;
+            font-variant-numeric:tabular-nums;}
+  .cv-clock .sec{font-size:.45em;font-weight:400;color:var(--sg-fg3);margin-left:.15em;}
+  .cv-date{font-size:2.0cqw;color:var(--sg-fg3);text-align:right;margin-top:.35em;line-height:1.2;}
+
+  .cv-sec-t{font-size:2.0cqw;font-weight:700;letter-spacing:.08em;color:var(--sg-fg2);
+            display:flex;align-items:center;gap:.7em;margin-bottom:.85cqw;line-height:1.2;}
+  .cv-sec-t .bar{width:.35em;height:1.15em;background:var(--sg-ev);flex:none;}
+  .cv-sec-t.pj .bar{background:var(--sg-pj);}
+  .cv-sec-t .cnt{margin-left:auto;font-weight:400;color:var(--sg-fg3);}
+
+  .ev-zone{flex:1.75;display:flex;flex-direction:column;min-height:0;}
+  .pj-zone{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .cv-grid{display:grid;gap:1.1%;flex:1;min-height:0;}
+  .n1{grid-template-columns:1fr;}
+  .n2{grid-template-columns:1fr 1fr;}
+  .n4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+  .p3{grid-template-columns:repeat(3,1fr);}
+
+  .ec{border:1px solid var(--sg-line);background:rgba(255,255,255,.03);border-radius:2px;
+      display:flex;align-items:center;justify-content:space-between;gap:2%;min-height:0;}
+  .ec-body{min-width:0;}
+  .ec-pin{display:inline-block;background:var(--sg-ev);color:var(--sg-bg1);font-weight:700;
+          font-size:2.0cqw;padding:.05em .4em;border-radius:2px;margin-right:.5em;vertical-align:.12em;}
+  .ec-cd{font-weight:700;color:var(--sg-ev);line-height:1;display:inline;}
+  .ec-when{font-size:2.0cqw;color:var(--sg-fg2);line-height:1.15;}
+  .ec-t{font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ec-tags{display:flex;flex-wrap:wrap;gap:.5em;list-style:none;padding:0;}
+  .ec-tags li{background:var(--sg-tag);border:1px solid var(--sg-line);border-radius:2px;
+              font-size:2.0cqw;padding:.1em .5em;line-height:1.15;}
+  .qr{flex:none;background:
+      repeating-conic-gradient(#1b1b23 0% 25%, #f2f3f7 0% 50%) 0 0/9% 9%;
+      border:.35cqw solid #f2f3f7;}
+
+  /* 3〜4件（compact） */
+  .ec.c4{padding:.47cqw;}
+  .ec.c4 .ec-cd{font-size:3.2cqw;}
+  .ec.c4 .ec-pin{font-size:1.7cqw;}
+  .ec.c4 .ec-when{margin-top:.35em;}
+  .ec.c4 .ec-t{font-size:2.5cqw;margin-top:.25em;}
+  .ec.c4 .qr{width:8.6cqw;height:8.6cqw;}
+  /* 2件（normal） */
+  .ec.c2{padding:.7cqw;}
+  .ec.c2 .ec-cd{font-size:4.8cqw;}
+  .ec.c2 .ec-when{margin-top:.5em;}
+  .ec.c2 .ec-t{font-size:3.2cqw;margin-top:.3em;}
+  .ec.c2 .ec-tags{margin-top:.5em;}
+  .ec.c2 .qr{width:11.5cqw;height:11.5cqw;}
+  /* 1件（hero） */
+  .ec.c1{padding:1.4cqw;}
+  .ec.c1 .ec-cd{font-size:7.0cqw;}
+  .ec.c1 .ec-when{margin-top:.5em;}
+  .ec.c1 .ec-t{font-size:3.8cqw;margin-top:.3em;}
+  .ec.c1 .ec-tags{margin-top:.5em;}
+  .ec.c1 .qr{width:16.7cqw;height:16.7cqw;}
+
+  .pc{border:1px solid var(--sg-line);background:rgba(255,255,255,.03);border-radius:2px;
+      padding:.46cqw;display:flex;align-items:center;justify-content:space-between;gap:4%;min-height:0;}
+  .pc-st{display:inline-block;font-size:2.0cqw;font-weight:700;border-radius:2px;
+         padding:.1em .5em;background:var(--sg-rec);color:var(--sg-bg1);line-height:1.2;}
+  .pc-st.prg{background:var(--sg-pj);}
+  .pc-t{font-size:2.2cqw;font-weight:700;margin-top:.4em;line-height:1.15;
+        display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
+  .pc-m{font-size:2.0cqw;color:var(--sg-fg2);margin-top:.3em;line-height:1.15;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pc .qr{width:6.5cqw;height:6.5cqw;}
+
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;}
+  .empty .lg{font-size:4.6cqw;font-weight:700;letter-spacing:-.02em;}
+  .empty .ms{font-size:2.8cqw;color:var(--sg-fg2);}
+  .empty .qr{width:15.6cqw;height:15.6cqw;}
+  .empty .url{font-size:2.0cqw;color:var(--sg-fg3);}
+
+  /* 旧スケール（案A・比較用）。v2.2 の実装値そのまま */
+  .canvas.old .cv-logo{font-size:2.1cqw;}
+  .canvas.old .cv-sub,
+  .canvas.old .cv-date,
+  .canvas.old .cv-status,
+  .canvas.old .cv-sec-t,
+  .canvas.old .ec-when,
+  .canvas.old .ec-tags li,
+  .canvas.old .ec-pin{font-size:1.3cqw;}
+  .canvas.old .cv-clock{font-size:3.1cqw;}
+  .canvas.old .ec.c4 .ec-cd{font-size:1.9cqw;}
+  .canvas.old .ec.c4 .ec-t{font-size:1.4cqw;}
+  .canvas.old .ec.c4 .qr{width:5.7cqw;height:5.7cqw;}
+  .canvas.old .pc-st,.canvas.old .pc-m{font-size:1.3cqw;}
+  .canvas.old .pc-t{font-size:1.5cqw;}
+  .canvas.old .pc .qr{width:4.7cqw;height:4.7cqw;}
+  .canvas.old{--sg-fg3:#5d6474;--sg-line:#2b2e3c;--sg-font:system-ui,sans-serif;font-weight:400;font-feature-settings:normal;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0;}
+  th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);
+     text-transform:uppercase;border-bottom:1px solid var(--ink);padding:6px 8px;}
+  td{border-bottom:1px solid var(--line-2);padding:8px;vertical-align:top;}
+  td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .tag-ok{color:var(--ok);font-family:var(--mono);font-size:11px;font-weight:700;}
+  .tag-bad{color:var(--bad);font-family:var(--mono);font-size:11px;font-weight:700;}
+  .scroll{overflow-x:auto;}
+  h2.sec{font-size:18px;margin:48px 0 4px;padding-bottom:8px;border-bottom:2px solid var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Wireframe · Signage v2.3（案） — 視認性改修</div>
+  <h1>CircleBoard — サイネージ（改修案）</h1>
+  <p>
+    <code>wireframe-signage.html</code>（v2.2・確定版）の後継案。レイアウトの構造は変えず、
+    <b>視距離・コントラスト・フォント指定</b>だけを直したときにどう見えるかを実寸比で描いたもの。
+    根拠は「サイネージ検査記録」の所見 F-2〜F-5。
+  </p>
+  <div class="meta">
+    <span>VERSION v2.3 案</span><span>2026-09-11</span><span>1920×1080 / 16:9</span>
+    <span>視距離 2.5m 想定</span><span>未承認</span>
+  </div>
+</header>
+
+<div class="callout">
+  <b>この案の要点は1つだけ。「遠くから読める大きさにすると、1枚のカードに入る項目が減る」。</b><br>
+  最小フォントを 25px → 38px に上げると、3〜4件表示のカードからタグが落ちます。
+  <b>文字を大きくすることと、項目を減らすことはセットでしか選べません。</b>
+  下の S1 と S6 を見比べて、どちらを採るか決めてください。決まるまで実装には入りません。
+</div>
+
+<!-- ============ S1: 4件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S1</span><span class="screen-nm">標準表示</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント3〜4件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div>
+        <div class="cv-logo">CircleBoard</div>
+        <div class="cv-sub">情報系学生サークル</div>
+      </div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47</div>
+        <div>
+          <div class="cv-clock">15:47<span class="sec">:25</span></div>
+          <div class="cv-date">2026年9月11日（金）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">4件</span></div>
+      <div class="cv-grid n4">
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-pin">📌 ピン留め</span><span class="ec-cd">あと3日</span></div>
+            <div class="ec-when">9/14（月）15:47 ・ 3号館 401教室</div>
+            <div class="ec-t">新歓LT会 2026 〜はじめてのアウトプット〜</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと8日</span></div>
+            <div class="ec-when">9/19（土）15:47 ・ 部室</div>
+            <div class="ec-t">Rails もくもく会</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと11日</span></div>
+            <div class="ec-when">9/22（火）15:47 ・ 3号館 302教室</div>
+            <div class="ec-t">競プロ練習会 ABC復習</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと14日</span></div>
+            <div class="ec-when">9/25（金）15:47 ・ 部室</div>
+            <div class="ec-t">学園祭 展示企画 キックオフ</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>プロジェクト<span class="cnt">3件</span></div>
+      <div class="cv-grid p3">
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st">募集中</span>
+            <div class="pc-t">部室予約システム</div>
+            <div class="pc-m">毎週水曜 18:00〜 ・ 4 / 8名</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st prg">進行中</span>
+            <div class="pc-t">CircleBoard 本体開発</div>
+            <div class="pc-m">毎週金曜 17:00〜 ・ 6名</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="pc">
+          <div class="ec-body">
+            <span class="pc-st">募集中</span>
+            <div class="pc-t">サークル紹介 LP リニューアル</div>
+            <div class="pc-m">隔週火曜 ・ 2 / 5名</div>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="note bad">
+    <b>v2.2 からの最大の変更：3〜4件表示のカードからタグを落とす。</b>
+    最小フォントを 38px に上げると、残り日数・日時・場所・タイトルで高さを使い切る。
+    タグを残すと必ずはみ出す（検査記録 F-1 で直したのと同じ壊れ方に戻る）。
+    タグは 1件・2件表示のときだけ出す。
+  </div>
+  <div class="note">
+    <b>「最終更新」を補助色から格上げした。</b>画面が古いことに気づかせるための文字なのに、
+    v2.2 では最もコントラストの低い色（2.69:1）が当たっていた。#8b93a4（5.17:1）に変更（F-3）。
+  </div>
+</section>
+
+<!-- ============ S2: 2件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S2</span><span class="screen-nm">中規模</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント2件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47</div>
+        <div><div class="cv-clock">15:47<span class="sec">:25</span></div>
+        <div class="cv-date">2026年9月11日（金）</div></div>
+      </div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">2件</span></div>
+      <div class="cv-grid n2">
+        <div class="ec c2">
+          <div class="ec-body">
+            <div><span class="ec-pin">📌 ピン留め</span><span class="ec-cd">あと3日</span></div>
+            <div class="ec-when">9/14（月）15:47 ・ 3号館 401教室</div>
+            <div class="ec-t">新歓LT会 2026</div>
+            <ul class="ec-tags"><li>LT</li><li>新歓</li><li>初心者歓迎</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c2">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと8日</span></div>
+            <div class="ec-when">9/19（土）15:47 ・ 部室</div>
+            <div class="ec-t">Rails もくもく会</div>
+            <ul class="ec-tags"><li>Rails</li><li>もくもく</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>プロジェクト<span class="cnt">3件</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">部室予約システム</div><div class="pc-m">毎週水曜 18:00〜 ・ 4 / 8名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">CircleBoard 本体開発</div><div class="pc-m">毎週金曜 17:00〜 ・ 6名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">サークル紹介 LP リニューアル</div><div class="pc-m">隔週火曜 ・ 2 / 5名</div></div><div class="qr"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    <b>2件のときは1行になるので高さに余裕がある。</b>タグを出し、残り日数を 4.2cqw（80px）まで上げる。
+    QRも 190px（50型で 110mm ≒ 1.1m から読める）に拡大する。
+  </div>
+</section>
+
+<!-- ============ S3: 1件（ヒーロー） ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S3</span><span class="screen-nm">ヒーロー</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント1件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47</div>
+        <div><div class="cv-clock">15:47<span class="sec">:25</span></div>
+        <div class="cv-date">2026年9月11日（金）</div></div>
+      </div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">1件</span></div>
+      <div class="cv-grid n1">
+        <div class="ec c1">
+          <div class="ec-body">
+            <div><span class="ec-pin">📌 ピン留め</span><span class="ec-cd">あと3日</span></div>
+            <div class="ec-when">9/14（月）15:47 ・ 3号館 401教室</div>
+            <div class="ec-t">新歓LT会 2026 〜はじめてのアウトプット〜</div>
+            <ul class="ec-tags"><li>LT</li><li>新歓</li><li>初心者歓迎</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>プロジェクト<span class="cnt">3件</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">部室予約システム</div><div class="pc-m">毎週水曜 18:00〜 ・ 4 / 8名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">CircleBoard 本体開発</div><div class="pc-m">毎週金曜 17:00〜 ・ 6名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">サークル紹介 LP リニューアル</div><div class="pc-m">隔週火曜 ・ 2 / 5名</div></div><div class="qr"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    <b>QRを 220px → 320px に拡大（F-5）。</b>50型で 184mm になり、10:1 則で 1.8m から読める。
+    2〜3m には届かないが、ヒーローと0件表示だけは「近づかなくても読める」側に寄せられる。
+    3〜4件表示のカードに 3m 用のQR（300mm ＝ 520px 相当）は物理的に入らない。
+  </div>
+</section>
+
+<!-- ============ S4: 0件 ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S4</span><span class="screen-nm">0件</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">イベント・プロジェクトとも0件</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47</div>
+        <div><div class="cv-clock">15:47<span class="sec">:25</span></div>
+        <div class="cv-date">2026年9月11日（金）</div></div>
+      </div>
+    </div>
+    <div class="empty">
+      <div class="lg">CircleBoard</div>
+      <p class="ms" style="margin:0;">いま募集中の企画はありません</p>
+      <div class="qr"></div>
+      <div class="url">企画の投稿はこちらから</div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    <b>0件のときが最も遠くから読める。</b>QRは 300px（55型で 190mm ＝ 1.9m から読める）。
+    この画面だけは「近づかなくてもスマホで開ける」状態にできる。
+  </div>
+</section>
+
+<!-- ============ S5: 更新できていないとき ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S5</span><span class="screen-nm">更新できていないとき</span>
+    <span class="screen-url">/signage?token=xxx</span><span class="screen-cond">取得失敗・直前の内容を保持</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47<span class="alert">サーバーに接続できません</span></div>
+        <div><div class="cv-clock">16:12<span class="sec">:40</span></div>
+        <div class="cv-date">2026年9月11日（金）</div></div>
+      </div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">2件</span></div>
+      <div class="cv-grid n2">
+        <div class="ec c2">
+          <div class="ec-body">
+            <div><span class="ec-pin">📌 ピン留め</span><span class="ec-cd">あと3日</span></div>
+            <div class="ec-when">9/14（月）15:47 ・ 3号館 401教室</div>
+            <div class="ec-t">新歓LT会 2026</div>
+            <ul class="ec-tags"><li>LT</li><li>新歓</li><li>初心者歓迎</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c2">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと8日</span></div>
+            <div class="ec-when">9/19（土）15:47 ・ 部室</div>
+            <div class="ec-t">Rails もくもく会</div>
+            <ul class="ec-tags"><li>Rails</li><li>もくもく</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>プロジェクト<span class="cnt">3件</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">部室予約システム</div><div class="pc-m">毎週水曜 18:00〜 ・ 4 / 8名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">CircleBoard 本体開発</div><div class="pc-m">毎週金曜 17:00〜 ・ 6名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">サークル紹介 LP リニューアル</div><div class="pc-m">隔週火曜 ・ 2 / 5名</div></div><div class="qr"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note warn">
+    <b>時計は16:12なのに最終更新が15:47。この差が「止まっている」の証拠になる。</b>
+    v2.2 でもこの2つは出していたが、どちらも 2.69:1 の色だったため遠目には存在しないのと同じだった（F-3）。
+    警告の文言は色だけに頼らず、必ずテキストでも出す。
+  </div>
+</section>
+
+<!-- ============ S6: 参考・案A ============ -->
+<section class="screen">
+  <div class="screen-hd">
+    <span class="screen-no">S6</span><span class="screen-nm">参考：案A（v2.2 のまま・視距離1.5m前提）</span>
+    <span class="screen-cond">比較用・採用しない場合の姿</span>
+  </div>
+  <div class="cqw">
+  <div class="canvas old">
+    <div class="cv-hd">
+      <div><div class="cv-logo">CircleBoard</div><div class="cv-sub">情報系学生サークル</div></div>
+      <div class="cv-hd-r">
+        <div class="cv-status">最終更新 15:47</div>
+        <div><div class="cv-clock">15:47<span class="sec">:25</span></div>
+        <div class="cv-date">2026年9月11日（金）</div></div>
+      </div>
+    </div>
+    <div class="ev-zone">
+      <div class="cv-sec-t"><span class="bar"></span>注目イベント<span class="cnt">4件</span></div>
+      <div class="cv-grid n4">
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-pin">📌 ピン留め</span><span class="ec-cd">あと3日</span></div>
+            <div class="ec-when">9/14（月）15:47 ・ 3号館 401教室</div>
+            <div class="ec-t">新歓LT会 2026 〜はじめてのアウトプット〜</div>
+            <ul class="ec-tags"><li>LT</li><li>新歓</li><li>初心者歓迎</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと8日</span></div>
+            <div class="ec-when">9/19（土）15:47 ・ 部室</div>
+            <div class="ec-t">Rails もくもく会</div>
+            <ul class="ec-tags"><li>Rails</li><li>もくもく</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと11日</span></div>
+            <div class="ec-when">9/22（火）15:47 ・ 3号館 302教室</div>
+            <div class="ec-t">競プロ練習会 ABC復習</div>
+            <ul class="ec-tags"><li>競プロ</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+        <div class="ec c4">
+          <div class="ec-body">
+            <div><span class="ec-cd">あと14日</span></div>
+            <div class="ec-when">9/25（金）15:47 ・ 部室</div>
+            <div class="ec-t">学園祭 展示企画 キックオフ</div>
+            <ul class="ec-tags"><li>学園祭</li><li>展示</li></ul>
+          </div>
+          <div class="qr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pj-zone">
+      <div class="cv-sec-t pj"><span class="bar"></span>プロジェクト<span class="cnt">3件</span></div>
+      <div class="cv-grid p3">
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">部室予約システム</div><div class="pc-m">毎週水曜 18:00〜 ・ 4 / 8名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st prg">進行中</span><div class="pc-t">CircleBoard 本体開発</div><div class="pc-m">毎週金曜 17:00〜 ・ 6名</div></div><div class="qr"></div></div>
+        <div class="pc"><div class="ec-body"><span class="pc-st">募集中</span><div class="pc-t">サークル紹介 LP リニューアル</div><div class="pc-m">隔週火曜 ・ 2 / 5名</div></div><div class="qr"></div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="note">
+    <b>案A は情報量で勝ち、可読距離で負ける。</b>タグも説明も全部載るが、最小フォントは 25px のままで、
+    55型でも 1.6m まで近づかないと読めない。<b>「部室に入った人が席から見る画面」ではなく「掲示板として近くで読む画面」になる。</b>
+    これで良いと決めるなら、仕様 §5.3 の「視認距離2〜3m」を 1.5m に書き換える必要がある。
+  </div>
+</section>
+
+<!-- ============ 付表 ============ -->
+<h2 class="sec">付表1 — 色（spec §5.3 からの変更）</h2>
+<p style="font-size:13px;color:var(--ink-2);margin:8px 0 0;">
+  コントラスト比は最も条件の悪い面（グラデーション右下 <code>#1a1a24</code> に <code>white 3%</code> を重ねた <code>#21212b</code>）で算出。
+</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>用途</th><th>v2.2</th><th class="n">比</th><th>v2.3 案</th><th class="n">比</th><th>要件</th></tr></thead>
+  <tbody>
+    <tr><td>本文</td><td><code>#f2f3f7</code></td><td class="n">14.38</td><td><code>#f2f3f7</code> 据え置き</td><td class="n">14.38</td><td class="tag-ok">OK</td></tr>
+    <tr><td>副文（日時・場所）</td><td><code>#9aa0ae</code></td><td class="n">6.08</td><td><code>#9aa0ae</code> 据え置き</td><td class="n">6.08</td><td class="tag-ok">OK</td></tr>
+    <tr><td>補助（最終更新・日付・件数）</td><td><code>#5d6474</code></td><td class="n tag-bad">2.69</td><td><code>#8b93a4</code></td><td class="n">5.17</td><td>4.5:1 以上</td></tr>
+    <tr><td>罫線・カード枠</td><td><code>#2b2e3c</code></td><td class="n tag-bad">1.18</td><td><code>#676f88</code></td><td class="n">3.19</td><td>3:1 以上</td></tr>
+    <tr><td>イベント黄</td><td><code>#fcd34d</code></td><td class="n">11.06</td><td>据え置き</td><td class="n">11.06</td><td class="tag-ok">OK</td></tr>
+    <tr><td>プロジェクト青</td><td><code>#5eb3f5</code></td><td class="n">7.02</td><td>据え置き</td><td class="n">7.02</td><td class="tag-ok">OK</td></tr>
+    <tr><td>募集中 緑</td><td><code>#4ade80</code></td><td class="n">9.15</td><td>据え置き</td><td class="n">9.15</td><td class="tag-ok">OK</td></tr>
+    <tr><td>警告 赤</td><td><code>#fca5a5</code></td><td class="n">8.40</td><td>据え置き</td><td class="n">8.40</td><td class="tag-ok">OK</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="note">
+  <b>背景のグラデーション（#0f0f15 → #1a1a24）は変えない。</b>Material のダークテーマが薦める #121212 とほぼ同じ明度で、
+  純黒を避けるという条件は既に満たしている。
+</div>
+
+<h2 class="sec">付表2 — 文字の大きさ</h2>
+<p style="font-size:13px;color:var(--ink-2);margin:8px 0 0;">
+  px は 1920×1080 換算。実寸と可読距離は <b>55型</b>（1px = 0.634mm）で計算。和文のインキ高さを em の 0.85 倍、
+  視距離3mにつき文字高25mm として換算した。
+</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>要素</th><th class="n">v2.2</th><th class="n">可読距離</th><th class="n">v2.3 案</th><th class="n">実寸</th><th class="n">可読距離</th></tr></thead>
+  <tbody>
+    <tr><td><b>最小フォント</b>（日時・場所・件数・最終更新）</td><td class="n">25.0 px</td><td class="n tag-bad">1.6 m</td><td class="n">38.4 px</td><td class="n">24.4 mm</td><td class="n">2.5 m</td></tr>
+    <tr><td>ロゴ</td><td class="n">40.3</td><td class="n">2.6 m</td><td class="n">46.1</td><td class="n">29.2</td><td class="n">3.0 m</td></tr>
+    <tr><td>時計</td><td class="n">59.5</td><td class="n">3.9 m</td><td class="n">69.1</td><td class="n">43.8</td><td class="n">4.5 m</td></tr>
+    <tr><td>残り日数（3〜4件）</td><td class="n">36.5</td><td class="n">2.4 m</td><td class="n">61.4</td><td class="n">38.9</td><td class="n">4.0 m</td></tr>
+    <tr><td>タイトル（3〜4件）</td><td class="n">26.9</td><td class="n tag-bad">1.7 m</td><td class="n">48.0</td><td class="n">30.4</td><td class="n">3.1 m</td></tr>
+    <tr><td>残り日数（2件）</td><td class="n">51.8</td><td class="n">3.4 m</td><td class="n">92.2</td><td class="n">58.5</td><td class="n">6.0 m</td></tr>
+    <tr><td>タイトル（2件）</td><td class="n">33.6</td><td class="n">2.2 m</td><td class="n">61.4</td><td class="n">38.9</td><td class="n">4.0 m</td></tr>
+    <tr><td>残り日数（1件）</td><td class="n">107.5</td><td class="n">7.0 m</td><td class="n">134.4</td><td class="n">85.2</td><td class="n">8.7 m</td></tr>
+    <tr><td>タイトル（1件）</td><td class="n">61.4</td><td class="n">4.0 m</td><td class="n">73.0</td><td class="n">46.3</td><td class="n">4.7 m</td></tr>
+    <tr><td>プロジェクト名</td><td class="n">28.8</td><td class="n tag-bad">1.9 m</td><td class="n">42.2</td><td class="n">26.8</td><td class="n">2.7 m</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="sec">付表3 — QRの大きさ（10:1 則）</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>配置</th><th class="n">v2.2</th><th class="n">読める距離</th><th class="n">v2.3 案</th><th class="n">実寸</th><th class="n">読める距離</th></tr></thead>
+  <tbody>
+    <tr><td>1件（ヒーロー）</td><td class="n">220 px</td><td class="n">1.4 m</td><td class="n">320 px</td><td class="n">203 mm</td><td class="n">2.0 m</td></tr>
+    <tr><td>0件表示</td><td class="n">200</td><td class="n">1.3 m</td><td class="n">300</td><td class="n">190</td><td class="n">1.9 m</td></tr>
+    <tr><td>2件</td><td class="n">110</td><td class="n tag-bad">0.7 m</td><td class="n">221</td><td class="n">140</td><td class="n">1.4 m</td></tr>
+    <tr><td>3〜4件</td><td class="n">110</td><td class="n tag-bad">0.7 m</td><td class="n">165</td><td class="n">105</td><td class="n">1.1 m</td></tr>
+    <tr><td>プロジェクト</td><td class="n">90</td><td class="n tag-bad">0.6 m</td><td class="n">125</td><td class="n">79</td><td class="n">0.8 m</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="note warn">
+  <b>QRだけは 2〜3m に届かない。</b>3m から読める QR は 300mm（520px 相当）で、カードには入らない。
+  この案は「遠くから残り日数とタイトルを読み、気になったら1〜2m まで歩み寄ってQRを読む」という動線を前提にしている。
+  <b>この前提を仕様に明記することが、この案の受け入れ条件のひとつ。</b>
+</div>
+
+<h2 class="sec">実装に写すとき</h2>
+<div class="note">
+  <b>このファイルの cqw の数値は、そのまま <code>SignagePage.tsx</code> の <code>su(n)</code> の n になる。</b>
+  <code>su(n)</code> は 16:9 のとき n vw と等しく、キャンバス幅の n% に一致するため。
+  例：<code>.ec.c4 .ec-cd{font-size:3.2cqw}</code> → <code>COUNTDOWN_SIZE.compact = su(3.2)</code>。
+</div>
+<div class="note warn">
+  <b>ゾーンの高さ配分を変えている。</b><code>.ev-zone</code> の flex を 1.35 → 1.75 に上げた。
+  文字を大きくすると 2×2 のカードが高さ不足になるため、余っていたプロジェクト枠（実測で1枚あたり50px余剰）から回す。
+</div>
+<div class="note bad">
+  <b>タイトルは1行で切れる。</b>3〜4件表示のカードは幅900px・文字48pxで、日本語なら約14文字で <code>…</code> になる
+  （上の S1 で実際に切れている）。2行にする余地は高さに無い。
+  <b>長いタイトルを最後まで出したいなら、4件表示そのものを諦めるしかない。</b>
+</div>
+
+
+</div>
+</body>
+</html>
