@@ -56,15 +56,15 @@ class Event < ApplicationRecord
   # まだ開催されていないもの。この判定はここ1箇所だけに置く。
   # サイネージ(spotlight_targets)と一覧API(EventsController#index)が
   # 別々に「開催日 > 今」と書くと、23時台だけ食い違う
-  scope :upcoming, lambda {
-    from = if Time.current.hour >= SAME_DAY_CUTOFF_HOUR
-             Date.current.tomorrow.in_time_zone
-    else
-             Time.current.beginning_of_day
-    end
+  scope :upcoming, -> { where(starts_at: upcoming_from..) }
 
-    where(starts_at: from..)
-  }
+  # 「まだ開催されていない」の境目。開催当日は23時まで残す。
+  # scope と作成時の検証が同じ線を使うので、一覧に出ない日時では作れない
+  def self.upcoming_from(now = Time.current)
+    return now.to_date.tomorrow.in_time_zone if now.hour >= SAME_DAY_CUTOFF_HOUR
+
+    now.beginning_of_day
+  end
 
   scope :spotlight_targets, -> { active.recruiting.upcoming }
 
@@ -104,6 +104,12 @@ class Event < ApplicationRecord
 
   # 定員判定はここ1箇所。capacity が nil のときは無制限(仕様書 §2.2)。
   # フロントでボタンを隠すのは表示の話であって制限ではないので、API側で必ず使う
+  def starts_at_not_in_past
+    return if starts_at.nil? || starts_at >= self.class.upcoming_from
+
+    errors.add(:starts_at, "は過去の日時にできません")
+  end
+
   def full?
     capacity.present? && active_event_participations.size >= capacity
   end
@@ -129,6 +135,18 @@ class Event < ApplicationRecord
   validates :description, presence: true, length: { maximum: MAX_DESCRIPTION_LENGTH }
   validates :location, presence: true, length: { maximum: MAX_LOCATION_LENGTH }
   validates :starts_at, presence: true
+
+  # 過去の日時では作らせない(2026-09-12 の監査)。10年前のイベントが作れていた。
+  #
+  # 一覧は upcoming で隠すので表には出ないが、recalculate_spotlight_scores は
+  # active 全件を回すため、注目スコアだけが巨大な値になる
+  # (imminence = 14 - (-3650))。
+  #
+  # **作成時だけ見る。** 更新でも見ると、開催済みのイベントの説明を直せなくなる。
+  #
+  # 募集中のものだけ見る。終わった企画を記録として後から登録するのは普通の操作で、
+  # seed もそうしている。APIの作成は status を受け取らないので必ず募集中になる
+  validate :starts_at_not_in_past, on: :create, if: :recruiting?
   # 任意項目。maximum だけの検証は nil も空文字も通すので allow_nil は付けない。
   #
   # 形式は2026-09-12 の監査で追加。javascript: で始まる文字列が保存でき、
