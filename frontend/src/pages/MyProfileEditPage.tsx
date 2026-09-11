@@ -31,6 +31,8 @@ const BIO_MAX = 500;
 const DEPARTMENT_MAX = 50;
 const PRONOUNS_MAX = 20;
 const LABEL_MAX = 20;
+// サーバー側の検証と同じ値(backend の UserLink::MAX_URL_LENGTH)
+const URL_MAX = 2000;
 // サーバー側と同じ値を1か所から使う
 const MAX_TAGS = MAX_TAGS_PER_RESOURCE;
 
@@ -270,6 +272,7 @@ export function MyProfileEditPage() {
                   <Input
                     value={row.url}
                     onChange={(e) => updateLink(index, { url: e.target.value })}
+                    maxLength={URL_MAX}
                     width="100%"
                   />
                 </FormControl>

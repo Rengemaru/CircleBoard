@@ -18,6 +18,10 @@ import { AdminOnly } from "./AdminOnly";
 // 並べていたが、FormControl の statusLabels が同じことをする
 const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
 
+// サーバー側の検証と同じ値(backend の User::MAX_NAME_LENGTH / MAX_EMAIL_LENGTH)
+const NAME_MAX = 50;
+const EMAIL_MAX = 255;
+
 const ROLE_OPTIONS: { label: string; value: NewUserInput["role"] }[] = [
   { label: "メンバー（通常）", value: "member" },
   { label: "管理者", value: "admin" },
@@ -87,6 +91,7 @@ function IssueForm() {
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                maxLength={NAME_MAX}
                 required
                 width="100%"
               />
@@ -100,6 +105,7 @@ function IssueForm() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                maxLength={EMAIL_MAX}
                 required
                 width="100%"
               />
