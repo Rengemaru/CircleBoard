@@ -24,6 +24,7 @@ const ADMIN_ITEMS = [
   { to: "/admin/posts", label: "企画一覧（全件）" },
   { to: "/admin/pin", label: "ピン留め設定" },
   { to: "/admin/signage", label: "サイネージトークン" },
+  { to: "/admin/tags", label: "タグ" },
 ];
 
 export function SiteHeader({ session }: { session: SessionState }) {
