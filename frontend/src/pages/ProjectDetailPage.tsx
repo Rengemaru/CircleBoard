@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { TagChip } from "../components/TagChip";
 import { Link, useParams } from "react-router-dom";
 import { DefinitionList, DefinitionListItem, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
@@ -7,7 +8,6 @@ import { MemberPage } from "../components/MemberPage";
 import { UserCard } from "../components/UserCard";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { Chip } from "../components/ui/Chip";
 import { Modal } from "../components/ui/Modal";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
@@ -135,7 +135,7 @@ export function ProjectDetailPage() {
             {project.status === "recruiting" ? "募集中" : "進行中"}
           </Badge>
           {project.tags.map((tag) => (
-            <Chip key={tag.id}>{tag.name}</Chip>
+            <TagChip key={tag.id} name={tag.name} />
           ))}
         </div>
 

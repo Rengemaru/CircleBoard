@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TagChip } from "../components/TagChip";
 import { Link } from "react-router-dom";
 import { Base, Cluster, Heading, Section, Stack, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
@@ -155,7 +156,7 @@ function SpotlightSection({
                   <Cluster gap="XXS" as="ul">
                     {event.tags.map((tag) => (
                       <li key={tag.id}>
-                        <Chip>{tag.name}</Chip>
+                        <TagChip name={tag.name} />
                       </li>
                     ))}
                   </Cluster>

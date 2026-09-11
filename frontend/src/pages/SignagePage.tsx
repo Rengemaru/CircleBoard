@@ -455,9 +455,12 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
         {density !== "compact" && event.tags.length > 0 && (
           <ul className="flex flex-wrap gap-[0.5em]" style={{ marginTop: ROW_GAP[density] }}>
             {event.tags.map((tag) => (
+              // 長い名前でカードから溢れないよう、幅8em(全角8文字ぶん)で切る
+              // (docs/spec-tags.md §3.3)。title は付けない。
+              // 誰も操作しない画面なので、マウスを乗せる人がいない
               <li
                 key={tag.id}
-                className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
+                className="max-w-[8em] truncate rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
                 style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
               >
                 {tag.name}

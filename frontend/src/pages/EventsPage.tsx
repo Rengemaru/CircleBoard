@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TagChip } from "../components/TagChip";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
@@ -173,7 +174,7 @@ function EventRow({ event }: { event: EventSummary }) {
           <ul className="flex flex-wrap gap-1">
             {event.tags.map((tag) => (
               <li key={tag.id}>
-                <Chip size="S">{tag.name}</Chip>
+                <TagChip name={tag.name} />
               </li>
             ))}
           </ul>
