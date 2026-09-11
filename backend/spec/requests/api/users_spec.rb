@@ -146,14 +146,37 @@ RSpec.describe "Api::Users", type: :request do
       expect(response.body).not_to include("情報工学科")
     end
 
-    it "ログイン済みのイベント詳細にも department は出さない" do
+    # 2026-09-11 に方針を変えた。参加者・主催のカードに学科と呼ばれ方を
+    # 出すため、ログイン済みには返す(Issue #214)。
+    #
+    # 見せる範囲は増えていない。ログインした人は GET /api/users/:id で
+    # 同じ2つを見られる。未ログインには owner も participants もキーごと
+    # 返さないので、上のテストがそのまま効く
+    it "ログイン済みのイベント詳細には department と pronouns を返す" do
+      me.update!(department: "情報工学科", pronouns: "he/him")
       event = create(:event, owner: me)
       create(:event_participation, event:, user: me)
       login(other)
 
       get "/api/events/#{event.id}"
 
-      expect(response.body).not_to include("department")
+      body = response.parsed_body
+      expect(body["owner"]).to include("department" => "情報工学科", "pronouns" => "he/him")
+      expect(body["participants"].first).to include("department" => "情報工学科")
+    end
+
+    # 名前の横に出すためのものだけを足す。role や suspended_at は
+    # 管理画面の情報で、参加者の一覧に出すものではない
+    it "イベント詳細に role や email は出さない" do
+      event = create(:event, owner: me)
+      create(:event_participation, event:, user: me)
+      login(other)
+
+      get "/api/events/#{event.id}"
+
+      expect(response.parsed_body["owner"].keys)
+        .to contain_exactly("id", "name", "department", "pronouns")
+      expect(response.body).not_to include("suspended_at")
     end
   end
 end

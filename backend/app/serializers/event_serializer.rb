@@ -51,7 +51,7 @@ class EventSerializer
     # 参加者の一覧(participants)は詳細だけのまま。名前の並びは
     # 一覧の1行に入れるものではない
     with_owner = base.merge(
-      owner: @event.owner && { id: @event.owner.id, name: @event.owner.name },
+      owner: @event.owner && UserCardSerializer.new(@event.owner).as_json,
       current_user_joined: current_user_joined?
     )
     return with_owner unless @detail
@@ -82,7 +82,7 @@ class EventSerializer
   # キャンセル済みは含めない。user は退会で nil になりうる(ON DELETE SET NULL)
   def participants
     @event.active_event_participations.filter_map do |participation|
-      participation.user && { id: participation.user.id, name: participation.user.name }
+      participation.user && UserCardSerializer.new(participation.user).as_json
     end
   end
 

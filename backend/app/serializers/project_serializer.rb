@@ -37,7 +37,7 @@ class ProjectSerializer
     return base unless signed_in?
 
     base.merge(
-      owner: @project.owner && { id: @project.owner.id, name: @project.owner.name },
+      owner: @project.owner && UserCardSerializer.new(@project.owner).as_json,
       participants: participants,
       current_user_joined: current_user_joined?
     )
@@ -65,7 +65,7 @@ class ProjectSerializer
   # user は退会で nil になりうる(ON DELETE SET NULL)
   def participants
     @project.project_participations.filter_map do |participation|
-      participation.user && { id: participation.user.id, name: participation.user.name }
+      participation.user && UserCardSerializer.new(participation.user).as_json
     end
   end
 

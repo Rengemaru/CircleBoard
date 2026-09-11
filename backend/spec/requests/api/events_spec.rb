@@ -25,7 +25,11 @@ RSpec.describe "GET /api/events", type: :request do
     get "/api/events"
 
     owner = response.parsed_body["events"].first["owner"]
-    expect(owner).to eq("id" => event.owner.id, "name" => event.owner.name)
+    # 学科と呼ばれ方も返す。参加者・主催のカードに出すため(Issue #214)
+    expect(owner).to eq(
+      "id" => event.owner.id, "name" => event.owner.name,
+      "department" => nil, "pronouns" => nil
+    )
   end
 
   # マイページの「参加中の企画」が使う(Issue #165)。
