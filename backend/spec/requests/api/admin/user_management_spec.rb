@@ -32,7 +32,7 @@ RSpec.describe "ユーザー管理", type: :request do
       # 公開APIの UserSerializer は email を返さない。この画面だけが受け取る
       expect(row.keys).to contain_exactly(
         "id", "name", "email", "role", "enrollment_year", "graduation_year", "department",
-        "graduated", "suspended", "suspended_at"
+        "graduated", "grade", "grade_years", "suspended", "suspended_at"
       )
       expect(row["email"]).to eq(member.email)
     end
