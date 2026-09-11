@@ -25,7 +25,7 @@ module Api
 
     def create
       # owner は current_user から設定する。リクエストの owner_id を信用しない
-      tags = resolve_tags(tag_ids_param)
+      tags = resolve_tag_names(tag_names_param, category: :project_event)
       return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       project = current_user.owned_projects.new(project_params)
@@ -39,14 +39,14 @@ module Api
     end
 
     def update
-      tags = resolve_tags(tag_ids_param)
+      tags = resolve_tag_names(tag_names_param, category: :project_event)
       return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       # タグの割り当ては保存済みレコードに対して即座に中間テーブルへ書き込まれる。
       # 本体の更新が失敗したときにタグだけ変わった状態が残らないよう、まとめて巻き戻す
       updated = false
       ActiveRecord::Base.transaction do
-        @project.tags = tags if tag_ids_param
+        @project.tags = tags if tag_names_param
         updated = @project.update(project_params)
         raise ActiveRecord::Rollback unless updated
       end
@@ -118,9 +118,10 @@ module Api
 
     # status を許可しているのは、募集中 → 進行中 → 完了 の遷移が
     # 編集以外に手段が無いため(docs/api-spec.md §3 は3値と定めている)。
-    # tag_ids は T2-5(タグ付け)の担当。owner_id は許可しない
-    def tag_ids_param
-      params.dig(:project, :tag_ids)
+    # タグは名前で受け取る。まだ存在しないタグはIDを持てないため
+    # (docs/spec-tags.md §3.7)。owner_id は許可しない
+    def tag_names_param
+      params.dig(:project, :tag_names)
     end
 
     def project_params

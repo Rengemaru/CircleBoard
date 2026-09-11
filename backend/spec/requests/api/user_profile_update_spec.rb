@@ -80,17 +80,36 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
     end
 
     it "スキルを差し替える" do
-      old = create(:tag, name: "旧")
-      new = create(:tag, name: "新")
+      old = create(:tag, name: "旧", category: :profile)
+      new = create(:tag, name: "新", category: :profile)
       me.tags = [ old ]
       login(me)
-      patch_me(tag_ids: [ new.id ])
+      patch_me(tag_names: [ "新" ])
 
       expect(response).to have_http_status(:ok)
       expect(me.reload.tags).to contain_exactly(new)
     end
 
-    it "tag_ids を送らなければスキルに触らない" do
+    # 自由記述。無い名前はその場で作る(docs/spec-tags.md §3.5)
+    it "存在しない名前はその場で作られる" do
+      login(me)
+
+      expect { patch_me(tag_names: [ "Photogrammetry" ]) }.to change(Tag, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(me.reload.tags.map(&:name)).to eq([ "Photogrammetry" ])
+    end
+
+    # 企画と語彙を分ける(§3.4)。ここが project_event になると、
+    # 3Dの人のプロフィールに企画用の語彙が混ざる
+    it "作られるタグは profile になる" do
+      login(me)
+      patch_me(tag_names: [ "Blender" ])
+
+      expect(Tag.find_by(name: "Blender")).to be_profile
+    end
+
+    it "tag_names を送らなければスキルに触らない" do
       tag = create(:tag)
       me.tags = [ tag ]
       login(me)
@@ -173,15 +192,14 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
     end
 
     it "スキルが6件なら 422" do
-      tags = create_list(:tag, 6)
-      patch_me(tag_ids: tags.map(&:id))
+      patch_me(tag_names: %w[a b c d e f])
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(me.reload.tags).to be_empty
     end
 
-    it "存在しないタグIDなら 422" do
-      patch_me(tag_ids: [ 999_999 ])
+    it "21文字なら 422" do
+      patch_me(tag_names: [ "あ" * 21 ])
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -253,9 +271,9 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
     end
 
     it "自己紹介が弾かれたとき、スキルが変わっていない" do
-      tag = create(:tag)
+      tag = create(:tag, category: :profile)
       me.tags = [ tag ]
-      patch_me(bio: "あ" * 501, tag_ids: [])
+      patch_me(bio: "あ" * 501, tag_names: [])
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(me.reload.tags).to contain_exactly(tag)

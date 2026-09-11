@@ -23,7 +23,7 @@ module Api
     def create
       # owner は current_user から設定する。リクエストの owner_id を信用しない
       # (docs/api-spec.md §2)。event_params でも許可していない
-      tags = resolve_tags(tag_ids_param)
+      tags = resolve_tag_names(tag_names_param, category: :project_event)
       return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       event = current_user.owned_events.new(event_params)
@@ -38,14 +38,14 @@ module Api
     end
 
     def update
-      tags = resolve_tags(tag_ids_param)
+      tags = resolve_tag_names(tag_names_param, category: :project_event)
       return render_error(:unprocessable_entity, "タグの指定が正しくありません") if tags.nil?
 
       # タグの割り当ては保存済みレコードに対して即座に中間テーブルへ書き込まれる。
       # 本体の更新が失敗したときにタグだけ変わった状態が残らないよう、まとめて巻き戻す
       updated = false
       ActiveRecord::Base.transaction do
-        @event.tags = tags if tag_ids_param
+        @event.tags = tags if tag_names_param
         updated = @event.update(event_params)
         raise ActiveRecord::Rollback unless updated
       end
@@ -128,10 +128,12 @@ module Api
       render_error(:forbidden, "この企画を編集する権限がありません")
     end
 
-    # tag_ids は T2-5(タグ付け)の担当なのでここでは受け取らない。
+    # タグは名前で受け取る。まだ存在しないタグはIDを持てないため
+    # (docs/spec-tags.md §3.7)。event_params で許可しないのは、tags が
+    # 中間テーブル越しの関連で、update に混ぜられないため。
     # owner_id を許可しないのは、リクエストで他人を owner にできてしまうため
-    def tag_ids_param
-      params.dig(:event, :tag_ids)
+    def tag_names_param
+      params.dig(:event, :tag_names)
     end
 
     def event_params
