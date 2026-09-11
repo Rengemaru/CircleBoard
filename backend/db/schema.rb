@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_10_173146) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_10_173147) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -137,6 +137,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_10_173146) do
     t.datetime "suspended_at"
     t.string "department"
     t.text "bio"
+    t.string "pronouns"
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 

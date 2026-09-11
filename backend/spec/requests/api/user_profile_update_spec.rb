@@ -61,6 +61,15 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
   end
 
   describe "更新できるもの" do
+    it "呼ばれ方を更新する" do
+      login(me)
+      patch_me(pronouns: "さん付けで")
+
+      expect(response).to have_http_status(:ok)
+      expect(me.reload.pronouns).to eq "さん付けで"
+      expect(response.parsed_body["pronouns"]).to eq "さん付けで"
+    end
+
     it "学科と自己紹介を更新する" do
       login(me)
       patch_me(department: "経営学科", bio: "こんにちは")
@@ -128,6 +137,33 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(me.reload.department).to eq "情報工学科"
+    end
+
+    # フォームは常に文字列を送るので、一度書いて消すと "" が残る。
+    # 一度も書いていない人(nil)と区別が付かないと、画面の「—」が出ずに
+    # 項目名だけの空行になる
+    it "空文字で保存すると未入力(nil)に戻る" do
+      me.update!(department: "情報工学科", pronouns: "he/him", bio: "はじめまして")
+
+      patch_me(department: "", pronouns: "", bio: "")
+
+      expect(response).to have_http_status(:ok)
+      expect(me.reload.attributes.values_at("department", "pronouns", "bio")).to all(be_nil)
+    end
+
+    it "空白だけでも未入力(nil)に戻る" do
+      me.update!(department: "情報工学科")
+
+      patch_me(department: "   ")
+
+      expect(me.reload.department).to be_nil
+    end
+
+    it "呼ばれ方が21字なら 422" do
+      patch_me(pronouns: "あ" * 21)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(me.reload.pronouns).to be_nil
     end
 
     it "自己紹介が501字なら 422" do

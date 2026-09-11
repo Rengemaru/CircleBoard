@@ -20,6 +20,7 @@ export async function fetchProfile(id: number): Promise<Profile> {
 // スキルとリンクを毎回送り直さずに済む
 export type ProfileInput = {
   department?: string;
+  pronouns?: string;
   bio?: string;
   // 送った配列でまるごと置き換わる。空配列は「全部消す」
   tag_ids?: number[];

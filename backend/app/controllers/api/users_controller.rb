@@ -76,7 +76,7 @@ module Api
     end
 
     def profile_params
-      params.permit(:department, :bio)
+      params.permit(:department, :bio, :pronouns)
     end
 
     # tags と links を引くので事前に読む(CLAUDE.md §3-3)。
