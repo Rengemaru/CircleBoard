@@ -195,7 +195,7 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failure | null }) {
   return (
     <header
-      className="flex items-end justify-between border-b border-[#2b2e3c]"
+      className="flex items-end justify-between border-b border-[#676f88]"
       // 1.04 は 16:9 のときの pb-[1.1%] と同じ値。% のままだと横長で下線だけが下がる
       style={{ paddingBottom: su(1.04) }}
     >
@@ -203,7 +203,7 @@ function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failu
         <div className="font-bold tracking-tight" style={{ fontSize: su(2.1) }}>
           CircleBoard
         </div>
-        <div className="mt-1 text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+        <div className="mt-1 text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
           情報系学生サークル
         </div>
       </div>
@@ -222,7 +222,7 @@ function FetchStatus({ fetchedAt, failure }: { fetchedAt: Date | null; failure: 
 
   return (
     <div className="text-right leading-snug" style={{ fontSize: MIN_FONT_SIZE, maxWidth: su(26) }}>
-      <div className="text-[#5d6474]">最終更新 {formatClock(fetchedAt)}</div>
+      <div className="text-[#8b93a4]">最終更新 {formatClock(fetchedAt)}</div>
       {failure !== null && (
         // 更新できていないことは、色だけでなく文言でも伝える
         <div className="mt-1 text-[#fca5a5]">{FAILURE_MESSAGE[failure]}</div>
@@ -254,11 +254,11 @@ function Clock() {
             画面が固まっているのか動いているのかが遠目に分からない。
             「動いている時計＝生きている画面」の証拠にならなかった(Issue #69) */}
         {/* 区切りを入れないと 02:46 と 01秒 が「02:461」に見える */}
-        <span className="ml-[0.15em] text-[0.45em] font-normal text-[#5d6474]">
+        <span className="ml-[0.15em] text-[0.45em] font-normal text-[#8b93a4]">
           :{formatSeconds(now)}
         </span>
       </div>
-      <div className="mt-[0.35em] text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
+      <div className="mt-[0.35em] text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
         {formatToday(now)}
       </div>
     </div>
@@ -277,7 +277,7 @@ function SectionTitle({ label, count, color }: { label: string; count: number; c
       {/* 数字だけだと何の数か分からない。他の画面も「4件」「7件」と
           単位を付けている。数メートル離れて見る画面なので、なおさら
           読み替えを挟ませない(Issue #191) */}
-      <span className="ml-auto font-normal text-[#5d6474]">{count}件</span>
+      <span className="ml-auto font-normal text-[#8b93a4]">{count}件</span>
     </div>
   );
 }
@@ -354,7 +354,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#676f88] bg-white/[0.03]"
       style={{ padding: CARD_PADDING[density] }}
     >
       <div className="min-w-0">
@@ -436,7 +436,7 @@ function ProjectCard({ project }: { project: SignageProject }) {
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#676f88] bg-white/[0.03]"
       // 0.46 は 16:9・3列のときの p-[1.5%] と同じ値
       style={{ padding: su(0.46) }}
     >
@@ -488,7 +488,7 @@ function EmptyState() {
         bgColor="#f2f3f7"
         level="M"
       />
-      <p className="text-[#5d6474]" style={{ fontSize: su(1.4) }}>
+      <p className="text-[#8b93a4]" style={{ fontSize: su(1.4) }}>
         企画の投稿はこちらから
       </p>
     </div>
