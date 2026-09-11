@@ -285,8 +285,9 @@ CREATE UNIQUE INDEX index_events_single_pinned ON events (pinned) WHERE pinned =
 ```
 tags
 - id
-- name       string NOT NULL UNIQUE
-- category   integer NOT NULL default: 0   # 0:project_event / 1:skill（1は未使用）
+- name       string NOT NULL              # 20字まで。正規化してから保存する
+- category   integer NOT NULL default: 0   # 0:project_event / 1:profile
+- UNIQUE (name, category)                  # 同じ名前を両方の用途で持てるようにする
 - timestamps
 
 event_tags
@@ -382,10 +383,15 @@ user_links                                 # 外部リンク
 - 1人あたり3件まで（アプリ側で検証）
 ```
 
-**スキルは §2.4 の `tags` を再利用します。** 企画に付けるタグ（Web開発 / ゲーム制作 / 機械学習 …）が
-そのまま「使える技術」になります。別のテーブルで持つと、「機械学習ができる人」と
-「機械学習の企画」が別の語彙になり、探すときに繋がりません。
-`tags.category` の `1:skill` は未使用のまま残します（同じタグを両方の用途で使うため）。
+**スキルは §2.4 の `tags` を使いますが、`category` で企画側と語彙を分けます**
+（`1:profile`。2026-09-11 変更、`docs/spec-tags.md` §3.4）。
+
+> **当初は分けない方針でした。** 「機械学習ができる人」と「機械学習の企画」が別の語彙になると
+> 探すときに繋がらないためです。**分けた代わりにこれを失います**（同名での突き合わせが要る）。
+>
+> それでも分けるのは、プロフィールのタグが「その人が何者か」のラベルとして残り続けるからです。
+> 企画の語彙と混ぜると人を型にはめてしまい、**3Dをやっている人がWebを始めようとするときに
+> 自分のタグが足を引っ張ります。**
 
 **どちらも ON DELETE CASCADE です。** 利用者が消えたら、その人のスキルとリンクは残す意味がありません。
 §2.5 の `event_participations.user_id` が SET NULL なのは「参加した記録」を残すためで、
