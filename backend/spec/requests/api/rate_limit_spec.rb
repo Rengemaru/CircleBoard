@@ -6,6 +6,20 @@ require "rails_helper"
 # 上限を超えたときだけでなく、上限内が通ることも確かめる。片方だけだと
 # 「常に429を返す実装」でも通ってしまう。
 RSpec.describe "レート制限", type: :request, rack_attack: true do
+  # Rack::Attack は「Time.now.to_i / period が同じ値の間だけ数える」時間窓で判定する。
+  # 実時間のまま31回続けて叩くと、途中で窓が切り替わることがあり、最後の1回が
+  # 新しい窓の1件目になって 429 ではなく 200 が返る。同じコードで再実行すると通るため、
+  # CI がランダムに落ちる原因になっていた(Issue #205)。
+  #
+  # 時刻を止めれば窓は跨ぎようがない。travel_to は Rails 標準
+  # (ActiveSupport::Testing::TimeHelpers、rails_helper.rb で include 済み)なので、
+  # Timecop のような gem を増やさずに済む。
+  #
+  # 秒を0に合わせるのは、止めた時刻が窓のどこにいるかを読んで分かるようにするため。
+  around do |example|
+    travel_to(Time.current.change(sec: 0)) { example.run }
+  end
+
   describe "ログイン試行 (A-3)" do
     let(:user) { create(:user) }
 
