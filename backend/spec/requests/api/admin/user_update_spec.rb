@@ -129,6 +129,30 @@ RSpec.describe "ユーザーの編集", type: :request do
     end
   end
 
+  # 年度の範囲検証(2026-09-12 の監査)を入れたあとも、この2つが通ること。
+  # 卒業にする操作は卒業年度を今の年度まで引き寄せるので、入学年度との
+  # 前後関係を壊しうる
+  describe "年度の範囲との両立" do
+    # 押しても卒業生にならないボタンになるより、何が起きなかったのかを返す
+    it "まだ入学していない人は卒業生にできない" do
+      freshman = create(:user, enrollment_year: this_year + 1, graduation_year: this_year + 5)
+      sign_in(admin)
+      put "/api/admin/users/#{freshman.id}/graduation"
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(freshman.reload).not_to be_graduated
+    end
+
+    it "入学した年度の人を卒業生にできる" do
+      rookie = create(:user, enrollment_year: this_year, graduation_year: this_year + 4)
+      sign_in(admin)
+      put "/api/admin/users/#{rookie.id}/graduation"
+
+      expect(response).to have_http_status(:ok)
+      expect(rookie.reload.graduation_year).to eq(this_year)
+    end
+  end
+
   describe "PUT /api/admin/users/:user_id/graduation" do
     it "未ログインでは 401 を返す" do
       put "/api/admin/users/#{member.id}/graduation"
