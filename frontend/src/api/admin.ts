@@ -172,6 +172,31 @@ export async function revokeSignageToken(id: number): Promise<void> {
   await apiFetch<void>(`/api/admin/signage_tokens/${id}`, { method: "DELETE" });
 }
 
+// タグ管理(docs/spec-tags.md §3.8)。作成は無い。タグは企画かプロフィールに
+// 付ける過程で生まれるので、管理画面は「直す場所」に徹する
+export type AdminTagRow = {
+  id: number;
+  name: string;
+  category: "project_event" | "profile";
+  usage_count: number;
+};
+
+export async function fetchAdminTags(): Promise<AdminTagRow[]> {
+  const data = await apiFetch<{ tags: AdminTagRow[] }>("/api/admin/tags");
+  return data.tags;
+}
+
+export async function renameAdminTag(id: number, name: string): Promise<AdminTagRow> {
+  return apiFetch<AdminTagRow>(`/api/admin/tags/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ tag: { name } }),
+  });
+}
+
+export async function deleteAdminTag(id: number): Promise<void> {
+  await apiFetch<void>(`/api/admin/tags/${id}`, { method: "DELETE" });
+}
+
 export async function createUser(input: NewUserInput): Promise<{ id: number; name: string }> {
   const data = await apiFetch<{ user: { id: number; name: string } }>("/api/admin/users", {
     method: "POST",

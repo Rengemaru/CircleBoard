@@ -17,6 +17,7 @@ import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
 import { AdminPostsPage } from "./pages/admin/AdminPostsPage";
 import { AdminSignageTokensPage } from "./pages/admin/AdminSignageTokensPage";
+import { AdminTagsPage } from "./pages/admin/AdminTagsPage";
 import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 
@@ -49,6 +50,7 @@ export function App() {
         <Route path="/admin/posts" element={<AdminPostsPage />} />
         <Route path="/admin/pin" element={<AdminPinsPage />} />
         <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
+        <Route path="/admin/tags" element={<AdminTagsPage />} />
 
         {/* サイネージはナビゲーションを一切出さない(wireframe-signage.html) */}
         <Route path="/signage" element={<SignagePage />} />
