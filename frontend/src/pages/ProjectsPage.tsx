@@ -6,6 +6,7 @@ import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { FilterButton, FilterRow } from "../components/ui/FilterRow";
+import { TagFilter } from "../components/TagFilter";
 import { Note } from "../components/ui/Note";
 import { fetchProjects } from "../api/projects";
 import { fetchTags } from "../api/tags";
@@ -97,12 +98,7 @@ export function ProjectsPage() {
     setSearchParams(params);
   }
 
-  // 押すたびに入れる／外す
-  function toggleTag(tagId: number) {
-    const next = selectedTagIds.includes(tagId)
-      ? selectedTagIds.filter((id) => id !== tagId)
-      : [...selectedTagIds, tagId];
-
+  function setTagIds(next: number[]) {
     updateParams({ tagIds: next });
   }
 
@@ -172,17 +168,11 @@ export function ProjectsPage() {
             </div>
           )}
 
+          {/* 候補が増えても破綻しないよう、並べずに検索させる。
+              ここでは新しいタグを作らせない(docs/spec-tags.md §3.6) */}
           {tags.length > 0 && (
             <FilterRow label="タグ">
-              {tags.map((tag) => (
-                <FilterButton
-                  key={tag.id}
-                  active={selectedTagIds.includes(tag.id)}
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {tag.name}
-                </FilterButton>
-              ))}
+              <TagFilter candidates={tags} selectedIds={selectedTagIds} onChange={setTagIds} />
             </FilterRow>
           )}
 

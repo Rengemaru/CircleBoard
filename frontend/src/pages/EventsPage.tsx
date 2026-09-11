@@ -3,7 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
-import { FilterButton, FilterRow } from "../components/ui/FilterRow";
+import { FilterRow } from "../components/ui/FilterRow";
+import { TagFilter } from "../components/TagFilter";
 import { Note } from "../components/ui/Note";
 import { fetchEvents } from "../api/events";
 import { fetchTags } from "../api/tags";
@@ -65,12 +66,8 @@ export function EventsPage() {
     };
   }, [selectedTagIds]);
 
-  // 押すたびに入れる／外す。選択が0件のときは絞り込まない（＝全件）
-  function toggleTag(tagId: number) {
-    const next = selectedTagIds.includes(tagId)
-      ? selectedTagIds.filter((id) => id !== tagId)
-      : [...selectedTagIds, tagId];
-
+  // 選択が0件のときは絞り込まない（＝全件）。URLからもキーごと消す
+  function setTagIds(next: number[]) {
     setSearchParams(next.length === 0 ? {} : { tag_ids: next.join(",") });
   }
 
@@ -101,17 +98,11 @@ export function EventsPage() {
             </div>
           )}
 
+          {/* 候補が増えても破綻しないよう、並べずに検索させる。
+              ここでは新しいタグを作らせない(docs/spec-tags.md §3.6) */}
           {tags.length > 0 && (
             <FilterRow label="タグ">
-              {tags.map((tag) => (
-                <FilterButton
-                  key={tag.id}
-                  active={selectedTagIds.includes(tag.id)}
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {tag.name}
-                </FilterButton>
-              ))}
+              <TagFilter candidates={tags} selectedIds={selectedTagIds} onChange={setTagIds} />
             </FilterRow>
           )}
 
