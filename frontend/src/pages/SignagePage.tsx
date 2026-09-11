@@ -7,6 +7,7 @@ import { formatCountdownDays } from "../lib/countdown";
 import type { SignageData, SignageEvent, SignageProject } from "../types/signage";
 
 // 部室ディスプレイ用の全画面ビュー(1920x1080 / 16:9)。
+// 16:9 以外のディスプレイに繋がれても崩れないよう、寸法は SIGNAGE_UNIT で測る。
 // ナビゲーションは一切置かない。ヘッダー・フッター・リンクも表示しない
 // (wireframes/wireframe-signage.html「共通仕様」)。
 // 視認距離2〜3mを想定し、最小フォントは24px相当。
@@ -19,12 +20,29 @@ import type { SignageData, SignageEvent, SignageProject } from "../types/signage
 // 端末なので自力で復帰できなかった。データだけ取り直す(Issue #47)。
 const REFRESH_INTERVAL_SECONDS = 60;
 
-// 視認距離2〜3mで読める文字の下限。1920px 幅で約25px にあたり、
+// 画面に内接する 16:9 の枠の、幅1%にあたる長さ。
+//
+// 寸法をすべて vw(=画面幅の1%)で書いていたため、16:9 より横長のディスプレイでは
+// 高さが足りないのに文字だけ大きくなり、カードが下の段に重なっていた
+// (2560×1080 で再現。1件表示のときはタグ行が「プロジェクト」の見出しに重なる)。
+// 縦長では逆に、余った高さの分だけ文字が小さく見えていた。
+//
+// 横長のときは高さ基準に切り替わる単位を1つ用意し、縦に効く寸法はすべてこれで測る。
+// 16:9 ちょうどなら min() は 1vw を選ぶので、1920×1080 での見た目は変わらない。
+const SIGNAGE_UNIT = "min(1vw, 1vh * 16 / 9)";
+
+// 1920px 幅を基準に書かれていた「Xvw」を、そのまま su(X) に置き換えられる。
+// min() を各所に展開せず var() を参照するのは、どこが基準なのかを1か所に残すため
+function su(n: number): string {
+  return `calc(${n} * var(--sg-u))`;
+}
+
+// 視認距離2〜3mで読める文字の下限。1920×1080 で約25px にあたり、
 // ファイル冒頭の「最小フォントは24px相当」を満たす。
 //
 // className に書くと Tailwind の任意値がリテラルになり、下回っていても
 // レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
-const MIN_FONT_SIZE = "1.3vw";
+const MIN_FONT_SIZE = su(1.3);
 
 // QRの大きさ。1920px 幅を基準にして、画面幅で拡縮する。
 //
@@ -34,17 +52,23 @@ const MIN_FONT_SIZE = "1.3vw";
 const SIGNAGE_BASE_WIDTH = 1920;
 const QR_SIZE_AT_BASE = { hero: 220, event: 110, project: 90, empty: 200 } as const;
 
+// SIGNAGE_UNIT と同じ計算。QR は <svg> に実ピクセルを渡すので CSS 変数では届かない。
+// 画面幅のままだと、横長のディスプレイでQRだけが高さを無視して大きくなる
+function stageWidth(): number {
+  return Math.min(window.innerWidth, (window.innerHeight * 16) / 9);
+}
+
 function useQrSize(kind: keyof typeof QR_SIZE_AT_BASE): number {
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const [stage, setStage] = useState(stageWidth);
 
   useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
+    const onResize = () => setStage(stageWidth());
     window.addEventListener("resize", onResize);
 
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  return Math.round((QR_SIZE_AT_BASE[kind] * viewportWidth) / SIGNAGE_BASE_WIDTH);
+  return Math.round((QR_SIZE_AT_BASE[kind] * stage) / SIGNAGE_BASE_WIDTH);
 }
 
 // 失敗の種類。部室に入った人が最初に打つ手が変わるので分ける
@@ -145,7 +169,13 @@ export function SignagePage() {
 
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen w-screen flex-col gap-[1.6%] bg-[linear-gradient(135deg,#0f0f15_0%,#1a1a24_100%)] px-[2.6%] py-[2.2%] text-[#f2f3f7]">
+    <div
+      className="flex h-screen w-screen flex-col gap-[1.6%] bg-[linear-gradient(135deg,#0f0f15_0%,#1a1a24_100%)] text-[#f2f3f7]"
+      // padding の % は上下も「幅」に対して効く(CSSの仕様)。横長のディスプレイでは
+      // 上下の余白だけが増え、中身の入る高さを奪っていた。
+      // gap は行方向だけ高さに対して効くので、% のままでよい
+      style={{ "--sg-u": SIGNAGE_UNIT, padding: `${su(2.2)} ${su(2.6)}` } as React.CSSProperties}
+    >
       {children}
     </div>
   );
@@ -153,7 +183,10 @@ function Screen({ children }: { children: React.ReactNode }) {
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center text-[2vw] text-[#9aa0ae]">
+    <div
+      className="flex flex-1 items-center justify-center text-[#9aa0ae]"
+      style={{ fontSize: su(2) }}
+    >
       {children}
     </div>
   );
@@ -161,14 +194,20 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 
 function Header({ fetchedAt, failure }: { fetchedAt: Date | null; failure: Failure | null }) {
   return (
-    <header className="flex items-end justify-between border-b border-[#2b2e3c] pb-[1.1%]">
+    <header
+      className="flex items-end justify-between border-b border-[#2b2e3c]"
+      // 1.04 は 16:9 のときの pb-[1.1%] と同じ値。% のままだと横長で下線だけが下がる
+      style={{ paddingBottom: su(1.04) }}
+    >
       <div>
-        <div className="text-[2.1vw] font-bold tracking-tight">CircleBoard</div>
+        <div className="font-bold tracking-tight" style={{ fontSize: su(2.1) }}>
+          CircleBoard
+        </div>
         <div className="mt-1 text-[#5d6474]" style={{ fontSize: MIN_FONT_SIZE }}>
           情報系学生サークル
         </div>
       </div>
-      <div className="flex items-end gap-[2vw]">
+      <div className="flex items-end" style={{ gap: su(2) }}>
         <FetchStatus fetchedAt={fetchedAt} failure={failure} />
         <Clock />
       </div>
@@ -182,7 +221,7 @@ function FetchStatus({ fetchedAt, failure }: { fetchedAt: Date | null; failure: 
   if (fetchedAt === null) return null;
 
   return (
-    <div className="max-w-[26vw] text-right leading-snug" style={{ fontSize: MIN_FONT_SIZE }}>
+    <div className="text-right leading-snug" style={{ fontSize: MIN_FONT_SIZE, maxWidth: su(26) }}>
       <div className="text-[#5d6474]">最終更新 {formatClock(fetchedAt)}</div>
       {failure !== null && (
         // 更新できていないことは、色だけでなく文言でも伝える
@@ -206,7 +245,10 @@ function Clock() {
 
   return (
     <div className="text-right">
-      <div className="font-mono text-[3.1vw] font-bold leading-none tracking-tight">
+      <div
+        className="font-mono font-bold leading-none tracking-tight"
+        style={{ fontSize: su(3.1) }}
+      >
         {formatClock(now)}
         {/* 秒を小さく添える。毎秒更新しているのに分単位の表示だと、
             画面が固まっているのか動いているのかが遠目に分からない。
@@ -226,8 +268,9 @@ function Clock() {
 function SectionTitle({ label, count, color }: { label: string; count: number; color: string }) {
   return (
     <div
-      className="mb-[0.9%] flex items-center gap-[0.7em] font-bold tracking-[0.08em] text-[#9aa0ae]"
-      style={{ fontSize: MIN_FONT_SIZE }}
+      className="flex items-center gap-[0.7em] font-bold tracking-[0.08em] text-[#9aa0ae]"
+      // 0.85 は 16:9 のときの mb-[0.9%] と同じ値
+      style={{ fontSize: MIN_FONT_SIZE, marginBottom: su(0.85) }}
     >
       <span className="h-[1.15em] w-[0.35em]" style={{ backgroundColor: color }} />
       {label}
@@ -271,15 +314,15 @@ function EventSection({ events, grown }: { events: SignageEvent[]; grown: boolea
 type Density = "hero" | "normal" | "compact";
 
 const COUNTDOWN_SIZE: Record<Density, string> = {
-  hero: "5.6vw",
-  normal: "2.7vw",
-  compact: "1.9vw",
+  hero: su(5.6),
+  normal: su(2.7),
+  compact: su(1.9),
 };
 
 const TITLE_SIZE: Record<Density, string> = {
-  hero: "3.2vw",
-  normal: "1.75vw",
-  compact: "1.4vw",
+  hero: su(3.2),
+  normal: su(1.75),
+  compact: su(1.4),
 };
 
 // 行間も詰める。文字だけ小さくしても、間の余白が同じだと収まらない
@@ -289,12 +332,13 @@ const ROW_GAP: Record<Density, string> = {
   compact: "0.35em",
 };
 
-// 枠の内側の余白。カード幅に対する % なので、上下にも同じだけ効く。
-// 2段組みでは上下で 28px 使ってしまう
+// 枠の内側の余白。% はカード幅に対して効くので、横長のディスプレイでは
+// カードが広がるぶん上下の余白まで増え、2段組みで中身が入りきらなくなっていた。
+// 値は 16:9 のときの 1.5% / 1% と同じ(hero はカード1枚が全幅なので倍率だけ違う)
 const CARD_PADDING: Record<Density, string> = {
-  hero: "1.5%",
-  normal: "1.5%",
-  compact: "1%",
+  hero: su(1.4),
+  normal: su(0.7),
+  compact: su(0.47),
 };
 
 // 1行しかない行は、既定の line-height(約1.5)だと文字の上下に無駄が出る。
@@ -391,7 +435,11 @@ function ProjectCard({ project }: { project: SignageProject }) {
   const qrSize = useQrSize("project");
 
   return (
-    <article className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03] p-[1.5%]">
+    <article
+      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#2b2e3c] bg-white/[0.03]"
+      // 0.46 は 16:9・3列のときの p-[1.5%] と同じ値
+      style={{ padding: su(0.46) }}
+    >
       <div className="min-w-0">
         <span
           className="rounded px-[0.6em] py-[0.2em] font-bold"
@@ -403,7 +451,9 @@ function ProjectCard({ project }: { project: SignageProject }) {
         >
           {project.status === "recruiting" ? "募集中" : "進行中"}
         </span>
-        <h2 className="mt-[0.4em] truncate text-[1.5vw] font-bold">{project.title}</h2>
+        <h2 className="mt-[0.4em] truncate font-bold" style={{ fontSize: su(1.5) }}>
+          {project.title}
+        </h2>
         {project.meeting_schedule !== null && (
           <div className="mt-[0.3em] truncate text-[#9aa0ae]" style={{ fontSize: MIN_FONT_SIZE }}>
             {project.meeting_schedule}
@@ -424,8 +474,12 @@ function EmptyState() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[2vh]">
-      <div className="text-[4vw] font-bold">CircleBoard</div>
-      <p className="text-[2.4vw] text-[#9aa0ae]">いま募集中の企画はありません</p>
+      <div className="font-bold" style={{ fontSize: su(4) }}>
+        CircleBoard
+      </div>
+      <p className="text-[#9aa0ae]" style={{ fontSize: su(2.4) }}>
+        いま募集中の企画はありません
+      </p>
       <QRCodeSVG
         // 空なら、このサイネージを開いている URL をそのまま使う。
         // 部室の端末が LAN の IP で開いていれば、QR もその IP になる
@@ -434,7 +488,9 @@ function EmptyState() {
         bgColor="#f2f3f7"
         level="M"
       />
-      <p className="text-[1.4vw] text-[#5d6474]">企画の投稿はこちらから</p>
+      <p className="text-[#5d6474]" style={{ fontSize: su(1.4) }}>
+        企画の投稿はこちらから
+      </p>
     </div>
   );
 }
