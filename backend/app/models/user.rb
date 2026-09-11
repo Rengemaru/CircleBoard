@@ -35,8 +35,18 @@ class User < ApplicationRecord
   MAX_NAME_LENGTH = 50
   MAX_EMAIL_LENGTH = 255
 
+  # メールの形式(2026-09-12 の監査で追加)。存在と一意性しか見ておらず、
+  # API を直接叩けば "not-an-email" が保存できた。
+  # ログインできないアカウントを発行できてしまうのが実害。
+  #
+  # **RFC 準拠の正規表現は書かない。** 読めないものを置いても誰も直せない
+  # (CLAUDE.md §0)。打ち間違いを弾くのが目的なので、「@ と空白を含まない文字列
+  # @ @と空白を含まない文字列 . @と空白を含まない文字列」で足りる
+  EMAIL_FORMAT = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
+
   validates :name, presence: true, length: { maximum: MAX_NAME_LENGTH }
   validates :email, presence: true, length: { maximum: MAX_EMAIL_LENGTH },
+                    format: { with: EMAIL_FORMAT, message: "の形式が正しくありません" },
                     uniqueness: { case_sensitive: false }
   # 公開サーバーで運用するため、最初から8文字以上を必須にする（仕様書 §2.1）
   validates :password, length: { minimum: 8 }, if: -> { password.present? }
