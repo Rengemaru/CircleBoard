@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { TagChip } from "../components/TagChip";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { DefinitionList, DefinitionListItem, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
@@ -116,7 +117,7 @@ export function EventDetailPage() {
           </Badge>
           {event.pinned && <Chip>📌 ピン留め</Chip>}
           {event.tags.map((tag) => (
-            <Chip key={tag.id}>{tag.name}</Chip>
+            <TagChip key={tag.id} name={tag.name} />
           ))}
         </div>
 

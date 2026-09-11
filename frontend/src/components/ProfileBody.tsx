@@ -1,5 +1,5 @@
 import { DefinitionList, DefinitionListItem, Cluster, Text } from "smarthr-ui";
-import { Chip } from "./ui/Chip";
+import { TagChip } from "./TagChip";
 import { ProfileLinks } from "./ProfileLinks";
 import type { Profile } from "../types/user";
 
@@ -47,7 +47,7 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
         ) : (
           <Cluster gap={0.5}>
             {profile.tags.map((tag) => (
-              <Chip key={tag.id}>{tag.name}</Chip>
+              <TagChip key={tag.id} name={tag.name} />
             ))}
           </Cluster>
         )}

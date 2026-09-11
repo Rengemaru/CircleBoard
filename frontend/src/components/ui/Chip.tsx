@@ -6,8 +6,23 @@ import { Button, Chip as ShrChip } from "smarthr-ui";
 // アカウントの状態を示すもので、1オブジェクトに1つしか付けない。
 // こちらはタグ・カテゴリ・権限のような「属性」で、いくつ付いてもよい。
 // SmartHR も Chip を「オブジェクトのプロパティ」向けとしている。
-export function Chip({ children }: { children: React.ReactNode }) {
-  return <ShrChip size="S">{children}</ShrChip>;
+// className と title を通すのは、タグを幅で切る必要があるため
+// (TagChip。docs/spec-tags.md §3.3)。呼び出し側から指定できないと、
+// タグだけ別の見た目を作る道ができてしまう
+export function Chip({
+  children,
+  className,
+  title,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <ShrChip size="S" className={className} title={title}>
+      {children}
+    </ShrChip>
+  );
 }
 
 // 企画作成のタグ選択。押せる要素なので Chip では作らない。

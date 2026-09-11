@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { TagChip } from "../components/TagChip";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
+import { AnchorButton, Base, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -253,7 +254,7 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
           <ul className="flex flex-wrap gap-1">
             {project.tags.map((tag) => (
               <li key={tag.id}>
-                <Chip size="S">{tag.name}</Chip>
+                <TagChip name={tag.name} />
               </li>
             ))}
           </ul>

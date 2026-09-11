@@ -455,10 +455,17 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
         {density !== "compact" && event.tags.length > 0 && (
           <ul className="flex flex-wrap gap-[0.5em]" style={{ marginTop: ROW_GAP[density] }}>
             {event.tags.map((tag) => (
+              // 長い名前でカードから溢れないよう、幅8em(全角8文字ぶん)で切る
+              // (docs/spec-tags.md §3.3)。
+              //
+              // title はこの画面では効かない。誰も操作しないのでマウスを乗せる人がいない。
+              // それでも付けるのは、仕様が画面を限定せずに「タグ要素に title を付ける」と
+              // 定めているため。効かないことを理由に外すのは実装側の判断になる(PR #238 レビュー)
               <li
                 key={tag.id}
-                className="rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
+                className="max-w-[8em] truncate rounded bg-[#2b2e3c] px-[0.6em] py-[0.2em]"
                 style={{ fontSize: MIN_FONT_SIZE, lineHeight: CARD_LINE_HEIGHT }}
+                title={tag.name}
               >
                 {tag.name}
               </li>

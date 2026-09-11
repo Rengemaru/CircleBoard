@@ -1,6 +1,6 @@
 import { Cluster, Stack, Text } from "smarthr-ui";
+import { TagChip } from "./TagChip";
 import { Avatar } from "./ui/Avatar";
-import { Chip } from "./ui/Chip";
 import { ProfileLinks } from "./ProfileLinks";
 import { PageHeading } from "./ui/PageHeading";
 import { Panel } from "./ui/Panel";
@@ -46,7 +46,7 @@ export function ProfileHeader({ profile }: { profile: Profile }) {
             <Cluster gap={0.5} as="ul">
               {profile.tags.map((tag) => (
                 <li key={tag.id}>
-                  <Chip>{tag.name}</Chip>
+                  <TagChip name={tag.name} />
                 </li>
               ))}
             </Cluster>
