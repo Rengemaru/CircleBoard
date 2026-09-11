@@ -142,6 +142,17 @@ export async function updateUser(id: number, input: UpdateUserInput): Promise<vo
   });
 }
 
+// 現役⇄卒業。卒業はフラグではなく卒業年度と今の年度の比較結果なので、
+// 切り替えは年度の上書きになる。**元の卒業年度は戻らない**(backend の
+// graduations_controller)。押す前に確認を挟むのは呼び出し側の責任
+export async function graduateUser(id: number): Promise<void> {
+  await apiFetch<unknown>(`/api/admin/users/${id}/graduation`, { method: "PUT" });
+}
+
+export async function ungraduateUser(id: number): Promise<void> {
+  await apiFetch<unknown>(`/api/admin/users/${id}/graduation`, { method: "DELETE" });
+}
+
 export async function fetchDashboard(): Promise<Dashboard> {
   return apiFetch<Dashboard>("/api/admin/dashboard");
 }
