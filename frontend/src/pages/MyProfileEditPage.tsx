@@ -28,6 +28,7 @@ const TITLE = "プロフィールを編集";
 // ここに書くのは「書きながら分かる」ためで、検証を肩代わりするものではない
 const BIO_MAX = 500;
 const DEPARTMENT_MAX = 50;
+const PRONOUNS_MAX = 20;
 const LABEL_MAX = 20;
 const MAX_TAGS = 5;
 
@@ -43,6 +44,7 @@ export function MyProfileEditPage() {
   // 書いてあった内容が消える
   const [profile, setProfile] = useState<Profile | null>(null);
   const [department, setDepartment] = useState("");
+  const [pronouns, setPronouns] = useState("");
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
@@ -59,6 +61,7 @@ export function MyProfileEditPage() {
         setProfile(loaded);
         // API は未入力を null で返す。textarea の value に null は入れられない
         setDepartment(loaded.department ?? "");
+        setPronouns(loaded.pronouns ?? "");
         setBio(loaded.bio ?? "");
         setSelectedTagIds(loaded.tags.map((tag) => tag.id));
         // 1行も無い人にも入力欄を1つ出す。「行を追加」を押さないと
@@ -97,6 +100,7 @@ export function MyProfileEditPage() {
     try {
       await updateMyProfile({
         department,
+        pronouns,
         bio,
         tag_ids: selectedTagIds,
         links: toPayload(links),
@@ -184,6 +188,24 @@ export function MyProfileEditPage() {
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   maxLength={DEPARTMENT_MAX}
+                  width="100%"
+                />
+              </FormControl>
+
+              {/* 選択肢にしない。当てはまらない人が書けなくなるうえ、
+                  選択肢そのものが「この中から選べ」という主張になる
+                  (spec-v2.2.md §2.1)。代名詞に限らない書き方もできる。
+                  名前の横に並ぶ欄なので maxLength で20字に止める */}
+              <FormControl
+                label="呼ばれ方"
+                statusLabels={OPTIONAL}
+                helpMessage="参加者や主催の一覧で、名前の横に出ます"
+                exampleMessage="he/him / さん付けで / 呼び捨てOK"
+              >
+                <Input
+                  value={pronouns}
+                  onChange={(e) => setPronouns(e.target.value)}
+                  maxLength={PRONOUNS_MAX}
                   width="100%"
                 />
               </FormControl>

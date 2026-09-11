@@ -25,6 +25,8 @@ class ProfileSerializer
       id: @user.id,
       name: @user.name,
       department: @user.department,
+      # 呼ばれ方。名前の横に出す(spec-v2.2.md §2.1)
+      pronouns: @user.pronouns,
       bio: @user.bio,
       enrollment_year: @user.enrollment_year,
       graduation_year: @user.graduation_year,

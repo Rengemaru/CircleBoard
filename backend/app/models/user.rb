@@ -18,6 +18,18 @@ class User < ApplicationRecord
   MAX_TAGS = 5
   MAX_LINKS = 3
 
+  # 空文字は「未入力」として nil に寄せる。
+  #
+  # 画面のフォームは常に文字列を送るので、一度書いて消すと "" が残り、
+  # 一度も書いていない人(nil)と区別が付かなくなる。実際、"" になった人は
+  # プロフィールの「—」が出ず、項目名だけの空行になっていた。
+  #
+  # 画面側で毎回 (value ?? "") === "" と書くより、入り口で1つの形に
+  # 揃える方が、後から足す項目でも同じ間違いが起きない
+  BLANKABLE_PROFILE_FIELDS = %i[department pronouns bio].freeze
+
+  before_validation :nullify_blank_profile_fields
+
   validates :name, presence: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   # 公開サーバーで運用するため、最初から8文字以上を必須にする（仕様書 §2.1）
@@ -28,6 +40,9 @@ class User < ApplicationRecord
   # nil も空文字も長さの条件を満たすので、付けても何も変わらない
   validates :department, length: { maximum: 50 }
   validates :bio, length: { maximum: 500 }
+  # 名前の横に並べる欄なので短くする。長い文が入ると、参加者の一覧で
+  # 名前が読み取れなくなる(spec-v2.2.md §2.1)
+  validates :pronouns, length: { maximum: 20 }
   validate :tags_within_limit
   validate :links_within_limit
 
@@ -95,6 +110,12 @@ class User < ApplicationRecord
   end
 
   private
+
+  def nullify_blank_profile_fields
+    BLANKABLE_PROFILE_FIELDS.each do |field|
+      self[field] = nil if self[field].blank?
+    end
+  end
 
   # 上限を超えたことを、どちらの項目の話か分かる文言で返す。
   # 「保存できません」だけだと、どれを減らせばよいのか分からない

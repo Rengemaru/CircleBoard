@@ -32,11 +32,14 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
   return (
     <DefinitionList>
       <DefinitionListItem term="学科" maxColumns={1}>
-        {profile.department ?? "—"}
+        {orDash(profile.department)}
+      </DefinitionListItem>
+      <DefinitionListItem term="呼ばれ方" maxColumns={1}>
+        {orDash(profile.pronouns)}
       </DefinitionListItem>
       <DefinitionListItem term="自己紹介" maxColumns={1}>
         {/* 改行はそのまま出すが、HTML としては解釈しない(React が既定でエスケープする) */}
-        <span className="whitespace-pre-wrap">{profile.bio ?? "—"}</span>
+        <span className="whitespace-pre-wrap">{orDash(profile.bio)}</span>
       </DefinitionListItem>
       <DefinitionListItem term="使える技術" maxColumns={1}>
         {profile.tags.length === 0 ? (
@@ -58,11 +61,19 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
 
 // リンクの並びは箇条書きなので ul/li で出す。
 //
+// 未入力は「—」。null だけでなく空文字も未入力として扱う。
+// サーバー側でも空文字は nil に寄せているが(User#nullify_blank_profile_fields)、
+// 画面側が null しか見ていないと、寄せる前に保存された行で空欄になる
+function orDash(value: string | null): string {
+  return value === null || value === "" ? "—" : value;
+}
+
 // 4項目すべてが未入力かどうか。department と bio は API が null で返すが、
 // 画面から空文字が入ることもあるので両方を空として扱う
 function isEmpty(profile: Profile): boolean {
   return (
     (profile.department ?? "") === "" &&
+    (profile.pronouns ?? "") === "" &&
     (profile.bio ?? "") === "" &&
     profile.tags.length === 0 &&
     profile.links.length === 0

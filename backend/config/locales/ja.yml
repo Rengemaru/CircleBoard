@@ -48,6 +48,7 @@ ja:
         graduation_year: "卒業年度"
         department: "学科"
         bio: "自己紹介"
+        pronouns: "呼ばれ方"
         suspended_at: "停止日時"
       event:
         title: "タイトル"

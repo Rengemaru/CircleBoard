@@ -25,7 +25,16 @@ export function ProfileHeader({ profile }: { profile: Profile }) {
         <Avatar id={profile.id} name={profile.name} size="lg" />
 
         <Stack gap={0.5} className="min-w-0">
-          <PageHeading title={profile.name} className="" />
+          <Cluster align="baseline" gap={0.5}>
+            <PageHeading title={profile.name} className="" />
+            {/* 呼ばれ方は名前のすぐ横。名前を読んだ人がそのまま目に入る
+                位置でないと、呼びかける前に見てもらえない */}
+            {profile.pronouns !== null && profile.pronouns !== "" && (
+              <Text size="S" color="TEXT_GREY">
+                {profile.pronouns}
+              </Text>
+            )}
+          </Cluster>
 
           {/* 学科と学年は1行にまとめる。どちらも「その人が誰か」の手がかりで、
               項目名を立てて縦に並べるほどの分量ではない。

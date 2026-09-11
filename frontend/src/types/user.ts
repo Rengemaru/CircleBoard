@@ -13,6 +13,8 @@ export type Profile = {
   name: string;
   // 未入力は null。空文字ではない
   department: string | null;
+  // 呼ばれ方。名前の横に出す短い自由入力(spec-v2.2.md §2.1)
+  pronouns: string | null;
   bio: string | null;
   enrollment_year: number;
   graduation_year: number;
