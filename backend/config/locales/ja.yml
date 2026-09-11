@@ -22,9 +22,13 @@ ja:
         # belongs_to の存在チェック。「イベントを入力してください」になる
         required: "を入力してください"
         not_a_number: "は数値で入力してください"
+        not_an_integer: "は整数で入力してください"
         greater_than: "は%{count}より大きい値にしてください"
         greater_than_or_equal_to: "は%{count}以上にしてください"
         less_than_or_equal_to: "は%{count}以下にしてください"
+        # has_secure_password が持つ bcrypt の 72バイト制限。
+        # 文字数ではなくバイト数なので too_long と文言を変える
+        password_too_long: "は72バイト以内で入力してください（日本語なら24文字ほど）"
 
     models:
       user: "利用者"
