@@ -9,7 +9,10 @@ require "rails_helper"
 # 片側だけだと「常に B を返す実装」でも通ってしまう。
 RSpec.describe "User#grade" do
   # 入学年度と「その年度の9月時点」を渡して学年を得る
-  def grade_at(enrollment_year:, years_later:, graduation_year: 2099)
+  # graduation_year の既定は「まだ卒業していない」を表す。入学年度から離しすぎると
+  # 年度の範囲検証(入学年度+10まで)に落ちるので、在学の上限に合わせる
+  def grade_at(enrollment_year:, years_later:, graduation_year: nil)
+    graduation_year ||= enrollment_year + User::MAX_YEARS_TO_GRADUATION
     user = build(:user, enrollment_year: enrollment_year, graduation_year: graduation_year)
     user.grade(Date.new(enrollment_year + years_later, 9, 1))
   end
@@ -35,7 +38,7 @@ RSpec.describe "User#grade" do
   end
 
   describe "年度の切り替わり" do
-    let(:user) { build(:user, enrollment_year: 2026, graduation_year: 2099) }
+    let(:user) { build(:user, enrollment_year: 2026, graduation_year: 2036) }
 
     it "3月31日までは据え置き" do
       expect(user.grade(Date.new(2027, 3, 31))).to eq("B1")

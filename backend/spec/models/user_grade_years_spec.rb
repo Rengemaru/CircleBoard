@@ -91,8 +91,10 @@ RSpec.describe "User の在学年数" do
     end
 
     it "範囲の外では grade が表記を出せない" do
-      outside = build(:user, enrollment_year: User.enrollment_year_for(10, autumn),
-                             graduation_year: 2099)
+      enrolled = User.enrollment_year_for(10, autumn)
+      # まだ卒業していない10年目。年度の範囲検証に落ちない最大の卒業年度にする
+      outside = build(:user, enrollment_year: enrolled,
+                             graduation_year: enrolled + User::MAX_YEARS_TO_GRADUATION)
 
       expect(outside.grade(autumn)).to be_nil
     end

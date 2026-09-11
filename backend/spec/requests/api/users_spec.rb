@@ -32,7 +32,7 @@ RSpec.describe "Api::Users", type: :request do
     # 時刻を固定しないと、1〜3月に実行したときだけ1つ手前の学年になる
     it "学年を返す" do
       travel_to(Date.new(2026, 9, 1)) do
-        me.update!(enrollment_year: 2024, graduation_year: 2099)
+        me.update!(enrollment_year: 2024, graduation_year: 2034)
         login(me)
         get "/api/users/me"
 

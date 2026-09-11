@@ -69,8 +69,10 @@ RSpec.describe "ユーザー管理", type: :request do
     # 画面ごとに計算させると、RubyとTypeScriptに同じ規則が2本並ぶ
     it "卒業したかどうかを判定して返す" do
       sign_in(admin)
-      graduate = create(:user, graduation_year: Date.current.year - 3)
-      current = create(:user, graduation_year: Date.current.year + 3)
+      graduate = create(:user, enrollment_year: Date.current.year - 7,
+                               graduation_year: Date.current.year - 3)
+      current = create(:user, enrollment_year: Date.current.year - 1,
+                              graduation_year: Date.current.year + 3)
       get "/api/admin/users"
 
       rows = response.parsed_body["users"].index_by { _1["id"] }
@@ -81,8 +83,8 @@ RSpec.describe "ユーザー管理", type: :request do
 
     it "卒業年度の新しい順に返す" do
       sign_in(admin)
-      create(:user, graduation_year: 2024)
-      create(:user, graduation_year: 2030)
+      create(:user, enrollment_year: 2020, graduation_year: 2024)
+      create(:user, enrollment_year: 2026, graduation_year: 2030)
 
       years = response_years_after { get "/api/admin/users" }
 

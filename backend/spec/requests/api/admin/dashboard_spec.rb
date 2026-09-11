@@ -23,8 +23,8 @@ RSpec.describe "GET /api/admin/dashboard", type: :request do
     before { sign_in(admin) }
 
     it "メンバー数と、そのうちの卒業生を数える" do
-      create(:user, graduation_year: Date.current.year - 3)
-      create(:user, graduation_year: Date.current.year + 3)
+      create(:user, enrollment_year: Date.current.year - 7, graduation_year: Date.current.year - 3)
+      create(:user, enrollment_year: Date.current.year - 1, graduation_year: Date.current.year + 3)
 
       get "/api/admin/dashboard"
       stats = response.parsed_body["stats"]
