@@ -21,7 +21,9 @@ import { UserLink } from "../../components/UserLink";
 import {
   deleteUser,
   fetchAdminUsers,
+  graduateUser,
   suspendUser,
+  ungraduateUser,
   unsuspendUser,
   updateUser,
   type AdminUserRow,
@@ -82,6 +84,8 @@ function UserList({ currentUserId }: { currentUserId: number }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [deleting, setDeleting] = useState<AdminUserRow | null>(null);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
+  // 卒業年度の上書きは元に戻せないので、停止や削除と同じく確認を挟む
+  const [graduating, setGraduating] = useState<AdminUserRow | null>(null);
   // 停止も相手のセッションを即座に切るので、削除と同じく確認を挟む
   const [suspending, setSuspending] = useState<AdminUserRow | null>(null);
   // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
@@ -117,6 +121,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
       setDeleting(null);
       setSuspending(null);
       setEditing(null);
+      setGraduating(null);
       load();
     } catch (e: unknown) {
       setError(e);
@@ -197,6 +202,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                 isSelf={user.id === currentUserId}
                 onDelete={() => setDeleting(user)}
                 onEdit={() => setEditing(user)}
+                onToggleGraduation={() => setGraduating(user)}
                 onSuspend={() => setSuspending(user)}
                 onUnsuspend={() =>
                   run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
@@ -229,6 +235,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                     isSelf={user.id === currentUserId}
                     onDelete={() => setDeleting(user)}
                     onEdit={() => setEditing(user)}
+                    onToggleGraduation={() => setGraduating(user)}
                     onSuspend={() => setSuspending(user)}
                     onUnsuspend={() =>
                       run(() => unsuspendUser(user.id), `${user.name} の停止を解除しました`)
@@ -291,6 +298,46 @@ function UserList({ currentUserId }: { currentUserId: number }) {
         />
       )}
 
+      {/* 卒業年度の上書きは取り消せないので ⚠️ を付ける。年度を持っているのは
+          サーバーだけなので、ここでは今の値を出すだけで「今年度」は計算しない
+          (backend の User#academic_year) */}
+      {graduating !== null && (
+        <Modal
+          title={
+            graduating.graduated
+              ? "⚠️ このアカウントを現役に戻しますか？"
+              : "⚠️ このアカウントを卒業生にしますか？"
+          }
+          confirmLabel={graduating.graduated ? "現役に戻す" : "卒業生にする"}
+          busy={busy}
+          onCancel={() => setGraduating(null)}
+          onConfirm={() =>
+            graduating.graduated
+              ? run(() => ungraduateUser(graduating.id), `${graduating.name} を現役に戻しました`)
+              : run(() => graduateUser(graduating.id), `${graduating.name} を卒業生にしました`)
+          }
+        >
+          {graduating.graduated ? (
+            <p>
+              <strong>{graduating.name}</strong>を現役に戻します。
+              <br />
+              卒業年度（{graduating.graduation_year}）を今年度の次に置き直します。
+              <strong>本当の卒業年度は分かりません。</strong>
+              学年が実際と違ったら、続けて「編集」で入れ直してください。
+            </p>
+          ) : (
+            <p>
+              <strong>{graduating.name}</strong>を卒業生にします。
+              <br />
+              卒業年度を今年度まで前倒しします。
+              <strong>いまの卒業年度（{graduating.graduation_year}）は戻せません。</strong>
+              <br />
+              学年（{graduating.grade ?? "—"}）の表示は消えます。ログインは止まりません。
+            </p>
+          )}
+        </Modal>
+      )}
+
       {suspending !== null && (
         <Modal
           title="アカウントを停止しますか？"
@@ -324,6 +371,7 @@ function UserCard({
   isSelf,
   onDelete,
   onEdit,
+  onToggleGraduation,
   onSuspend,
   onUnsuspend,
   busy,
@@ -332,6 +380,7 @@ function UserCard({
   isSelf: boolean;
   onDelete: () => void;
   onEdit: () => void;
+  onToggleGraduation: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
   busy: boolean;
@@ -347,10 +396,8 @@ function UserCard({
           {isSelf && <span className="text-[11px] text-gray-500">（自分）</span>}
           {user.suspended ? (
             <Badge tone="suspended">停止中</Badge>
-          ) : user.graduated ? (
-            <Badge tone="grad">卒業生</Badge>
           ) : (
-            <Badge tone="active">現役</Badge>
+            <GraduationBadgeButton user={user} onClick={onToggleGraduation} busy={busy} />
           )}
           {user.role === "admin" && <Chip>管理者</Chip>}
         </Cluster>
@@ -396,6 +443,7 @@ function UserRow({
   isSelf,
   onDelete,
   onEdit,
+  onToggleGraduation,
   onSuspend,
   onUnsuspend,
   busy,
@@ -404,6 +452,7 @@ function UserRow({
   isSelf: boolean;
   onDelete: () => void;
   onEdit: () => void;
+  onToggleGraduation: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
   busy: boolean;
@@ -437,13 +486,12 @@ function UserRow({
         {user.role === "admin" ? <Chip>管理者</Chip> : <span className="text-gray-400">—</span>}
       </Td>
       <Td>
-        {/* 状態。停止は解除できるので卒業より前に見せる */}
+        {/* 状態。停止は解除できるので卒業より前に見せる。
+            停止中は卒業の切り替えを出さない。先に停止を解除してもらう */}
         {user.suspended ? (
           <Badge tone="suspended">停止中</Badge>
-        ) : user.graduated ? (
-          <Badge tone="grad">卒業生</Badge>
         ) : (
-          <Badge tone="active">現役</Badge>
+          <GraduationBadgeButton user={user} onClick={onToggleGraduation} busy={busy} />
         )}
       </Td>
       <Td>
@@ -473,6 +521,40 @@ function UserRow({
         </span>
       </Td>
     </tr>
+  );
+}
+
+// 現役/卒業のバッジ。押すと切り替わる(オーナー決定 2026-09-11)。
+//
+// 見た目はバッジのまま変えていない。一覧で状態を読み取る役目が主で、
+// ボタンに見せると「操作」列と区別が付かなくなるため。押せることは
+// カーソルと読み上げ名で示す。
+//
+// aria-label に見えている文字（現役 / 卒業生）を含めているのは、
+// 音声入力で「現役」と言ったときに反応しなくなるのを避けるため
+function GraduationBadgeButton({
+  user,
+  onClick,
+  busy,
+}: {
+  user: AdminUserRow;
+  onClick: () => void;
+  busy: boolean;
+}) {
+  const label = user.graduated ? "卒業生" : "現役";
+  const action = user.graduated ? "現役に戻す" : "卒業生にする";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      title={`${user.name} を${action}`}
+      aria-label={`${label} — 押すと${action}`}
+      className="cursor-pointer rounded disabled:cursor-default disabled:opacity-60"
+    >
+      <Badge tone={user.graduated ? "grad" : "active"}>{label}</Badge>
+    </button>
   );
 }
 

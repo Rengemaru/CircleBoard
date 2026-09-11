@@ -95,7 +95,7 @@ export function AdminUserEditDialog({
           exampleMessage="3 → B3、5 → M1、8 → D2"
           helpMessage={
             user.graduated
-              ? "卒業生に学年はありません。在学中に戻すと入れられます"
+              ? "卒業生に学年はありません。先に一覧で「卒業生」を押して現役に戻してください"
               : "1〜9。0 と 10 以上は入れられません"
           }
         >
@@ -118,7 +118,7 @@ export function AdminUserEditDialog({
 
         <Note>
           学年を変えると入学年度と卒業年度も入れ直します。卒業年度は「いまの課程が
-          終わる年度末」として決めるので、進学や留年でずれることがあります。
+          終わる年度末」として決めるので、進学や留年でずれたら一覧のバッジで直してください。
         </Note>
       </Stack>
     </ControlledFormDialog>
