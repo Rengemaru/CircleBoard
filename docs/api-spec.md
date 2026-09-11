@@ -264,7 +264,27 @@ enum の整数（0:recruiting 1:in_progress 2:completed）がそのままこの�
 （企画用とプロフィール用で語彙を分ける。`docs/spec-tags.md` §3.4）。
 
 **タグ単体を作るAPIは作りません。** タグは企画かプロフィールに付ける過程で生まれます（`docs/spec-tags.md` §3.5）。
-こうすると、どこにも付いていないタグが生まれにくくなります。改名と削除は管理画面が持ちます（§3.8）。
+こうすると、どこにも付いていないタグが生まれにくくなります。
+
+### `GET /api/admin/tags` — 一覧 🔒管理者
+
+```json
+{ "tags": [{ "id": 1, "name": "Web開発", "category": "project_event", "usage_count": 3 }] }
+```
+
+`usage_count` は イベント・プロジェクト・プロフィールに付いている数の合計。
+
+### `PATCH /api/admin/tags/:id` — 改名 🔒管理者
+
+`{ "tag": { "name": "Web" } }` → 200。`category` は変えられない
+（企画に付いているタグをプロフィール用に移すと、その企画からタグが消えるため）。
+
+### `DELETE /api/admin/tags/:id` — 削除 🔒管理者
+
+→ 204。**`usage_count` が1以上なら 422。** 中間テーブルが `ON DELETE CASCADE` なので、
+消すと企画から黙ってタグが外れます。
+
+**管理画面に作成はありません**（§3.8。ここは「直す場所」）。
 
 ---
 

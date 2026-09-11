@@ -35,6 +35,9 @@ Rails.application.routes.draw do
         resource :suspension, only: [ :update, :destroy ], controller: "suspensions"
       end
       resources :signage_tokens, only: [ :index, :create, :destroy ]
+      # タグは「直す場所」。作成は持たない。タグは企画かプロフィールに
+      # 付ける過程で生まれる(docs/spec-tags.md §3.5 / §3.8)
+      resources :tags, only: [ :index, :update, :destroy ]
       # 企画一覧・全件(wireframes/wireframe-admin-ver2.html ④)。
       # イベントとプロジェクトを1つの表に混ぜるので、どちらでもない名前で持つ
       resources :posts, only: [ :index ]

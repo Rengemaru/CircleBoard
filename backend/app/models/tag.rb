@@ -25,6 +25,31 @@ class Tag < ApplicationRecord
                    length: { maximum: MAX_NAME_LENGTH },
                    uniqueness: { scope: :category }
 
+  # 管理画面の一覧で使う件数(docs/spec-tags.md §3.8)。
+  #
+  # 3つの中間テーブルを別々に数えるのは、企画用とプロフィール用で付く先が
+  # 違うため。1本の JOIN にまとめると、行が掛け算になって件数がずれる。
+  #
+  # N+1 を避けるためにサブクエリで持ってくる。タグは数十件になりうるので、
+  # 1件ずつ count を投げると一覧を開くたびに数十クエリが走る(CLAUDE.md §3-3)
+  USAGE_COUNT_SQL = <<~SQL.squish.freeze
+    (SELECT COUNT(*) FROM event_tags   WHERE event_tags.tag_id   = tags.id)
+  + (SELECT COUNT(*) FROM project_tags WHERE project_tags.tag_id = tags.id)
+  + (SELECT COUNT(*) FROM user_tags    WHERE user_tags.tag_id    = tags.id)
+  SQL
+
+  scope :with_usage_count, lambda {
+    select("tags.*, #{USAGE_COUNT_SQL} AS usage_count").order(:category, :name)
+  }
+
+  # 一覧以外(改名・削除)からも同じ名前で呼べるようにする。
+  # with_usage_count を通っていれば select の値を使い、そうでなければ数える
+  def usage_count
+    return self[:usage_count].to_i if has_attribute?(:usage_count)
+
+    event_tags.count + project_tags.count + user_tags.count
+  end
+
   # 表記ゆれのうち「全角と半角」「空白」だけを吸収する(docs/spec-tags.md §3.1)。
   #
   # NFKC が担うのは全角英数→半角、半角カナ→全角カナ、全角空白→半角空白。
