@@ -52,10 +52,11 @@ RSpec.describe "企画へのタグ付け", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
-    it "category: skill のタグは指定できない" do
-      skill = create(:tag, name: "Rails", category: :skill)
+    # プロフィール用の語彙は企画に付けられない(docs/spec-tags.md §3.4)
+    it "category: profile のタグは指定できない" do
+      profile_tag = create(:tag, name: "Rails", category: :profile)
 
-      post "/api/events", params: { event: base_params.merge(tag_ids: [ skill.id ]) }, as: :json
+      post "/api/events", params: { event: base_params.merge(tag_ids: [ profile_tag.id ]) }, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

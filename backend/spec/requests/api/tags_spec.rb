@@ -11,10 +11,10 @@ RSpec.describe "GET /api/tags", type: :request do
     expect(response.parsed_body["tags"].first.keys).to contain_exactly("id", "name")
   end
 
-  # category: skill(1) は未使用(仕様書 §2.4)
+  # プロフィール用の語彙は企画側に出さない(docs/spec-tags.md §3.4)
   it "category が project_event のタグだけを返す" do
     visible = create(:tag, name: "Web開発", category: :project_event)
-    hidden = create(:tag, name: "Rails", category: :skill)
+    hidden = create(:tag, name: "Rails", category: :profile)
 
     get "/api/tags"
 
