@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cluster, FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { Button } from "../components/ui/Button";
-import { FilterChip } from "../components/ui/Chip";
 import { ErrorNote } from "../components/ui/ErrorNote";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { fetchTags } from "../api/tags";
+import { TagPicker } from "../components/TagPicker";
+import { MAX_TAGS_PER_RESOURCE } from "../lib/tags";
 import { fetchMyProfile, updateMyProfile } from "../api/users";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { flashState } from "../lib/flash";
@@ -30,7 +31,8 @@ const BIO_MAX = 500;
 const DEPARTMENT_MAX = 50;
 const PRONOUNS_MAX = 20;
 const LABEL_MAX = 20;
-const MAX_TAGS = 5;
+// サーバー側と同じ値を1か所から使う
+const MAX_TAGS = MAX_TAGS_PER_RESOURCE;
 
 // 必須と任意はステータスラベルで示す。ラベルの文字に「（任意）」と
 // 混ぜると、書き方が2通りになる(/create と同じ)
@@ -48,13 +50,8 @@ export function MyProfileEditPage() {
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-  // 送信は名前で行う。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)。
-  // 選択のキーはIDのまま残している。入力欄そのものを MultiCombobox に替えるのは Issue #230
-  const selectedTagNames = useMemo(
-    () => tags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => tag.name),
-    [tags, selectedTagIds],
-  );
+  // 選んだタグは名前で持つ。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)
+  const [selectedTagNames, setSelectedTagNames] = useState<string[]>([]);
 
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [error, setError] = useState<unknown>(null);
@@ -70,7 +67,7 @@ export function MyProfileEditPage() {
         setDepartment(loaded.department ?? "");
         setPronouns(loaded.pronouns ?? "");
         setBio(loaded.bio ?? "");
-        setSelectedTagIds(loaded.tags.map((tag) => tag.id));
+        setSelectedTagNames(loaded.tags.map((tag) => tag.name));
         // 1行も無い人にも入力欄を1つ出す。「行を追加」を押さないと
         // 何も書けない画面にしない
         setLinks(
@@ -119,12 +116,6 @@ export function MyProfileEditPage() {
       setError(e);
       setBusy(false);
     }
-  }
-
-  function toggleTag(id: number) {
-    setSelectedTagIds((current) =>
-      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
-    );
   }
 
   function updateLink(index: number, patch: Partial<LinkRow>) {
@@ -238,35 +229,21 @@ export function MyProfileEditPage() {
           )}
         </Panel>
 
-        {/* スキルは企画のタグと同じ語彙から選ぶ。作成APIは無い
-            (docs/api-spec.md §4)。選び方も /create と揃える */}
+        {/* スキルの語彙は企画と分けている(docs/spec-tags.md §3.4)。
+            候補も category=profile だけを取る。選び方は /create と揃える */}
         <Panel title="使える技術">
-          {tagsError ? (
-            <Text size="S" color="TEXT_GREY">
-              タグを読み込めませんでした。ページを再読み込みしてください。
-            </Text>
-          ) : tags.length === 0 ? (
-            <Text size="S" color="TEXT_GREY">
-              選べるタグがありません。
-            </Text>
-          ) : (
-            <Stack gap={0.75}>
-              <Text size="S" color="TEXT_GREY">
-                {MAX_TAGS}件まで選べます。
-              </Text>
-              <Cluster gap={0.5}>
-                {tags.map((tag) => (
-                  <FilterChip
-                    key={tag.id}
-                    active={selectedTagIds.includes(tag.id)}
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </FilterChip>
-                ))}
-              </Cluster>
-            </Stack>
-          )}
+          <FormControl
+            label="使える技術"
+            helpMessage={`${MAX_TAGS}件まで。一覧に無いものは打って足せます。`}
+          >
+            <TagPicker
+              candidates={tags}
+              selected={selectedTagNames}
+              onChange={setSelectedTagNames}
+              max={MAX_TAGS}
+              loadFailed={tagsError}
+            />
+          </FormControl>
         </Panel>
 
         <Panel title="リンク">

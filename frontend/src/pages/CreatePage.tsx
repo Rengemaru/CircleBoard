@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
-import { FilterChip } from "../components/ui/Chip";
 import { FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { TagPicker } from "../components/TagPicker";
+import { MAX_TAGS_PER_RESOURCE } from "../lib/tags";
 import { apiFetch } from "../api/client";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -65,13 +66,8 @@ export function CreatePage() {
   const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-  // 送信は名前で行う。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)。
-  // 選択のキーはIDのまま残している。入力欄そのものを MultiCombobox に替えるのは Issue #230
-  const selectedTagNames = useMemo(
-    () => tags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => tag.name),
-    [tags, selectedTagIds],
-  );
+  // 選んだタグは名前で持つ。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)
+  const [selectedTagNames, setSelectedTagNames] = useState<string[]>([]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -137,12 +133,6 @@ export function CreatePage() {
     } finally {
       setBusy(false);
     }
-  }
-
-  function toggleTag(id: number) {
-    setSelectedTagIds((current) =>
-      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
-    );
   }
 
   if (loading) {
@@ -323,27 +313,21 @@ export function CreatePage() {
           </Stack>
         </Panel>
 
-        {/* タグは既存のものから選ぶ。作成APIは無い(docs/api-spec.md §4) */}
+        {/* 候補から選ぶことも、無い名前を打って足すこともできる
+            (docs/spec-tags.md §3.5) */}
         <Panel title="タグ">
-          {tagsError ? (
-            <p className="text-[13px] text-gray-500">
-              タグを読み込めませんでした。ページを再読み込みしてください。
-            </p>
-          ) : tags.length === 0 ? (
-            <p className="text-[13px] text-gray-500">選べるタグがありません。</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <FilterChip
-                  key={tag.id}
-                  active={selectedTagIds.includes(tag.id)}
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {tag.name}
-                </FilterChip>
-              ))}
-            </div>
-          )}
+          <FormControl
+            label="タグ"
+            helpMessage={`${MAX_TAGS_PER_RESOURCE}件まで。一覧に無いものは打って足せます。`}
+          >
+            <TagPicker
+              candidates={tags}
+              selected={selectedTagNames}
+              onChange={setSelectedTagNames}
+              max={MAX_TAGS_PER_RESOURCE}
+              loadFailed={tagsError}
+            />
+          </FormControl>
         </Panel>
 
         <div className="flex gap-2">
