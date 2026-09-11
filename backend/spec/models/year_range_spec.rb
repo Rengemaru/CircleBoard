@@ -48,18 +48,30 @@ RSpec.describe "年度の範囲" do
     end
   end
 
-  describe "卒業年度" do
+  # 卒業年度は2つの見方で見る。
+  #   1. 今の年度から遠すぎないか（0 や 99999 を弾く）
+  #   2. 入学より前になっていないか
+  # 1 を入学年度基準にすると、古い卒業生を現役に戻すときに落ちる
+  describe "卒業年度（今の年度から見た範囲）" do
     let(:enrolled) { this_year - 2 }
 
-    it "入学年度の10年後までは通る" do
+    it "今年度の10年後までは通る" do
       expect(build(:user, enrollment_year: enrolled,
-                          graduation_year: enrolled + User::MAX_YEARS_TO_GRADUATION)).to be_valid
+                          graduation_year: this_year + User::MAX_YEARS_TO_GRADUATION)).to be_valid
     end
 
-    it "入学年度の11年後は止まる" do
+    it "今年度の11年後は止まる" do
       expect(build(:user, enrollment_year: enrolled,
-                          graduation_year: enrolled + User::MAX_YEARS_TO_GRADUATION + 1)).not_to be_valid
+                          graduation_year: this_year + User::MAX_YEARS_TO_GRADUATION + 1)).not_to be_valid
     end
+
+    it "0 は止まる" do
+      expect(build(:user, enrollment_year: enrolled, graduation_year: 0)).not_to be_valid
+    end
+  end
+
+  describe "卒業年度（入学年度との前後）" do
+    let(:enrolled) { this_year - 2 }
 
     # 下限は入学年度と同じ年まで。一覧の「卒業生にする」が卒業年度を今の年度まで
     # 引き寄せるので、入学した年度に辞めた人は両方が同じ年になる
@@ -69,6 +81,14 @@ RSpec.describe "年度の範囲" do
 
     it "入学年度より前は止まる" do
       expect(build(:user, enrollment_year: enrolled, graduation_year: enrolled - 1)).not_to be_valid
+    end
+
+    # **入学年度が信用できないときは前後関係を見ない。**
+    # 見ると、古い卒業生を現役に戻すことも学年を入れ直すこともできなくなる
+    it "入学年度が範囲の外なら前後関係は見ない" do
+      old_user = build(:user, enrollment_year: this_year - 20, graduation_year: this_year + 1)
+
+      expect(old_user.errors[:graduation_year]).to be_empty
     end
   end
 
@@ -90,6 +110,13 @@ RSpec.describe "年度の範囲" do
       old_graduate.enrollment_year = this_year - 30
 
       expect(old_graduate).not_to be_valid
+    end
+
+    # 「現役に戻す」は卒業年度を今の年度の次に置き直す。入学年度を基準に
+    # 範囲を見ていると、古い卒業生はここで必ず落ちて 500 になっていた
+    it "現役に戻せる" do
+      expect { old_graduate.update!(graduation_year: this_year + 1) }.not_to raise_error
+      expect(old_graduate.reload).not_to be_graduated
     end
   end
 end

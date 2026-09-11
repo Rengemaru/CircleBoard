@@ -143,6 +143,18 @@ RSpec.describe "ユーザーの編集", type: :request do
       expect(freshman.reload).not_to be_graduated
     end
 
+    # 卒業年度を今の年度の次に置き直すので、入学年度を基準に範囲を見ていると
+    # 古い卒業生はここで必ず落ちて 500 になっていた
+    it "10年以上前に入学した卒業生を現役に戻せる" do
+      old_graduate = build(:user, enrollment_year: this_year - 20, graduation_year: this_year - 16)
+      old_graduate.save!(validate: false)
+      sign_in(admin)
+      delete "/api/admin/users/#{old_graduate.id}/graduation"
+
+      expect(response).to have_http_status(:ok)
+      expect(old_graduate.reload).not_to be_graduated
+    end
+
     it "入学した年度の人を卒業生にできる" do
       rookie = create(:user, enrollment_year: this_year, graduation_year: this_year + 4)
       sign_in(admin)
