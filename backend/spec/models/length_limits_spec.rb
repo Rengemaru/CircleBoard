@@ -25,7 +25,10 @@ RSpec.describe "文字数の上限" do
 
   describe Event do
     def build_with(attribute, length)
-      build(:event, attribute => "あ" * length)
+      # 外部リンクは形式の検証(https?://)も通るように組み立てる。
+      # 長さ以外の理由で落ちると、何を確かめたのか分からなくなる
+      value = attribute == :external_url ? url_of(length) : "あ" * length
+      build(:event, attribute => value)
     end
 
     include_examples "上限で止まる", :title, Event::MAX_TITLE_LENGTH
@@ -69,8 +72,7 @@ RSpec.describe "文字数の上限" do
 
   describe UserLink do
     def build_with(attribute, length)
-      # スキームの分を引く。形式の検証(https?://)と同時に落ちないようにする
-      build(:user_link, attribute => "https://e.jp/#{'a' * (length - 13)}")
+      build(:user_link, attribute => url_of(length))
     end
 
     include_examples "上限で止まる", :url, UserLink::MAX_URL_LENGTH
@@ -82,6 +84,12 @@ RSpec.describe "文字数の上限" do
     end
 
     include_examples "上限で止まる", :name, SignageToken::MAX_NAME_LENGTH
+  end
+
+  # ちょうど length 文字の URL。スキームの分を引いて埋める
+  def url_of(length)
+    prefix = "https://e.jp/"
+    prefix + ("a" * (length - prefix.length))
   end
 
   # 監査で実際に通ってしまった値。同じことが起きたら気づけるようにしておく
