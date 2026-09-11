@@ -3,7 +3,10 @@ class SignageToken < ApplicationRecord
   # いつ止めたかの記録が残る(spec-v2.2.md §2.7)
   scope :valid, -> { where(revoked_at: nil) }
 
-  validates :name, presence: true
+  # 「部室ディスプレイ」程度の表示名。長さの上限が無かった(2026-09-12 の監査)
+  MAX_NAME_LENGTH = 50
+
+  validates :name, presence: true, length: { maximum: MAX_NAME_LENGTH }
   validates :token, presence: true, uniqueness: true
 
   # token はサーバー側で生成する。リクエストの値を信用すると、

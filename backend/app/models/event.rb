@@ -6,10 +6,16 @@ class Event < ApplicationRecord
 
   belongs_to :owner, class_name: "User", optional: true
 
-  # DB の NOT NULL 制約に対応する presence のみ(仕様書 §2.2)。
-  # 一意性や数値範囲など、仕様書に無い検証は足さない。
+  # presence は DB の NOT NULL 制約に対応させる(仕様書 §2.2)。
   # DB制約だけだと保存時に例外が飛び、フォームにエラーを返せないため
   # アプリ層にも同じ制約を置いている。
+  #
+  # 長さの上限は NULL可の列にも付ける。maximum だけの検証は nil も空文字も
+  # 通すので、必須かどうかとは独立して置ける。
+  #
+  # 以前は「仕様書に無い検証は足さない」としていたが、上限が1つも無く
+  # 10MB のタイトルが保存できる状態だったため、2026-09-12 の監査を経て
+  # 長さだけ足した(オーナー承認済み)。
   # 注目スコアの係数(spec-v2.2.md §3.1/§3.4)。
   #
   #   spotlight_score = 開催間近ボーナス × 15 + 直近3日間の参加増加数 × 10
@@ -102,10 +108,29 @@ class Event < ApplicationRecord
     capacity.present? && active_event_participations.size >= capacity
   end
 
-  validates :title, presence: true
-  validates :description, presence: true
-  validates :location, presence: true
+  # 文字数の上限(2026-09-12 の監査で追加。オーナー承認済み)。
+  #
+  # **PostgreSQL の varchar は桁数を書かなければ無制限**で、Rails の t.string は
+  # 桁数を書かない。MySQL の VARCHAR(255) のような暗黙の上限が無いので、
+  # 上限は書いたところにしか生まれない。
+  #
+  # 実際、10MB のタイトルを持つイベントが 201 で保存でき、未ログインでも叩ける
+  # GET /api/events の応答が 11.5MB になっていた。一覧が崩れるだけの話ではなく、
+  # 部員なら誰でも公開APIを重くできる状態だった。
+  #
+  # DBのカラムには桁数を入れない。マイグレーションを伴わせず、
+  # spec-v2.2.md §2(確定済み)に触れないため(オーナー決定 2026-09-12)
+  MAX_TITLE_LENGTH = 100
+  MAX_DESCRIPTION_LENGTH = 2000
+  MAX_LOCATION_LENGTH = 100
+  MAX_EXTERNAL_URL_LENGTH = 2000
+
+  validates :title, presence: true, length: { maximum: MAX_TITLE_LENGTH }
+  validates :description, presence: true, length: { maximum: MAX_DESCRIPTION_LENGTH }
+  validates :location, presence: true, length: { maximum: MAX_LOCATION_LENGTH }
   validates :starts_at, presence: true
+  # 任意項目。maximum だけの検証は nil も空文字も通すので allow_nil は付けない
+  validates :external_url, length: { maximum: MAX_EXTERNAL_URL_LENGTH }
 
   has_many :event_tags, dependent: :destroy
   has_many :tags, through: :event_tags

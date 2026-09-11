@@ -30,8 +30,14 @@ class User < ApplicationRecord
 
   before_validation :nullify_blank_profile_fields
 
-  validates :name, presence: true
-  validates :email, presence: true, uniqueness: { case_sensitive: false }
+  # 氏名とメールの上限(2026-09-12 の監査で追加)。企画側と同じ理由で、
+  # 書かないかぎり上限は存在しなかった。255 はメールアドレスの実務上の上限
+  MAX_NAME_LENGTH = 50
+  MAX_EMAIL_LENGTH = 255
+
+  validates :name, presence: true, length: { maximum: MAX_NAME_LENGTH }
+  validates :email, presence: true, length: { maximum: MAX_EMAIL_LENGTH },
+                    uniqueness: { case_sensitive: false }
   # 公開サーバーで運用するため、最初から8文字以上を必須にする（仕様書 §2.1）
   validates :password, length: { minimum: 8 }, if: -> { password.present? }
 

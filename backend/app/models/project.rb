@@ -12,10 +12,21 @@ class Project < ApplicationRecord
     capacity.present? && project_participations.size >= capacity
   end
 
-  # DB の NOT NULL 制約に対応する presence のみ(spec-v2.2.md §2.3)。
-  # activity_schedule / meeting_schedule / capacity は NULL可なので付けない
-  validates :title, presence: true
-  validates :description, presence: true
+  # presence は DB の NOT NULL 制約に対応させる(spec-v2.2.md §2.3)。
+  # capacity は NULL可なので付けない。
+  #
+  # 長さの上限は NULL可の activity_schedule / meeting_schedule にも付ける。
+  # maximum だけの検証は nil も空文字も通すので、必須かどうかとは独立して置ける。
+  # 経緯と、DBのカラムに桁数を入れない理由は Event 側に書いてある
+  MAX_TITLE_LENGTH = 100
+  MAX_DESCRIPTION_LENGTH = 2000
+  # 「毎週土曜」「毎週水曜 19:00〜」程度の自由記述。予定表を貼る欄ではない
+  MAX_SCHEDULE_LENGTH = 100
+
+  validates :title, presence: true, length: { maximum: MAX_TITLE_LENGTH }
+  validates :description, presence: true, length: { maximum: MAX_DESCRIPTION_LENGTH }
+  validates :activity_schedule, length: { maximum: MAX_SCHEDULE_LENGTH }
+  validates :meeting_schedule, length: { maximum: MAX_SCHEDULE_LENGTH }
 
   has_many :project_tags, dependent: :destroy
   has_many :tags, through: :project_tags
