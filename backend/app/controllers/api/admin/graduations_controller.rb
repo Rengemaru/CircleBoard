@@ -21,6 +21,16 @@ module Api
       # 入学年度は触らない。学年の表記(B3 / M1)はそちらから出るので、
       # 現役に戻したときに元の学年が復元される
       def update
+        # まだ入学していない人は卒業生にできない。翌年度の入学者は先に登録できる
+        # ので(User::ENROLLMENT_YEARS_AHEAD)、この状態は実際に作れる。
+        #
+        # 卒業年度を今の年度まで引くと入学より前になり、年度の検証に落ちて 500 に
+        # なる。入学年度に丸めて 200 を返す手もあるが、押しても卒業生にならない
+        # ボタンになるので、何が起きなかったのかを返す
+        if @user.enrollment_year > User.academic_year
+          return render_error(:unprocessable_entity, "まだ入学していない人は卒業生にできません")
+        end
+
         @user.update!(graduation_year: User.academic_year)
         render json: serialize(@user)
       end
