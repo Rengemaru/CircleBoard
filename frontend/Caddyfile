@@ -11,6 +11,21 @@
 {$SITE_ADDRESS::80} {
 	encode gzip
 
+	# リクエストボディの上限(2026-09-12 の監査)。
+	#
+	# Caddy にも Rails にも既定の上限が無く、10MB の JSON がそのまま
+	# Rails まで届いていた。モデル側でも 422 で弾くようになったが、
+	# 弾く前に本文を読み切ることは変わらない。入口で切るほうが安い。
+	#
+	# 1MB にしているのは、このアプリで最大の入力が説明文2000字
+	# (Event::MAX_DESCRIPTION_LENGTH)で、タグとリンクを足しても桁が
+	# 2つ違うため。超えると Caddy が 413 を返す。
+	#
+	# ファイルのアップロードは無い(Active Storage は不採用。CLAUDE.md §1)
+	request_body {
+		max_size 1MB
+	}
+
 	handle /api/* {
 		reverse_proxy {$BACKEND_ORIGIN:backend:3000}
 	}
