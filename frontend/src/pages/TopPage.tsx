@@ -165,7 +165,14 @@ function SpotlightSection({
                   {formatDate(event.starts_at)} ・ {event.location}
                 </Text>
                 <Heading type="subBlockTitle">
-                  <TextLink elementAs={Link} to={`/events/${event.id}`}>
+                  {/* カードは高さに余裕があるので2行まで見せて省略する。
+                      title 属性でホバー時に全文が出る(Issue #322) */}
+                  <TextLink
+                    elementAs={Link}
+                    to={`/events/${event.id}`}
+                    className="line-clamp-2"
+                    title={event.title}
+                  >
                     {event.title}
                   </TextLink>
                 </Heading>
@@ -226,10 +233,19 @@ function ProjectSection({
                 <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
                   {project.status === "recruiting" ? "募集中" : "進行中"}
                 </Badge>
-                <TextLink elementAs={Link} to={`/projects/${project.id}`} size="S">
+                {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で
+                    狭い画面ではさらに縮む。title 属性で全文はホバーで読める(Issue #322) */}
+                <TextLink
+                  elementAs={Link}
+                  to={`/projects/${project.id}`}
+                  size="S"
+                  className="block min-w-0 max-w-[13em] truncate"
+                  title={project.title}
+                >
                   {project.title}
                 </TextLink>
-                <Text size="S" color="TEXT_GREY" className="ml-auto">
+                {/* タイトルだけが縮むよう、右のメタは縮ませない */}
+                <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
                   {formatProjectMeta(project)}
                 </Text>
               </Cluster>
@@ -262,7 +278,15 @@ function EventListSection({
               <Text size="S" color="TEXT_GREY" className="shrink-0">
                 {formatDate(event.starts_at)}
               </Text>
-              <TextLink elementAs={Link} to={`/events/${event.id}`} size="S">
+              {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で
+                  狭い画面ではさらに縮む。title 属性で全文はホバーで読める(Issue #322) */}
+              <TextLink
+                elementAs={Link}
+                to={`/events/${event.id}`}
+                size="S"
+                className="block min-w-0 max-w-[13em] truncate"
+                title={event.title}
+              >
                 {event.title}
               </TextLink>
               <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
