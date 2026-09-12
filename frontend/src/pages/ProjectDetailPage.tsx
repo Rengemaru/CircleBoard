@@ -14,6 +14,7 @@ import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { PostDescription } from "../components/PostDescription";
+import { DetailActionBar } from "../components/DetailActionBar";
 import { apiFetch } from "../api/client";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -152,6 +153,26 @@ export function ProjectDetailPage() {
   const canEdit =
     user !== null && (user.role === "admin" || (project.owner?.id ?? null) === user.id);
 
+  // 主催者は参加表明できない(Issue #307)。サーバーが422で弾く
+  const isOwner = project.owner?.id === user.id;
+  // **主操作が無いときは編集を primary に昇格させる。** 主催者にとっては
+  // 編集がこの画面の主操作で、参加や脱退の導線は出さない
+  const action = participationAction({
+    project,
+    isOwner,
+    full,
+    busy,
+    onJoin: () => setConfirming(true),
+    onRequestWithdrawal: () => setWithdrawing(true),
+    onCancelRequest: () =>
+      run(() => cancelWithdrawalRequest(Number(id)), "脱退の申請を取り下げました。"),
+  });
+  const edit = canEdit ? (
+    <LinkButton to={`/projects/${project.id}/edit`} variant="default" size="sm">
+      編集
+    </LinkButton>
+  ) : null;
+
   return (
     <MemberPage session={session}>
       <div className="mb-3">
@@ -177,16 +198,6 @@ export function ProjectDetailPage() {
             size は XL。smarthr-ui は太さではなく大きさで階層を作るので、
             既定の L だとパネル内の他の情報に埋もれる(PR #134 と同じ) */}
         <PageHeading title={project.title} className="mt-2.5" size="XL" />
-
-        {/* owner 本人と管理者だけに出す。**隠すのは表示の話で制限ではない**ので、
-            API 側が require_owner_or_admin で弾いている(CLAUDE.md §3-2) */}
-        {canEdit && (
-          <div className="mt-3">
-            <LinkButton to={`/projects/${project.id}/edit`} variant="default" size="sm">
-              編集
-            </LinkButton>
-          </div>
-        )}
 
         {/* 「いつ活動して・いつ集まって・あと何枠か」は参加を決めるのに
             一緒に見る情報なので横に並べる
@@ -241,25 +252,10 @@ export function ProjectDetailPage() {
 
       {notice !== null && <Note tone="success">{notice}</Note>}
 
-      {project.current_user_joined === true ? (
-        <WithdrawalSection
-          project={project}
-          busy={busy}
-          isOwner={project.owner?.id === user.id}
-          onRequest={() => setWithdrawing(true)}
-          onCancel={() =>
-            run(() => cancelWithdrawalRequest(Number(id)), "脱退の申請を取り下げました。")
-          }
-        />
-      ) : full ? (
-        <Note tone="warning">定員に達しています。</Note>
-      ) : (
-        // 「申請」と書いていたが、承認フローは無く押した時点で参加が確定する。
-        // 実態に合わせて「参加する」にする(Issue #42)
-        <Button variant="primary" onClick={() => setConfirming(true)} disabled={busy}>
-          参加する
-        </Button>
-      )}
+      {/* **説明は本文に残し、操作はバーへ移した**(Issue #302)。
+          「なぜ押せないのか」「いま申請中である」は読む情報で、
+          ボタンの横に置くものではない */}
+      <ParticipationNote project={project} isOwner={isOwner} full={full} />
 
       {/* owner と管理者にだけ返る。キーが無ければ捌く権限が無い */}
       {project.withdrawal_requests !== undefined && project.withdrawal_requests.length > 0 && (
@@ -303,6 +299,14 @@ export function ProjectDetailPage() {
           </Text>
         </Panel>
       )}
+
+      {/* **脱退申請パネルより後ろに置く。** sticky の効く範囲は親の終わりまでなので、
+          手前に置くと owner/管理者のときだけバーが画面中腹で止まる。
+          Modal は portal で別の場所に描かれるので、順序に関係しない */}
+      <DetailActionBar
+        primary={action ?? edit}
+        secondary={action === null ? undefined : (edit ?? undefined)}
+      />
 
       {withdrawing && (
         <Modal
@@ -352,45 +356,95 @@ function formatRemaining(project: ProjectSummary): string {
 //
 // **主催者には出さない。** 抜けると持ち主のいない企画が残るので、API も 422 で
 // 弾く(docs/api-spec.md)。押せるボタンを出して怒られるより、出さない
-function WithdrawalSection({
+// 状態の説明。**ボタンは持たない**（操作はバーにある）。
+// 「なぜ押せないのか」「いま申請中である」は読む情報なので本文に残す
+function ParticipationNote({
   project,
-  busy,
   isOwner,
-  onRequest,
-  onCancel,
+  full,
 }: {
   project: ProjectSummary;
-  busy: boolean;
   isOwner: boolean;
-  onRequest: () => void;
-  onCancel: () => void;
+  full: boolean;
 }) {
   if (isOwner) {
     return <Note>あなたが主催しています。主催者はこのプロジェクトを抜けられません。</Note>;
+  }
+
+  if (project.current_user_joined !== true) {
+    return full ? <Note tone="warning">定員に達しています。</Note> : null;
   }
 
   if (project.current_user_withdrawal_requested === true) {
     return (
       <Note tone="warning">
         脱退を申請しています。<strong>主催者が承認するまでは参加したままです。</strong>
-        <div className="mt-2">
-          <Button variant="default" size="sm" onClick={onCancel} disabled={busy}>
-            申請を取り下げる
-          </Button>
-        </div>
       </Note>
     );
   }
 
-  return (
-    <Note>
-      このプロジェクトに参加しています。
-      <div className="mt-2">
-        <Button variant="default" size="sm" onClick={onRequest} disabled={busy}>
-          脱退を申請する
+  return <Note>このプロジェクトに参加しています。</Note>;
+}
+
+// バーの主操作。**状態ごとに1つだけ返す。**
+//
+//   主催者    … 何も返さない（編集が primary に昇格する）
+//   申請中    … 申請を取り下げる
+//   参加中    … 脱退を申請する（イベントの「参加をキャンセル」と同じ位置）
+//   満員      … 「満員です」の無効ボタン
+//   それ以外  … 参加する
+//
+// **関数にしてあるのは、null を返せるようにするため。** コンポーネントだと
+// 中で null を返しても要素そのものは存在し、呼び出し側から
+// 「主操作が無い」ことを判定できない（FloatArea は primaryButton が必須）
+function participationAction({
+  project,
+  isOwner,
+  full,
+  busy,
+  onJoin,
+  onRequestWithdrawal,
+  onCancelRequest,
+}: {
+  project: ProjectSummary;
+  isOwner: boolean;
+  full: boolean;
+  busy: boolean;
+  onJoin: () => void;
+  onRequestWithdrawal: () => void;
+  onCancelRequest: () => void;
+}): React.ReactNode {
+  if (isOwner) return null;
+
+  if (project.current_user_joined === true) {
+    if (project.current_user_withdrawal_requested === true) {
+      return (
+        <Button variant="default" onClick={onCancelRequest} disabled={busy}>
+          申請を取り下げる
         </Button>
-      </div>
-    </Note>
+      );
+    }
+    return (
+      <Button variant="ghost" onClick={onRequestWithdrawal} disabled={busy}>
+        脱退を申請する
+      </Button>
+    );
+  }
+
+  if (full) {
+    return (
+      <Button variant="primary" disabled>
+        満員です
+      </Button>
+    );
+  }
+
+  // 「申請」と書いていたが、承認フローは無く押した時点で参加が確定する。
+  // 実態に合わせて「参加する」にする(Issue #42)
+  return (
+    <Button variant="primary" onClick={onJoin} disabled={busy}>
+      参加する
+    </Button>
   );
 }
 
