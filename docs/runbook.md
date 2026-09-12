@@ -24,6 +24,10 @@ alias dc='docker compose -f docker-compose.prod.yml --env-file .env.production'
 
 ## 1. 初回デプロイ
 
+**この節はサーバーを新しく建て直すときのものです。** 現在動いている本番の作り方の記録でもあります。いまの本番に対する日々の更新は §2、ドメインと HTTPS の設定値は §3 を見てください。
+
+`<VPSのIP>` は建てたサーバーのIPに読み替えます（現在の本番は `160.251.200.200`）。ドメインを先に用意できるなら、§3 の値を §1-3 の時点で入れてしまって構いません。
+
 VPS の初期設定（非 root ユーザー / SSH 鍵 / ufw / fail2ban）が済んでいる前提です。
 
 ```bash
@@ -223,44 +227,89 @@ dc exec -T backend bin/rails runner 'SignageToken.find(<ID>).update!(revoked_at:
 
 ## 2. 更新する（2回目以降）
 
-```bash
-# 開発機で: ビルドして push（§1-1 と同じ）
-# VPS で:
-cd /opt/circleboard
-dc pull
-dc up -d
-dc exec -T backend bin/rails db:migrate
+**手で打つことはありません。`main` にマージすると自動で出ます。**
+
+```
+feat/xxx ──PR──> develop ──PR──> main ──自動──> 本番
+                （溜める）      （出す）
 ```
 
-**マイグレーションは起動時に自動で走りません**（`backend/Dockerfile` の `CMD` に入れていません）。コンテナを2つ立てたときに同時に走って事故るためです。上のように明示的に打ちます。
+`develop` → `main` の PR を**マージコミット**でマージすると、`.github/workflows/deploy.yml` が動きます。
+
+> **squash にしないこと。** `develop` と `main` は長く並走するので、squash すると履歴が切り離され、次のマージで必ず衝突します（実際に起きました）。`feat/xxx` → `develop` は squash で構いません。
+
+### CD が何をしているか
+
+| | 場所 | 内容 |
+|---|---|---|
+| 1 | Actions | backend / frontend をビルドし、`:latest` と `:<コミットSHA>` の2つのタグで ghcr.io へ push |
+| 2 | VPS | `docker-compose.prod.yml` と `ops/` を scp して `chmod +x` |
+| 3 | VPS | **`./ops/backup.sh`**（戻せる状態を作ってから進む） |
+| 4 | VPS | `dc pull` → `dc up -d` → `dc exec backend bin/rails db:migrate` |
+| 5 | VPS | `/healthz` が返るまで最大30秒待って確認 |
+
+**VPS ではビルドしません。** 2GBしかなく、メモリ不足で落ちるためです（`docs/spec-v2.2.md` §7.4）。
+
+**`.env.production` は送られません。** リポジトリに無いので、変更するときは VPS で直接編集して `dc up -d` します。
+
+### 失敗したとき
+
+Actions が赤くなります。**赤いのに画面が動いていることがあります** — `up -d` まで成功して `db:migrate` で落ちた場合です。ログの最後まで読んでどこで止まったかを見てください。
 
 ### 切り戻す
 
-`.env.production` の `BACKEND_IMAGE` / `FRONTEND_IMAGE` のタグを前のものに書き換えて `dc up -d` します。
-
-**マイグレーションを含む更新は、これだけでは戻りません。** DBのスキーマは前に進んだままなので、§4 の復元が要ります。**戻せる形にしておくために、更新の前にバックアップを1回手で取ってください。**
+`:<コミットSHA>` のタグが毎回残るので、そこへ戻します。
 
 ```bash
-/opt/circleboard/ops/backup.sh
+cd /opt/circleboard
+vi .env.production
+# BACKEND_IMAGE=ghcr.io/rengemaru/circleboard-backend:<戻したいSHA>
+# FRONTEND_IMAGE=ghcr.io/rengemaru/circleboard-frontend:<戻したいSHA>
+dc up -d
 ```
+
+戻したい SHA は、GitHub の Actions のログか `git log origin/main` で分かります。
+
+**マイグレーションを含む更新は、これだけでは戻りません。** DBのスキーマは前に進んだままなので、§4 の復元が要ります。CD が毎回バックアップを取っているので、直前の状態は `backups/` にあります。
+
+### 手で出したいとき
+
+CD が使えないときの逃げ道です。
+
+```bash
+# 開発機で（§1-1 と同じ）
+docker build -t ghcr.io/rengemaru/circleboard-backend:latest ./backend
+docker push ghcr.io/rengemaru/circleboard-backend:latest
+# VPS で
+dc pull && dc up -d && dc exec -T backend bin/rails db:migrate
+```
+
+**ただし Windows でビルドしたイメージは、Linux でビルドしたものと実行権限が違います。** `backend/bin/*` が 100644 のままだと `bin/rails` が動きません（一度踏みました）。常用しないでください。
 
 ---
 
-## 3. ドメインを取ったら
+## 3. ドメインと HTTPS
 
-1. DNS の A レコードを VPS の IP に向ける
-2. `.env.production` を3か所書き換える
+**設定済みです。** 公開URLは **https://cb.fukupro.club** です。
 
-| 項目 | 変更後 |
+| 項目 | 値 |
 |---|---|
-| `SITE_ADDRESS` | `circleboard.example.jp`（`:80` から） |
-| `ALLOWED_HOSTS` | `circleboard.example.jp` |
-| `PUBLIC_BASE_URL` | `https://circleboard.example.jp` |
-| `FORCE_SSL` | **行ごと消す**（既定の `true` に戻る） |
+| DNS | Cloudflare の A レコード。`cb` → `160.251.200.200`、**Proxy は DNS only** |
+| 証明書 | Let's Encrypt。**Caddy が自動取得・自動更新** |
+| `SITE_ADDRESS` | `cb.fukupro.club` |
+| `ALLOWED_HOSTS` | `cb.fukupro.club` |
+| `PUBLIC_BASE_URL` | `https://cb.fukupro.club` |
+| `FORCE_SSL` | **行ごと無し**（既定の `true`） |
 
-3. `dc up -d` で入れ替える
+**Cloudflare の Proxy をオンにしないでください（オレンジの雲）。** ACME の確認要求が Cloudflare に吸われ、**Caddy が証明書を更新できなくなります。** 更新は90日ごとなので、切り替えた直後ではなく数か月後に切れます。
 
-Caddy が証明書を自動で取ります。`dc logs frontend` に取得のログが出ます。**DNS が向いていないと取れません**ので、1 を先にやってください。
+IP 直打ち（`http://160.251.200.200`）は `ALLOWED_HOSTS` から外れたので使えません。
+
+### ドメインを変えるとき
+
+**サイネージの QR に載っている URL が変わります。** 貼ってある QR と、部室の端末に設定した URL を作り直すことになります。トークン自体は有効なままです。
+
+HSTS を `max-age=63072000`（2年）で返しているので、**一度ブラウザが覚えると2年間 http でアクセスできません。**
 
 ---
 
@@ -268,7 +317,9 @@ Caddy が証明書を自動で取ります。`dc logs frontend` に取得のロ�
 
 ### 何を、いつ取っているか
 
-`ops/backup.sh` が毎日 4:00 に `pg_dump` を取り、`/opt/circleboard/backups/db_YYYYMMDD.sql.gz` に置きます。**14日より古いものは自動で消えます。**
+`ops/backup.sh` が毎日 4:00 に `pg_dump` を取り、`/opt/circleboard/backups/db_YYYYMMDD_HHMMSS.sql.gz` に置きます。**14日より古いものは自動で消えます。**
+
+CD も**デプロイのたびに1回**取ります（`deploy.yml`）。ファイル名に時刻が入っているのは、**同じ日に2回走ったときに1回目を上書きしないため**です。戻したいのはたいてい1回目（変更前）の方です。
 
 cron の登録は §1-7 で済ませています。何が入っているかは `crontab -l` で見られます。
 
@@ -299,7 +350,7 @@ ls -l /opt/circleboard/backups/        # 今日の日付のファイルがある
 
 ```bash
 # 手元（開発機）で打つ
-scp circleboard:/opt/circleboard/backups/db_$(date +%Y%m%d).sql.gz .
+scp 'circleboard:/opt/circleboard/backups/db_'$(date +%Y%m%d)'_*.sql.gz' .
 ```
 
 ### 復元する
@@ -314,7 +365,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -U circleboard -d postgres -c "CREATE DATABASE restore_check;"
 
 # 2. 流し込む。ON_ERROR_STOP=1 を付けると途中で失敗したときに止まる
-gzip -dc backups/db_20260912.sql.gz | \
+gzip -dc backups/db_20260913_043000.sql.gz | \
   docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -v ON_ERROR_STOP=1 -U circleboard -d restore_check
 

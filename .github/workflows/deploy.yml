@@ -104,13 +104,35 @@ jobs:
             #  同時に走って事故る)
             dc exec -T backend bin/rails db:migrate
             dc ps
-            # **起動を待つ。** up -d の直後は Puma がまだ待ち受けておらず、
-            # すぐ叩くと 502 になる(初回のデプロイで実際に出た)。
-            # 30秒待っても返らなければ、それは本当に起動できていない
+
+            # **http://localhost では届かない。** SITE_ADDRESS にドメインを
+            # 入れた時点で、Host: localhost は Caddy のサイトブロックに
+            # 一致しなくなり、自動HTTPSの 308 が返るだけになった。
+            # curl -f は 4xx/5xx でしか失敗しないので、
+            # **Rails が落ちていてもデプロイが緑になっていた。**
+            #
+            # .env.production は source しない(シェルのファイルではない)。
+            # sed で1行だけ取り出す
+            SITE=$(sed -n 's/^SITE_ADDRESS=//p' .env.production)
+            case "$SITE" in
+              # ドメインがまだ無い期間(SITE_ADDRESS=:80)。素のHTTPで届く
+              :*) check() { curl -fsS http://localhost/healthz | grep -q '"status":"ok"'; } ;;
+              # --resolve で、名前は本物・宛先は自分自身にする。
+              # **証明書もここで検証される。** 期限切れや取得失敗を
+              # デプロイのたびに拾える(更新は90日ごとで、他に気づく手段が無い)
+              *)  check() { curl -fsS --resolve "${SITE}:443:127.0.0.1" "https://${SITE}/healthz" | grep -q '"status":"ok"'; } ;;
+            esac
+
+            # **中身まで見る。** 200 が返るだけでは足りない。Caddy が
+            # SPA の index.html を返していても 200 になる
+            #
+            # up -d の直後は Puma がまだ待ち受けておらず 502 になる
+            # (初回のデプロイで実際に出た)。30秒待っても返らなければ、
+            # それは本当に起動できていない
             for i in $(seq 1 15); do
-              curl -fsS http://localhost/healthz && break
+              check && break
               echo "起動待ち ${i}/15"
               sleep 2
             done
             # ここが失敗したらデプロイは赤。出たつもりで壊れている状態を作らない
-            curl -fsS http://localhost/healthz
+            check
