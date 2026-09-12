@@ -1,8 +1,10 @@
 require "rails_helper"
 
 # 管理者によるアカウント発行(docs/api-spec.md §6)。
-# ユーザーの一覧・編集・停止・削除UIは MVP 対象外(CLAUDE.md §10)で、
-# rails console で対応する。ここは発行だけを担う。
+#
+# 学年は「在学何年目か」(1〜9)で受け取り、入学年度と卒業年度はサーバーが
+# 逆算する。年度を人手で入れるのは現実的でない(オーナー決定 2026-09-11)。
+# 編集(PATCH /api/admin/users/:id)と同じ扱い。
 RSpec.describe "POST /api/admin/users", type: :request do
   let(:admin) { create(:user, role: :admin) }
   let(:member) { create(:user) }
@@ -12,8 +14,7 @@ RSpec.describe "POST /api/admin/users", type: :request do
         name: "鈴木一郎",
         email: "ichiro@example.ac.jp",
         password: "password123",
-        enrollment_year: 2026,
-        graduation_year: 2030,
+        grade_years: 1,
         role: "member"
       }
     }
@@ -47,6 +48,57 @@ RSpec.describe "POST /api/admin/users", type: :request do
     created = User.find(response.parsed_body["user"]["id"])
     expect(created.name).to eq("鈴木一郎")
     expect(created).to be_member
+  end
+
+  describe "学年" do
+    before { sign_in(admin) }
+
+    def issue(grade_years)
+      body = params.deep_dup
+      body[:user][:grade_years] = grade_years
+      post "/api/admin/users", params: body, as: :json
+    end
+
+    it "在学年数から入学年度と卒業年度を決める" do
+      travel_to(Date.new(2026, 9, 1)) { issue(3) }
+
+      created = User.find(response.parsed_body["user"]["id"])
+      expect(created.enrollment_year).to eq(2024)
+      # 学部の4年目が終わる年度末に卒業する、とみなす
+      expect(created.graduation_year).to eq(2028)
+      expect(created.grade(Date.new(2026, 9, 1))).to eq("B3")
+    end
+
+    # 0 と 10 以上は入力させない。画面でも弾くが curl で直接叩ける
+    [ 0, 10, -1, "３", "abc" ].each do |bad|
+      it "#{bad.inspect} では発行しない" do
+        expect { issue(bad) }.not_to change(User, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    # 年度を直接送っても効かない。grade_years から逆算した値が入る
+    it "年度を混ぜても無視する" do
+      body = params.deep_dup
+      body[:user][:enrollment_year] = 1999
+      body[:user][:graduation_year] = 2099
+
+      travel_to(Date.new(2026, 9, 1)) { post "/api/admin/users", params: body, as: :json }
+
+      created = User.find(response.parsed_body["user"]["id"])
+      expect(created.enrollment_year).to eq(2026)
+    end
+
+    it "学年を送らないと 422（年度が決まらない）" do
+      body = params.deep_dup
+      body[:user].delete(:grade_years)
+
+      expect { post "/api/admin/users", params: body, as: :json }
+        .not_to change(User, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
   end
 
   it "admin ロールのアカウントも発行できる" do

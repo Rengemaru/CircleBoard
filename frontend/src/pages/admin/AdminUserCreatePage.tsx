@@ -8,6 +8,7 @@ import { ErrorNote } from "../../components/ui/ErrorNote";
 import { Note } from "../../components/ui/Note";
 import { Panel } from "../../components/ui/Panel";
 import { createUser, type NewUserInput } from "../../api/admin";
+import { gradeLabel } from "../../lib/grade";
 import { AdminOnly } from "./AdminOnly";
 
 // アカウント発行(wireframes/wireframe-admin-ver2.html ③)。
@@ -37,21 +38,17 @@ export function AdminUserCreatePage() {
 
 type Issued = { name: string; email: string; password: string };
 
-// 入学年度・卒業年度の選択肢。今年の前後を出しておけば足りる
-const THIS_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 14 }, (_, i) => THIS_YEAR - 6 + i);
-const YEAR_OPTIONS = YEARS.map((year) => ({ label: String(year), value: String(year) }));
-
 function IssueForm() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<NewUserInput>({
+  // 学年は form に持たない。入力中の空欄を 0 として扱わないよう文字列で持ち、
+  // 送るときに数値へ直す。form 側にも持つと、空にしたときだけ2つがずれる
+  const [form, setForm] = useState<Omit<NewUserInput, "grade_years">>({
     name: "",
     email: "",
     password: "",
-    enrollment_year: THIS_YEAR,
-    graduation_year: THIS_YEAR + 4,
     role: "member",
   });
+  const [years, setYears] = useState("1");
   const [issued, setIssued] = useState<Issued | null>(null);
   // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
   // 表示側(ErrorNote)で判定するため(Issue #72)
@@ -63,7 +60,7 @@ function IssueForm() {
     setBusy(true);
     setError(null);
     try {
-      await createUser(form);
+      await createUser({ ...form, grade_years: Number(years) });
       // 発行した初期パスワードはこの画面で一度だけ表示して終わり。
       // メール送信機能が無いので、口頭やDMで本人に伝える運用(ワイヤーフレーム③)
       setIssued({ name: form.name, email: form.email, password: form.password });
@@ -112,28 +109,31 @@ function IssueForm() {
             </FormControl>
           </div>
 
-          {/* 入学年度はワイヤーフレーム③に無いが、users.enrollment_year が
-            NOT NULL なので外せない(spec-v2.2.md §2)。
-            学科の入力欄は逆に、列が無いので今は作れない(T7-4) */}
-          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
-            <FormControl label="入学年度" statusLabels={REQUIRED}>
-              <Select
-                value={String(form.enrollment_year)}
-                options={YEAR_OPTIONS}
-                onChangeValue={(value) => setForm({ ...form, enrollment_year: Number(value) })}
-                width="100%"
+          {/* 入学年度と卒業年度は入力させない。部員ぶんを人手で入れるのは
+            現実的でない(オーナー決定 2026-09-11)。年度はこの数字から逆算する。
+            学科の入力欄は逆に、本人が /me/edit で書くのでここには無い */}
+          <FormControl
+            label="何年？"
+            statusLabels={REQUIRED}
+            exampleMessage="3 → B3、5 → M1、8 → D2"
+            helpMessage="1〜9。0 と 10 以上は入れられません"
+          >
+            <span className="flex items-center gap-3">
+              <Input
+                value={years}
+                // 1文字しか入らないので、0 と 10 以上は打ち込めない。
+                // サーバーでも同じ範囲で弾く(curl で直接叩けるため)
+                onChange={(e) => setYears(e.target.value.replace(/[^1-9]/g, "").slice(-1))}
+                inputMode="numeric"
+                maxLength={1}
+                aria-label="在学何年目か"
+                width="4em"
+                required
               />
-            </FormControl>
-            {/* 卒業年度は必須。後から一括入力するとコストが高いため発行時に必ず取る */}
-            <FormControl label="卒業年度" statusLabels={REQUIRED}>
-              <Select
-                value={String(form.graduation_year)}
-                options={YEAR_OPTIONS}
-                onChangeValue={(value) => setForm({ ...form, graduation_year: Number(value) })}
-                width="100%"
-              />
-            </FormControl>
-          </div>
+              {/* 入れた数字がどの学年になるかを、その場で見せる */}
+              <span className="text-sm text-gray-600">{gradeLabel(Number(years)) ?? "—"}</span>
+            </span>
+          </FormControl>
 
           <FormControl
             label="初期パスワード"

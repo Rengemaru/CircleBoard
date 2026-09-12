@@ -107,8 +107,8 @@ export type NewUserInput = {
   name: string;
   email: string;
   password: string;
-  enrollment_year: number;
-  graduation_year: number;
+  // 在学何年目か。入学年度と卒業年度はサーバーが逆算する(編集と同じ)
+  grade_years: number;
   role: "admin" | "member";
 };
 
