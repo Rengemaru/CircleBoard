@@ -4,10 +4,11 @@ import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { Button } from "../components/ui/Button";
-import { FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
+import { FormControl, Input, Stack, StatusLabel, Text } from "smarthr-ui";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { MarkdownField } from "../components/MarkdownField";
 import { TagPicker } from "../components/TagPicker";
 import { MAX_TAGS_PER_RESOURCE } from "../lib/tags";
 import { apiFetch } from "../api/client";
@@ -54,22 +55,24 @@ function toDateTimeLocal(iso: string): string {
   );
 }
 
-// 概要の書き出しに迷わないための雛形。value ではなく placeholder に入れる
-const EVENT_TEMPLATE = `【このイベントについて】
+// 概要の書き出しに迷わないための雛形。value ではなく placeholder に入れる。
+// 【】ではなく `# ` で書く。見出しにすると詳細画面で節ごとの
+// パネルに分かれる(Issue #303)。【】のままだとただの文字列で終わる
+const EVENT_TEMPLATE = `# このイベントについて
 
-【参加対象】
+# 参加対象
 
-【当日の流れ】
+# 当日の流れ
 
-【持ち物・事前準備】`;
+# 持ち物・事前準備`;
 
-const PROJECT_TEMPLATE = `【このプロジェクトについて】
+const PROJECT_TEMPLATE = `# このプロジェクトについて
 
-【作るもの・目指す成果物】
+# 作るもの・目指す成果物
 
-【使う技術】
+# 使う技術
 
-【求めるメンバー】`;
+# 求めるメンバー`;
 
 // 必須と任意はステータスラベルで示す。ラベルの文字に「（任意）」と
 // 混ぜると、必須の印だけ別の形になって2通りの書き方が並ぶ
@@ -356,16 +359,15 @@ function PostFormPage({ editingKind }: { editingKind?: Kind }) {
             <FormControl
               label="概要"
               statusLabels={REQUIRED}
-              helpMessage="枠の中の見出しは目安です。書きやすい形で構いません"
+              helpMessage="Markdown で書けます。`# 見出し` で節に分かれ、箇条書き・太字・リンク・表・コードが使えます"
             >
-              <Textarea
+              <MarkdownField
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={setDescription}
                 rows={10}
                 maxLetters={DESCRIPTION_MAX}
                 placeholder={kind === "event" ? EVENT_TEMPLATE : PROJECT_TEMPLATE}
                 required
-                width="100%"
               />
             </FormControl>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Cluster, FormControl, Input, Stack, StatusLabel, Text, Textarea } from "smarthr-ui";
+import { Cluster, FormControl, Input, Stack, StatusLabel, Text } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
 import { SessionUnavailable } from "../components/SessionUnavailable";
@@ -11,6 +11,7 @@ import { Panel } from "../components/ui/Panel";
 import { Note } from "../components/ui/Note";
 import { fetchTags } from "../api/tags";
 import { TagPicker } from "../components/TagPicker";
+import { MarkdownField } from "../components/MarkdownField";
 import { PasswordChangeDialog } from "../components/PasswordChangeDialog";
 import { changeMyPassword } from "../api/users";
 import { MAX_TAGS_PER_RESOURCE } from "../lib/tags";
@@ -267,15 +268,9 @@ export function MyProfileEditPage() {
               <FormControl
                 label="自己紹介"
                 statusLabels={OPTIONAL}
-                helpMessage="何を作っているか、何に興味があるかを書いておくと、企画に誘われやすくなります"
+                helpMessage="何を作っているか、何に興味があるかを書いておくと、企画に誘われやすくなります。Markdown で書けます"
               >
-                <Textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={8}
-                  maxLetters={BIO_MAX}
-                  width="100%"
-                />
+                <MarkdownField value={bio} onChange={setBio} rows={8} maxLetters={BIO_MAX} />
               </FormControl>
             </Stack>
           )}

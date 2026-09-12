@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Text } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { MemberPage } from "../components/MemberPage";
+import { Markdown } from "../components/Markdown";
 import { MyPostList } from "../components/MyPostList";
 import { ProfileHeader } from "../components/ProfileHeader";
 import { SessionUnavailable } from "../components/SessionUnavailable";
@@ -128,8 +129,9 @@ function Profile({ id }: { id: string | undefined }) {
               名札の中に入れると、長い人と短い人で高さが大きく変わる */}
           <Panel title="自己紹介">
             {profile.bio !== null && profile.bio !== "" ? (
-              // 改行はそのまま出すが、HTML としては解釈しない
-              <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+              // Markdown として描く(Issue #303)。ProfileBody とは別に
+              // ここでも bio を出しているので、両方を揃える
+              <Markdown source={profile.bio} />
             ) : (
               <Text size="S" color="TEXT_GREY">
                 まだ書かれていません。
