@@ -79,5 +79,6 @@ function handoverText(name: string, password: string): string {
   return [
     `${name} さんの CircleBoard のパスワードを再発行しました。`,
     `新しいパスワード: ${password}`,
+    "ログイン後、マイページから自分で変更できます。",
   ].join("\n");
 }
