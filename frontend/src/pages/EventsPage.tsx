@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TagChip } from "../components/TagChip";
+import { toPlainText } from "../lib/markdown";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
@@ -210,8 +211,10 @@ function EventRow({ event }: { event: EventSummary }) {
           </ul>
         )}
 
+        {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
+            ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
         <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
-          {event.description}
+          {toPlainText(event.description)}
         </Text>
 
         <Cluster align="center" gap="XS">
