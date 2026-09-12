@@ -22,6 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # **cache-to: type=gha には docker-container ドライバが要る。**
+      # ランナーの既定は docker ドライバで、キャッシュの書き出しに対応していない
+      # ("Cache export is not supported for the docker driver" で初回が落ちた)
+      - uses: docker/setup-buildx-action@v3
+
       # ghcr.io は所有者名が小文字でないと通らない（Rengemaru → rengemaru）
       - id: owner
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
