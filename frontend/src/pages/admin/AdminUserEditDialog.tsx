@@ -13,6 +13,9 @@ import type { AdminUserRow, UpdateUserInput } from "../../api/admin";
 // 確認ダイアログ(components/ui/Modal)ではなくフォームダイアログを使う。
 // あちらは確定ボタンが常に danger で、取り消せない操作の前に挟むためのもの。
 // 保存は取り消せる操作なので、同じ見た目にしない。
+// サーバー側の検証と同じ値(backend の User::MAX_NAME_LENGTH)
+const NAME_MAX = 50;
+
 const ROLE_OPTIONS: { label: string; value: "admin" | "member" }[] = [
   { label: "メンバー（通常）", value: "member" },
   { label: "管理者", value: "admin" },
@@ -38,6 +41,7 @@ export function AdminUserEditDialog({
   // 初期値を member にしておき、「変わったものだけ送る」で送信対象から外す
   const initialRole = user.role === "admin" ? "admin" : "member";
   const [role, setRole] = useState<"admin" | "member">(initialRole);
+  const [name, setName] = useState(user.name);
   // 文字列で持つ。数値にすると、消している途中の空欄を 0 として扱うことになる
   const [years, setYears] = useState(initialYears(user));
 
@@ -47,6 +51,7 @@ export function AdminUserEditDialog({
     const input: UpdateUserInput = {};
     // 変わったものだけ送る。触っていない項目まで送ると、
     // 卒業生の学年のようにサーバーが弾く値を、意図せず送ることになる
+    if (name !== user.name) input.name = name;
     if (role !== initialRole) input.role = role;
     if (years !== "" && Number(years) !== user.grade_years) input.grade_years = Number(years);
 
@@ -70,6 +75,18 @@ export function AdminUserEditDialog({
     >
       <Stack gap={1}>
         {error !== null && <ErrorNote error={error} fallback="保存に失敗しました" />}
+
+        {/* 発行時の打ち間違いを直すための欄。改姓は本人が /me/edit で直す
+          (docs/spec-admin-operations.md §3.4) */}
+        <FormControl label="氏名">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={NAME_MAX}
+            required
+            width="100%"
+          />
+        </FormControl>
 
         <FormControl
           label="権限"

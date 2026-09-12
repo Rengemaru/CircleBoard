@@ -46,16 +46,18 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
   end
 
   describe "受け取らない項目" do
-    it "name / email / role / 年度を混ぜても変わらない" do
-      before_attrs = me.slice(:name, :email, :role, :enrollment_year, :graduation_year)
+    # name は 2026-09-12 から受け取るようになった(spec/requests/api/name_change_spec.rb)。
+    # email / role / 年度は引き続き受け取らない
+    it "email / role / 年度を混ぜても変わらない" do
+      before_attrs = me.slice(:email, :role, :enrollment_year, :graduation_year)
       login(me)
       patch_me(
-        name: "別人", email: "hijack@example.com", role: "admin",
+        email: "hijack@example.com", role: "admin",
         enrollment_year: 1999, graduation_year: 2099, bio: "更新した"
       )
 
       expect(response).to have_http_status(:ok)
-      expect(me.reload.slice(:name, :email, :role, :enrollment_year, :graduation_year)).to eq before_attrs
+      expect(me.reload.slice(:email, :role, :enrollment_year, :graduation_year)).to eq before_attrs
       expect(me.bio).to eq "更新した"
     end
   end

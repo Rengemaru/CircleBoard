@@ -130,6 +130,9 @@ export async function unsuspendUser(id: number): Promise<void> {
 // 権限と学年の変更(docs/spec-admin-operations.md §3.3)。
 // 変えない項目は送らない。demo は選べない
 export type UpdateUserInput = {
+  // 本人も /me/edit から変えられる。直したい人が違うので入口を2つ残している
+  // (docs/spec-admin-operations.md §3.4)
+  name?: string;
   role?: "admin" | "member";
   // 在学何年目か。入学年度と卒業年度はサーバーがここから逆算する
   grade_years?: number;

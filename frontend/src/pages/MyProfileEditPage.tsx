@@ -34,6 +34,8 @@ const BIO_MAX = 500;
 const DEPARTMENT_MAX = 50;
 const PRONOUNS_MAX = 20;
 const LABEL_MAX = 20;
+// サーバー側の検証と同じ値(backend の User::MAX_NAME_LENGTH)
+const NAME_MAX = 50;
 // サーバー側の検証と同じ値(backend の UserLink::MAX_URL_LENGTH)
 const URL_MAX = 2000;
 // サーバー側と同じ値を1か所から使う
@@ -42,6 +44,7 @@ const MAX_TAGS = MAX_TAGS_PER_RESOURCE;
 // 必須と任意はステータスラベルで示す。ラベルの文字に「（任意）」と
 // 混ぜると、書き方が2通りになる(/create と同じ)
 const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
+const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
 
 export function MyProfileEditPage() {
   const navigate = useNavigate();
@@ -50,6 +53,7 @@ export function MyProfileEditPage() {
   // 読み込む前のフォームを触らせない。空欄が入った状態で保存されると、
   // 書いてあった内容が消える
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [name, setName] = useState("");
   const [department, setDepartment] = useState("");
   const [pronouns, setPronouns] = useState("");
   const [bio, setBio] = useState("");
@@ -97,6 +101,7 @@ export function MyProfileEditPage() {
       .then((loaded) => {
         setProfile(loaded);
         // API は未入力を null で返す。textarea の value に null は入れられない
+        setName(loaded.name);
         setDepartment(loaded.department ?? "");
         setPronouns(loaded.pronouns ?? "");
         setBio(loaded.bio ?? "");
@@ -136,6 +141,7 @@ export function MyProfileEditPage() {
     setError(null);
     try {
       await updateMyProfile({
+        name,
         department,
         pronouns,
         bio,
@@ -210,6 +216,19 @@ export function MyProfileEditPage() {
             </Text>
           ) : (
             <Stack gap={1.25}>
+              {/* 参加者一覧にも主催欄にもこの名前が出る。変えると即座に効く
+                (spec-v2.2.md §4.1)。改姓に本人が対応できないと、そのたびに
+                管理者へ頼むことになる(オーナー決定 2026-09-12) */}
+              <FormControl label="氏名" statusLabels={REQUIRED} exampleMessage="山田 一郎">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={NAME_MAX}
+                  required
+                  width="100%"
+                />
+              </FormControl>
+
               <FormControl
                 label="学科"
                 statusLabels={OPTIONAL}

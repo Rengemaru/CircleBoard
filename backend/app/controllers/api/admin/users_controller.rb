@@ -46,8 +46,12 @@ module Api
 
       # PATCH /api/admin/users/:id
       #
-      # 権限と学年を変える(docs/spec-admin-operations.md §3.3)。
-      # 氏名・メール・学科は扱わない。学科は本人が /me/edit で書く。
+      # 権限・学年・氏名を変える(docs/spec-admin-operations.md §3.3/§3.4)。
+      # メール・学科は扱わない。学科は本人が /me/edit で書く。
+      #
+      # **氏名は本人も変えられる**(PATCH /api/users/me)。入口が2つになるが、
+      # 直したい人が違う。改姓は本人が気づき、打ち間違いは発行した管理者が
+      # 気づく(オーナー決定 2026-09-12)
       #
       # **現役⇄卒業はここでは動かさない。** 卒業は graduation_year からの
       # 計算結果で、一覧のバッジが専用の入口(graduations_controller)を持つ。
@@ -58,6 +62,8 @@ module Api
 
         error = apply_role(user) || apply_grade_years(user)
         return render_error(:unprocessable_entity, error) if error
+
+        user.name = update_params[:name] if update_params.key?(:name)
 
         if user.save
           render json: serialize(user)
@@ -139,7 +145,7 @@ module Api
       end
 
       def update_params
-        @update_params ||= params.require(:user).permit(:role, :grade_years)
+        @update_params ||= params.require(:user).permit(:role, :grade_years, :name)
       end
 
       def serialize(user)

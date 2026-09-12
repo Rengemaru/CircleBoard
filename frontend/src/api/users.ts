@@ -19,6 +19,8 @@ export async function fetchProfile(id: number): Promise<Profile> {
 // 送らなかったキーには触らない。学科と自己紹介だけを直したいときに、
 // スキルとリンクを毎回送り直さずに済む
 export type ProfileInput = {
+  // 2026-09-12 から本人も変えられる。email / role / 年度は引き続き受け取られない
+  name?: string;
   department?: string;
   pronouns?: string;
   bio?: string;
