@@ -160,7 +160,7 @@ Rails の `enum` は integer カラムで持つ（PostgreSQLのENUM型は値の�
 | graduation_year | integer | NOT NULL | 卒業判定は `User#graduated?`（4月始まりの年度で判定） |
 | suspended_at | datetime | NULL可 | **NULL = 有効。** 時刻が入っていれば停止中（0.4-1 で追加） |
 | department | string | NULL可 | 学科。自由入力・50字まで（2026-09-10 追加。`docs/spec-my-page.md`） |
-| bio | text | NULL可 | 自己紹介。500字まで。改行を含むため string ではなく text |
+| bio | text | NULL可 | 自己紹介。**1000字まで**（Markdown 対応にあたり 500→1000。Issue #303、オーナー決定 2026-09-13）。改行を含むため string ではなく text |
 | pronouns | string | NULL可 | 呼ばれ方。自由入力・20字まで（2026-09-11 追加） |
 | created_at / updated_at | datetime | NOT NULL | |
 

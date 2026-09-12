@@ -31,7 +31,7 @@ erDiagram
         integer graduation_year
         datetime suspended_at "null = 有効"
         string department "学科。50字まで"
-        text bio "自己紹介。500字まで"
+        text bio "自己紹介。1000字まで"
     }
 
     events {
