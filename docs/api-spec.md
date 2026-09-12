@@ -447,7 +447,7 @@ React と Rails を触っています。",
 | 対象 | 制約 |
 |---|---|
 | `department` | 50字まで |
-| `bio` | 500字まで |
+| `bio` | 1000字まで |
 | `tag_names` | 5件まで。1件20字まで。無い名前はその場で作られる（`category: profile`） |
 | `links` | 3件まで |
 | `links[].label` | 必須・20字まで |

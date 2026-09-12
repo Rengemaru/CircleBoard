@@ -15,11 +15,12 @@ RSpec.describe "User のプロフィール", type: :model do
       expect(user).not_to be_valid
     end
 
-    it "自己紹介は500字まで" do
-      user.bio = "あ" * 500
+    # 字数を直に書かない。上限を変えたときに spec が嘘をつくため(Issue #303)
+    it "自己紹介は上限まで書ける" do
+      user.bio = "あ" * User::MAX_BIO_LENGTH
       expect(user).to be_valid
 
-      user.bio = "あ" * 501
+      user.bio = "あ" * (User::MAX_BIO_LENGTH + 1)
       expect(user).not_to be_valid
     end
 
