@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { TagChip } from "../components/TagChip";
-import { Link } from "react-router-dom";
-import { Base, Cluster, Heading, Section, Stack, Text, TextLink } from "smarthr-ui";
+import { PostCardLink } from "../components/PostCardLink";
+import { Base, Cluster, Heading, Section, Stack, Text } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { SessionUnavailable } from "../components/SessionUnavailable";
@@ -135,58 +135,58 @@ function SpotlightSection({
       <SectionHeading>注目イベント</SectionHeading>
       <ul className={spotlight.length === 1 ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         {spotlight.map((event) => (
-          <Base as="li" key={event.id} padding={1.25}>
+          // padding は PostCardLink 側に移し、overflow-hidden で枠の角に合わせて
+          // ホバーの背景を切る(Issue #323。枠全体を詳細へのリンクにする)
+          <Base as="li" key={event.id} padding={0} overflow="hidden">
             {/* カード1枚ずつを Section で包む。包まないと、カードの見出しが
                 「注目イベント」と同じ h2 になり、セクションの中身なのか
                 隣のセクションなのかが見出しからは分からない(Issue #187)。
                 smarthr-ui の Heading は Section の入れ子の深さでレベルが決まる */}
-            <Section>
-              <Stack gap="XXS">
-                {event.pinned && (
-                  <Cluster gap="XS">
-                    <Chip>📌 ピン留め</Chip>
-                  </Cluster>
-                )}
-                {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
-                ではなく「あと何日か」になっていた。28px は ver2 の .stat-value
-                （ダッシュボードの統計値）から借りた値で、ワイヤーフレームの
-                .cd は 17px。
+            <PostCardLink kind="event" id={event.id} className="p-5">
+              <Section>
+                <Stack gap="XXS">
+                  {event.pinned && (
+                    <Cluster gap="XS">
+                      <Chip>📌 ピン留め</Chip>
+                    </Cluster>
+                  )}
+                  {/* 日数 28px / タイトル 14px で、一番目立つのが「そのイベントが何か」
+                  ではなく「あと何日か」になっていた。28px は ver2 の .stat-value
+                  （ダッシュボードの統計値）から借りた値で、ワイヤーフレームの
+                  .cd は 17px。
 
-                大小関係は smarthr-ui へ移行済みの /events に揃える。
-                あちらは日数 14px < タイトル 16px で、識別のための名前を主に
-                している(smarthr-list.mdx)。兄弟画面で逆になっていると、
-                一覧から詳細へ移るたびに視線の置き場所が変わる。
-                ワイヤーフレームは日数を大きくしているが、/events は Phase 8 で
-                既にその配分を離れており、そちらに合わせる(Issue #59) */}
-                <Text size="S" weight="bold">
-                  {formatCountdown(event.starts_at)}
-                </Text>
-                <Text size="S" color="TEXT_GREY">
-                  {formatDate(event.starts_at)} ・ {event.location}
-                </Text>
-                <Heading type="subBlockTitle">
-                  {/* カードは高さに余裕があるので2行まで見せて省略する。
-                      title 属性でホバー時に全文が出る(Issue #322) */}
-                  <TextLink
-                    elementAs={Link}
-                    to={`/events/${event.id}`}
-                    className="line-clamp-2"
-                    title={event.title}
-                  >
-                    {event.title}
-                  </TextLink>
-                </Heading>
-                {event.tags.length > 0 && (
-                  <Cluster gap="XXS" as="ul">
-                    {event.tags.map((tag) => (
-                      <li key={tag.id}>
-                        <TagChip name={tag.name} />
-                      </li>
-                    ))}
-                  </Cluster>
-                )}
-              </Stack>
-            </Section>
+                  大小関係は smarthr-ui へ移行済みの /events に揃える。
+                  あちらは日数 14px < タイトル 16px で、識別のための名前を主に
+                  している(smarthr-list.mdx)。兄弟画面で逆になっていると、
+                  一覧から詳細へ移るたびに視線の置き場所が変わる。
+                  ワイヤーフレームは日数を大きくしているが、/events は Phase 8 で
+                  既にその配分を離れており、そちらに合わせる(Issue #59) */}
+                  <Text size="S" weight="bold">
+                    {formatCountdown(event.starts_at)}
+                  </Text>
+                  <Text size="S" color="TEXT_GREY">
+                    {formatDate(event.starts_at)} ・ {event.location}
+                  </Text>
+                  <Heading type="subBlockTitle">
+                    {/* 枠ごとリンクにしたのでリンクは張らない。カードは高さに余裕が
+                        あるので2行まで見せて省略し、title 属性でホバー時に全文が
+                        出る(Issue #322/#323) */}
+                    <span className="line-clamp-2" title={event.title}>
+                      {event.title}
+                    </span>
+                  </Heading>
+                  {event.tags.length > 0 && (
+                    <Cluster gap="XXS" as="ul">
+                      {event.tags.map((tag) => (
+                        <li key={tag.id}>
+                          <TagChip name={tag.name} />
+                        </li>
+                      ))}
+                    </Cluster>
+                  )}
+                </Stack>
+              </Section>
+            </PostCardLink>
           </Base>
         ))}
       </ul>
@@ -228,27 +228,28 @@ function ProjectSection({
       ) : (
         <ListPanel>
           {projects.slice(0, 3).map((project) => (
-            <li key={project.id} className="px-4 py-3">
-              <Cluster align="center" gap="XS">
-                <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
-                  {project.status === "recruiting" ? "募集中" : "進行中"}
-                </Badge>
-                {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で
-                    狭い画面ではさらに縮む。title 属性で全文はホバーで読める(Issue #322) */}
-                <TextLink
-                  elementAs={Link}
-                  to={`/projects/${project.id}`}
-                  size="S"
-                  className="block min-w-0 max-w-[13em] truncate"
-                  title={project.title}
-                >
-                  {project.title}
-                </TextLink>
-                {/* タイトルだけが縮むよう、右のメタは縮ませない */}
-                <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
-                  {formatProjectMeta(project)}
-                </Text>
-              </Cluster>
+            <li key={project.id}>
+              {/* 行の枠全体を詳細へのリンクにする(Issue #323) */}
+              <PostCardLink kind="project" id={project.id} className="px-4 py-3">
+                <Cluster align="center" gap="XS">
+                  <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
+                    {project.status === "recruiting" ? "募集中" : "進行中"}
+                  </Badge>
+                  {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で狭い画面
+                      ではさらに縮む。枠ごとリンクにしたのでリンクは張らず、title 属性で
+                      全文はホバーで読める(Issue #322/#323) */}
+                  <span
+                    className="block min-w-0 max-w-[13em] truncate text-sm"
+                    title={project.title}
+                  >
+                    {project.title}
+                  </span>
+                  {/* タイトルだけが縮むよう、右のメタは縮ませない */}
+                  <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
+                    {formatProjectMeta(project)}
+                  </Text>
+                </Cluster>
+              </PostCardLink>
             </li>
           ))}
         </ListPanel>
@@ -273,26 +274,24 @@ function EventListSection({
       <SectionHeading link="/events">イベント</SectionHeading>
       <ListPanel>
         {events.slice(0, EVENT_LIST_LIMIT).map((event) => (
-          <li key={event.id} className="px-4 py-3">
-            <Cluster align="center" gap="XS">
-              <Text size="S" color="TEXT_GREY" className="shrink-0">
-                {formatDate(event.starts_at)}
-              </Text>
-              {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で
-                  狭い画面ではさらに縮む。title 属性で全文はホバーで読める(Issue #322) */}
-              <TextLink
-                elementAs={Link}
-                to={`/events/${event.id}`}
-                size="S"
-                className="block min-w-0 max-w-[13em] truncate"
-                title={event.title}
-              >
-                {event.title}
-              </TextLink>
-              <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
-                {formatCapacity(event)}
-              </Text>
-            </Cluster>
+          <li key={event.id}>
+            {/* 行の枠全体を詳細へのリンクにする(Issue #323) */}
+            <PostCardLink kind="event" id={event.id} className="px-4 py-3">
+              <Cluster align="center" gap="XS">
+                <Text size="S" color="TEXT_GREY" className="shrink-0">
+                  {formatDate(event.starts_at)}
+                </Text>
+                {/* 行の中では最大13em(≒13文字)で1行省略する。min-w-0 で狭い画面
+                    ではさらに縮む。枠ごとリンクにしたのでリンクは張らず、title 属性で
+                    全文はホバーで読める(Issue #322/#323) */}
+                <span className="block min-w-0 max-w-[13em] truncate text-sm" title={event.title}>
+                  {event.title}
+                </span>
+                <Text size="S" color="TEXT_GREY" className="ml-auto shrink-0">
+                  {formatCapacity(event)}
+                </Text>
+              </Cluster>
+            </PostCardLink>
           </li>
         ))}
       </ListPanel>
@@ -304,7 +303,9 @@ function EventListSection({
 // 表ではないもの（一覧の行）にも使う
 function ListPanel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded border border-gray-200 bg-white">
+    // overflow-hidden: 行の枠全体がリンクになりホバーで背景が付く(Issue #323)。
+    // 角丸の外側に背景がはみ出さないよう、ここで切る
+    <div className="overflow-hidden rounded border border-gray-200 bg-white">
       <ul className="divide-y divide-gray-100">{children}</ul>
     </div>
   );
