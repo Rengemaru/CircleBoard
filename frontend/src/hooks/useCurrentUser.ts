@@ -12,10 +12,13 @@ export type SessionState = {
   user: CurrentUser | null;
   loading: boolean;
   failed: boolean;
+  // 初期パスワードのままか。true の間は他のAPIが全て403になる(Issue #288)
+  passwordChangeRequired: boolean;
 };
 
 export function useCurrentUser(): SessionState {
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
   // 未ログインは 200 + null で返ってくるので、例外が飛んだということは
   // 「未ログインだと分かった」ではなく「確かめられなかった」。
@@ -25,10 +28,13 @@ export function useCurrentUser(): SessionState {
 
   useEffect(() => {
     fetchCurrentUser()
-      .then(setUser)
+      .then((session) => {
+        setUser(session.user);
+        setPasswordChangeRequired(session.passwordChangeRequired);
+      })
       .catch(() => setFailed(true))
       .finally(() => setLoading(false));
   }, []);
 
-  return { user, loading, failed };
+  return { user, loading, failed, passwordChangeRequired };
 }
