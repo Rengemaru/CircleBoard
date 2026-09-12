@@ -162,6 +162,63 @@ RSpec.describe "パスワード", type: :request do
     end
   end
 
+  # 初期パスワードのままかどうかの記録(Issue #288)。
+  #
+  # 判定は password_digest では出来ない(ハッシュしか持っていない)ので、
+  # 「本人が設定し直した」という事実を列に残す。この段階では記録するだけで、
+  # 使う側(403 で弾く / 画面で誘導する)はまだ入っていない
+  describe "password_changed_at" do
+    it "発行したばかりのユーザーは未変更として扱う" do
+      expect(user.password_changed_at).to be_nil
+      expect(user.password_unchanged?).to be true
+    end
+
+    it "本人が変えると時刻が入る" do
+      sign_in(user, password: "oldpassword1")
+      patch "/api/users/me/password",
+            params: { current_password: "oldpassword1", password: "newpassword1" }, as: :json
+
+      expect(response).to have_http_status(:no_content)
+      expect(user.reload.password_changed_at).to be_present
+      expect(user.password_unchanged?).to be false
+    end
+
+    it "本人の変更が失敗したときは時刻が入らない" do
+      sign_in(user, password: "oldpassword1")
+      patch "/api/users/me/password",
+            params: { current_password: "oldpassword1", password: "short" }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(user.reload.password_changed_at).to be_nil
+    end
+
+    # **ここが抜けると、再発行のたびに仕組みが素通しになる。**
+    # 再発行した直後は、また管理者の知っているパスワードに戻っている
+    it "管理者が再発行すると未変更に戻る" do
+      admin = create(:user, :admin, password: "adminpassword1")
+      user.update!(password: "ownpassword1", password_changed_at: Time.current)
+
+      sign_in(admin, password: "adminpassword1")
+      put "/api/admin/users/#{user.id}/password", params: { password: "reissued12345" }, as: :json
+
+      expect(response).to have_http_status(:no_content)
+      expect(user.reload.password_changed_at).to be_nil
+      expect(user.password_unchanged?).to be true
+    end
+
+    it "管理者の再発行が失敗したときは記録を変えない" do
+      admin = create(:user, :admin, password: "adminpassword1")
+      changed_at = 1.day.ago
+      user.update!(password: "ownpassword1", password_changed_at: changed_at)
+
+      sign_in(admin, password: "adminpassword1")
+      put "/api/admin/users/#{user.id}/password", params: { password: "short" }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(user.reload.password_changed_at).to be_within(1.second).of(changed_at)
+    end
+  end
+
   # **既知の穴。** セッションは session[:user_id] しか持っていないので、
   # パスワードを変えても他の端末で開いたままのセッションは生き続ける。
   # 切るには users に session_token 列が要り、spec-v2.2.md §2 に触る。
