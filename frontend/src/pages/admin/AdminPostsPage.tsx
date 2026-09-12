@@ -252,12 +252,7 @@ function PostList() {
       {/* 破壊的操作の意味は確認モーダルに書く。押す直前に必ず目に入る場所でないと
           読まれない(SmartHR feedback.mdx「直前に操作した要素の近く」)。
           ここに残すのは、操作の前提として知っておく話だけ(Issue #61) */}
-      <Note tone="warning">
-        企画の内容そのものは、この画面からは編集できません。文面を直したいときは owner
-        本人に依頼するか、
-        <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
-        で対応します。
-      </Note>
+      <Note>企画名を押すと詳細へ移ります。内容の編集は詳細画面の「編集」からできます。</Note>
 
       {trashing !== null && (
         <Modal

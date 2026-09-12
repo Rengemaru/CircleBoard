@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -14,7 +14,9 @@ import { apiFetch } from "../api/client";
 import { fetchTags } from "../api/tags";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { flashState } from "../lib/flash";
-import type { Tag } from "../types/event";
+import { Select } from "smarthr-ui";
+import type { EventDetail, Tag } from "../types/event";
+import type { ProjectSummary } from "../types/project";
 
 // 企画作成(wireframes/wireframe-member.html ⑥)。要ログイン。
 //
@@ -24,10 +26,32 @@ import type { Tag } from "../types/event";
 //   プロジェクト … 継続的にコミットして成果物を作る。ログイン必須
 type Kind = "event" | "project";
 
+type ProjectStatus = "recruiting" | "in_progress" | "completed";
+
+const STATUS_LABEL: Record<ProjectStatus, string> = {
+  recruiting: "募集中",
+  in_progress: "進行中",
+  completed: "完了",
+};
+
 // URL の ?kind= から種類を決める。想定外の値と未指定はイベントに倒す。
 // 種類は作成後に変えられないので、黙って別のものを作らないよう既定を1つに固定する
 function parseKind(value: string | null): Kind {
   return value === "project" ? "project" : "event";
+}
+
+// ISO の日時を datetime-local の形(YYYY-MM-DDTHH:mm)に直す。
+//
+// 手元の時刻で出す。toISOString() を切ると UTC になり、編集画面を開いただけで
+// 開催日時が9時間ずれる
+function toDateTimeLocal(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
 }
 
 // 概要の書き出しに迷わないための雛形。value ではなく placeholder に入れる
@@ -52,6 +76,7 @@ const PROJECT_TEMPLATE = `【このプロジェクトについて】
 // どの分岐でも同じ画面名を出す。通さないと document.title が書き換わらず、
 // SPA では前に開いていた画面のタブ名が残る(PR #135、Issue #185)
 const TITLE = "企画を作成";
+const EDIT_TITLE = "企画を編集";
 
 const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
 
@@ -74,13 +99,32 @@ const CAPACITY_MAX = 1000;
 const OPTIONAL = <StatusLabel type="grey">任意</StatusLabel>;
 
 export function CreatePage() {
+  return <PostFormPage />;
+}
+
+// 編集は作成とまったく同じ項目を扱うので、フォームを共有する。
+// 別の画面にすると、項目を足したときに片方だけ直る(docs/spec-admin-operations.md §3.2)。
+//
+// 種類は URL が決める。作成では ?kind= で選べるが、**編集では変えられない**。
+// イベントとプロジェクトは別のテーブルで、作り直さないと移せない
+export function EventEditPage() {
+  return <PostFormPage editingKind="event" />;
+}
+
+export function ProjectEditPage() {
+  return <PostFormPage editingKind="project" />;
+}
+
+function PostFormPage({ editingKind }: { editingKind?: Kind }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
+  const editing = editingKind !== undefined;
   const session = useCurrentUser();
   const { user, loading, failed } = session;
   // どちらを作りに来たかは呼び出し元のボタンが決める。一覧の「プロジェクトを
   // 作成」から来た人にイベントのフォームを出さない(Issue #38)
-  const [kind, setKind] = useState<Kind>(() => parseKind(searchParams.get("kind")));
+  const [kind, setKind] = useState<Kind>(() => editingKind ?? parseKind(searchParams.get("kind")));
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState(false);
   // 選んだタグは名前で持つ。まだ存在しないタグはIDを持てないため(docs/spec-tags.md §3.7)
@@ -93,8 +137,14 @@ export function CreatePage() {
   const [capacity, setCapacity] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
   const [meetingSchedule, setMeetingSchedule] = useState("");
+  // プロジェクトの進行状況。募集中 → 進行中 → 完了 の遷移は編集にしか手段が無い
+  // (docs/api-spec.md §3)。イベントの status は API が受け取らないので出さない
+  const [status, setStatus] = useState<ProjectStatus>("recruiting");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 読み込みが終わるまでフォームを出さない。空欄を出すと、書き換えたつもりの
+  // 人がそのまま保存して中身を消してしまう
+  const [loadingPost, setLoadingPost] = useState(editing);
 
   useEffect(() => {
     // 失敗を空配列に倒すと「選べるタグがありません。」と断定してしまう。
@@ -104,49 +154,97 @@ export function CreatePage() {
       .catch(() => setTagsError(true));
   }, []);
 
+  useEffect(() => {
+    if (!editing || user === null) return;
+
+    let cancelled = false;
+    const path = editingKind === "event" ? `/api/events/${id}` : `/api/projects/${id}`;
+
+    apiFetch<EventDetail & ProjectSummary>(path)
+      .then((post) => {
+        if (cancelled) return;
+        setTitle(post.title);
+        setDescription(post.description);
+        setCapacity(post.capacity === null ? "" : String(post.capacity));
+        setSelectedTagNames(post.tags.map((tag: Tag) => tag.name));
+        if (editingKind === "event") {
+          setLocation(post.location);
+          setStartsAt(toDateTimeLocal(post.starts_at));
+          setExternalUrl(post.external_url ?? "");
+        } else {
+          setMeetingSchedule(post.meeting_schedule ?? "");
+          setStatus(post.status as ProjectStatus);
+        }
+        setLoadingPost(false);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "読み込みに失敗しました");
+        setLoadingPost(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, editingKind, id, user]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
       if (kind === "event") {
-        const created = await apiFetch<{ id: number }>("/api/events", {
-          method: "POST",
-          body: JSON.stringify({
-            event: {
-              title,
-              description,
-              location,
-              starts_at: startsAt,
-              capacity: capacity === "" ? null : Number(capacity),
-              // 空欄は null。空文字を送ると「空文字のリンク」が保存される
-              external_url: externalUrl === "" ? null : externalUrl,
-              tag_names: selectedTagNames,
-            },
-          }),
-        });
+        const created = await apiFetch<{ id: number }>(
+          editing ? `/api/events/${id}` : "/api/events",
+          {
+            method: editing ? "PUT" : "POST",
+            body: JSON.stringify({
+              event: {
+                title,
+                description,
+                location,
+                starts_at: startsAt,
+                capacity: capacity === "" ? null : Number(capacity),
+                // 空欄は null。空文字を送ると「空文字のリンク」が保存される
+                external_url: externalUrl === "" ? null : externalUrl,
+                tag_names: selectedTagNames,
+              },
+            }),
+          },
+        );
         // 画面が変わるだけでは「作られた」と言い切れない。
         // 他の操作はすべて文言で伝えている(Issue #191)
-        navigate(`/events/${created.id}`, { state: flashState("イベントを作成しました。") });
-      } else {
-        const created = await apiFetch<{ id: number }>("/api/projects", {
-          method: "POST",
-          body: JSON.stringify({
-            project: {
-              title,
-              description,
-              meeting_schedule: meetingSchedule,
-              capacity: capacity === "" ? null : Number(capacity),
-              tag_names: selectedTagNames,
-            },
-          }),
+        navigate(`/events/${created.id}`, {
+          state: flashState(editing ? "イベントを編集しました。" : "イベントを作成しました。"),
         });
+      } else {
+        const created = await apiFetch<{ id: number }>(
+          editing ? `/api/projects/${id}` : "/api/projects",
+          {
+            method: editing ? "PUT" : "POST",
+            body: JSON.stringify({
+              project: {
+                title,
+                description,
+                meeting_schedule: meetingSchedule,
+                capacity: capacity === "" ? null : Number(capacity),
+                tag_names: selectedTagNames,
+                // 作成では受け取らない。作った直後は必ず募集中
+                ...(editing ? { status } : {}),
+              },
+            }),
+          },
+        );
         navigate(`/projects/${created.id}`, {
-          state: flashState("プロジェクトを作成しました。"),
+          state: flashState(
+            editing ? "プロジェクトを編集しました。" : "プロジェクトを作成しました。",
+          ),
         });
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "作成に失敗しました");
+      setError(
+        e instanceof Error ? e.message : editing ? "保存に失敗しました" : "作成に失敗しました",
+      );
     } finally {
       setBusy(false);
     }
@@ -190,9 +288,19 @@ export function CreatePage() {
   return (
     <MemberPage session={session} size="NARROW">
       <PageHeading
-        title={TITLE}
-        subtitle="作ったあとで編集はできません。内容を確認してから作成してください"
+        title={editing ? EDIT_TITLE : TITLE}
+        subtitle={
+          editing
+            ? "参加者にはすぐ反映されます。日時や場所を変えたときは本人たちにも伝えてください"
+            : "内容はあとから編集できます"
+        }
       />
+
+      {loadingPost && (
+        <Text size="S" color="TEXT_GREY">
+          読み込み中…
+        </Text>
+      )}
 
       {/* 必須の欄は required でブラウザ側でも止める。送っても 422 が返るだけで、
           往復する意味がないため(ログインフォームと同じ扱い)。
@@ -200,33 +308,35 @@ export function CreatePage() {
       <form onSubmit={submit}>
         {error !== null && <Note tone="danger">{error}</Note>}
 
-        <Panel title="種類">
-          {/* name が無いと2つが別々のラジオになり、矢印キーで切り替えられず、
+        {!editing && (
+          <Panel title="種類">
+            {/* name が無いと2つが別々のラジオになり、矢印キーで切り替えられず、
               「2つのうち1つを選ぶ」と支援技術に伝わらない。
               fieldset と legend で1つの選択肢の集まりだと示す。
               legend は Panel の見出しと文言が重なるので視覚的には隠す(Issue #55) */}
-          <fieldset className="flex flex-wrap gap-4 text-[13px]">
-            <legend className="sr-only">種類</legend>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="kind"
-                checked={kind === "event"}
-                onChange={() => setKind("event")}
-              />
-              イベント（単発。未ログインでも閲覧できます）
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="kind"
-                checked={kind === "project"}
-                onChange={() => setKind("project")}
-              />
-              プロジェクト（継続。ログイン必須）
-            </label>
-          </fieldset>
-        </Panel>
+            <fieldset className="flex flex-wrap gap-4 text-[13px]">
+              <legend className="sr-only">種類</legend>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="kind"
+                  checked={kind === "event"}
+                  onChange={() => setKind("event")}
+                />
+                イベント（単発。未ログインでも閲覧できます）
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="kind"
+                  checked={kind === "project"}
+                  onChange={() => setKind("project")}
+                />
+                プロジェクト（継続。ログイン必須）
+              </label>
+            </fieldset>
+          </Panel>
+        )}
 
         <Panel title="内容">
           {/* 項目の間隔は Stack で決める。FormControl は自分では下余白を持たない */}
@@ -299,6 +409,23 @@ export function CreatePage() {
               </FormControl>
             )}
 
+            {/* 進行状況は編集でだけ出す。作った直後は必ず募集中で、
+              募集中 → 進行中 → 完了 の遷移は編集にしか手段が無い
+              (docs/api-spec.md §3)。イベントの status は API が受け取らない */}
+            {editing && kind === "project" && (
+              <FormControl label="進行状況">
+                <Select
+                  value={status}
+                  options={(Object.keys(STATUS_LABEL) as ProjectStatus[]).map((key) => ({
+                    label: STATUS_LABEL[key],
+                    value: key,
+                  }))}
+                  onChangeValue={(value) => setStatus(value)}
+                  width="100%"
+                />
+              </FormControl>
+            )}
+
             {/* 任意であることはラベルの文字ではなくステータスラベルで示す。
               空欄にしたときの挙動は helpMessage に分ける。
               ラベルに混ぜると2通りの書き方になる(Issue #58) */}
@@ -355,8 +482,15 @@ export function CreatePage() {
         </Panel>
 
         <div className="flex gap-2">
-          <Button type="submit" variant="primary" busy={busy} busyLabel="作成中…">
-            作成する
+          <Button
+            type="submit"
+            variant="primary"
+            busy={busy}
+            busyLabel={editing ? "保存中…" : "作成中…"}
+            // 読み込みが終わる前に押させない。空欄のまま上書きされる
+            disabled={loadingPost}
+          >
+            {editing ? "保存する" : "作成する"}
           </Button>
           {/* 直前の画面に戻る。/ に固定で飛ばすと、一覧から来た人が
               一覧に戻れない */}

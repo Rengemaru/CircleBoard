@@ -7,7 +7,7 @@ import { MyPage } from "./pages/MyPage";
 import { MyProfileEditPage } from "./pages/MyProfileEditPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { LegalPage } from "./pages/LegalPage";
-import { CreatePage } from "./pages/CreatePage";
+import { CreatePage, EventEditPage, ProjectEditPage } from "./pages/CreatePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
@@ -33,6 +33,9 @@ export function App() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/create" element={<CreatePage />} />
+          {/* 編集は作成とフォームを共有する。種類は URL が決め、編集では変えられない */}
+          <Route path="/events/:id/edit" element={<EventEditPage />} />
+          <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
           <Route path="/me" element={<MyPage />} />
           <Route path="/me/edit" element={<MyProfileEditPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />

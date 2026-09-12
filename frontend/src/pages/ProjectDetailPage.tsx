@@ -13,6 +13,7 @@ import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { apiFetch } from "../api/client";
+import { LinkButton } from "../components/ui/LinkButton";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useFlash } from "../lib/flash";
 import type { ProjectSummary } from "../types/project";
@@ -117,6 +118,9 @@ export function ProjectDetailPage() {
   }
 
   const full = project.capacity !== null && project.participants_count >= project.capacity;
+  // owner 本人か管理者だけが編集できる(docs/api-spec.md §3)
+  const canEdit =
+    user !== null && (user.role === "admin" || (project.owner?.id ?? null) === user.id);
 
   return (
     <MemberPage session={session}>
@@ -143,6 +147,16 @@ export function ProjectDetailPage() {
             size は XL。smarthr-ui は太さではなく大きさで階層を作るので、
             既定の L だとパネル内の他の情報に埋もれる(PR #134 と同じ) */}
         <PageHeading title={project.title} className="mt-2.5" size="XL" />
+
+        {/* owner 本人と管理者だけに出す。**隠すのは表示の話で制限ではない**ので、
+            API 側が require_owner_or_admin で弾いている(CLAUDE.md §3-2) */}
+        {canEdit && (
+          <div className="mt-3">
+            <LinkButton to={`/projects/${project.id}/edit`} variant="default" size="sm">
+              編集
+            </LinkButton>
+          </div>
+        )}
 
         {/* 「いつ活動して・いつ集まって・あと何枠か」は参加を決めるのに
             一緒に見る情報なので横に並べる
