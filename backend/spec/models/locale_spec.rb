@@ -19,11 +19,12 @@ RSpec.describe "検証エラーの文言" do
   end
 
   it "長すぎる項目は「〜文字以内で入力してください」" do
-    user = build(:user, bio: "あ" * 501)
+    user = build(:user, bio: "あ" * (User::MAX_BIO_LENGTH + 1))
 
     user.valid?
 
-    expect(user.errors.full_messages).to include("自己紹介は500文字以内で入力してください")
+    expect(user.errors.full_messages)
+      .to include("自己紹介は#{User::MAX_BIO_LENGTH}文字以内で入力してください")
   end
 
   it "重複は「すでに使われています」" do

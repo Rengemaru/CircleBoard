@@ -188,7 +188,7 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
     end
 
     it "自己紹介が501字なら 422" do
-      patch_me(bio: "あ" * 501)
+      patch_me(bio: "あ" * (User::MAX_BIO_LENGTH + 1))
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -266,7 +266,7 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
 
     it "自己紹介が弾かれたとき、リンクが消えていない" do
       create(:user_link, user: me, label: "既存", url: "https://example.com/old")
-      patch_me(bio: "あ" * 501, links: [])
+      patch_me(bio: "あ" * (User::MAX_BIO_LENGTH + 1), links: [])
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(me.reload.user_links.map(&:label)).to eq [ "既存" ]
@@ -275,7 +275,7 @@ RSpec.describe "Api::Users PATCH /api/users/me", type: :request do
     it "自己紹介が弾かれたとき、スキルが変わっていない" do
       tag = create(:tag, category: :profile)
       me.tags = [ tag ]
-      patch_me(bio: "あ" * 501, tag_names: [])
+      patch_me(bio: "あ" * (User::MAX_BIO_LENGTH + 1), tag_names: [])
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(me.reload.tags).to contain_exactly(tag)
