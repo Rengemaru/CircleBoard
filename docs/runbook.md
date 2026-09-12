@@ -266,3 +266,60 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
 docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -U circleboard -d postgres -c "DROP DATABASE restore_check;"
 ```
+
+---
+
+## 5. 落ちたとき
+
+### まずこの3つ
+
+```bash
+cd /opt/circleboard
+dc ps                              # どれが落ちているか
+curl -i http://localhost/healthz   # 200 か。落ちていればどの層かの目星がつく
+dc logs --tail=50 backend          # 直近のログ
+```
+
+`dc ps` の `STATUS` で切り分けます。
+
+| 見えるもの | 次に見る場所 |
+|---|---|
+| `db` が `unhealthy` | `dc logs db`。ディスクが埋まっていないか（`df -h`） |
+| `backend` が `Restarting` を繰り返す | `dc logs backend`。起動時に落ちている（下の表） |
+| 全部 `Up` なのに画面が出ない | `dc logs frontend`。Caddy まで届いていない |
+| コンテナが1つも無い | VPS を再起動した直後なら `dc up -d`。`restart: always` があるので通常は自動で戻る |
+
+### 症状から当たりをつける
+
+**ログの1行目を読んでから直してください。** 下は当たりやすい順です。
+
+| 症状 | だいたいの原因 |
+|---|---|
+| `backend` が起動直後に落ちる | `.env.production` の値が欠けている。`SECRET_KEY_BASE` か `DATABASE_URL` |
+| API が全部 403 | `ALLOWED_HOSTS` が今アクセスしている宛先と違う（ドメインを取った直後に起きる） |
+| **ログインだけ通らない** | `FORCE_SSL` と実際のアクセス方法が食い違っている。http で見ているのに `FORCE_SSL` が `true` だと、Cookie に `secure` が付いて送り返されない |
+| **サイネージだけ 500** | `PUBLIC_BASE_URL` が未設定。`ENV.fetch` に既定値が無いので、その画面だけ落ちる |
+| 画面は出るが API が 502 | `backend` が落ちている。`dc logs backend` |
+| 何をしても 413 | 送っている本文が 1MB を超えている（Caddy の `request_body max_size`） |
+| 突然全部が不調 | ディスクを疑う。`df -h` → 埋まっていれば `docker system prune -a` と古いバックアップの整理 |
+
+### 戻し方
+
+```bash
+dc restart backend     # だいたいこれで戻る
+dc up -d               # 設定を変えたあとはこちら（コンテナを作り直す）
+```
+
+**`.env.production` を書き換えたときは `restart` では反映されません。** 環境変数はコンテナを作るときに渡されるので、`up -d` が要ります。
+
+それでも直らないときは、イメージのタグを前のものに戻します（§2 の切り戻し）。
+
+### ログを後から追う
+
+```bash
+dc logs -f backend                 # 流しっぱなしで見る
+dc logs --since 1h backend         # 直近1時間だけ
+dc logs backend | grep -i error
+```
+
+アプリのログはファイルに残りません（`RAILS_LOG_TO_STDOUT=true`）。**コンテナを作り直すと消えます。** 原因を調べている途中で `up -d` を打つ前に、必要な行は手元に控えてください。
