@@ -14,6 +14,7 @@ import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { PostDescription } from "../components/PostDescription";
 import { DetailActionBar } from "../components/DetailActionBar";
+import { ACTION_BAR_BUTTON, ACTION_BAR_CTA } from "../components/actionBarButton";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useFlash } from "../lib/flash";
@@ -125,7 +126,7 @@ export function EventDetailPage() {
     onCancel: cancel,
   });
   const edit = canEdit ? (
-    <LinkButton to={`/events/${event.id}/edit`} variant="default" size="sm">
+    <LinkButton to={`/events/${event.id}/edit`} variant="default" className={ACTION_BAR_BUTTON}>
       編集
     </LinkButton>
   ) : null;
@@ -222,8 +223,8 @@ export function EventDetailPage() {
       {/* 通信に失敗したときだけは本文に出す。バーに入れるものではない */}
       {failed && <SessionUnavailable />}
 
-      {/* **本文の最後に置く。** sticky の効く範囲が親の終わりまでなので、
-          ここより後ろに要素があると、その手前でバーが止まってしまう */}
+      {/* fixed なので、ここに書いても出る場所は変わらない。
+          操作が本文のどこに属するかを読む人に示すために末尾に置く */}
       <DetailActionBar
         primary={action ?? edit}
         secondary={action === null ? undefined : (edit ?? undefined)}
@@ -277,7 +278,7 @@ function participationAction({
 
   if (!loggedIn) {
     return (
-      <LinkButton to={loginPath} variant="primary">
+      <LinkButton to={loginPath} variant="primary" className={ACTION_BAR_CTA}>
         ログインして参加
       </LinkButton>
     );
@@ -288,7 +289,7 @@ function participationAction({
 
   if (event.status === "completed") {
     return (
-      <Button variant="primary" disabled>
+      <Button variant="primary" disabled className={ACTION_BAR_BUTTON}>
         終了しました
       </Button>
     );
@@ -297,7 +298,13 @@ function participationAction({
   // 参加済みなら満員でもキャンセルできる。判定の順番が効いている
   if (event.current_user_joined === true) {
     return (
-      <Button variant="ghost" onClick={onCancel} busy={busy} busyLabel="キャンセル中…">
+      <Button
+        variant="ghost"
+        onClick={onCancel}
+        busy={busy}
+        busyLabel="キャンセル中…"
+        className={ACTION_BAR_BUTTON}
+      >
         参加をキャンセル
       </Button>
     );
@@ -305,14 +312,20 @@ function participationAction({
 
   if (full) {
     return (
-      <Button variant="primary" disabled>
+      <Button variant="primary" disabled className={ACTION_BAR_BUTTON}>
         満員です
       </Button>
     );
   }
 
   return (
-    <Button variant="primary" onClick={onJoin} busy={busy} busyLabel="参加中…">
+    <Button
+      variant="primary"
+      onClick={onJoin}
+      busy={busy}
+      busyLabel="参加中…"
+      className={ACTION_BAR_CTA}
+    >
       参加する
     </Button>
   );
