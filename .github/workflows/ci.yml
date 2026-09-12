@@ -15,7 +15,7 @@ on:
 # 同じ PR に続けて push したとき、古い方は止める。
 # main と develop への push は履歴として残したいので打ち切らない
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
