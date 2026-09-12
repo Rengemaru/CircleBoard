@@ -61,11 +61,12 @@
 { "email": "taro@example.ac.jp", "password": "password123" }
 
 // 200
-{ "user": { "id": 1, "name": "山田太郎", "role": "member" } }
+{ "user": { "id": 1, "name": "山田太郎", "role": "member" }, "password_change_required": false }
 ```
 
 - 認証失敗は **401**。「メールアドレスが存在しない」と「パスワードが違う」を区別しない
 - `rack-attack` で同一IPから5回/分に制限
+- `password_change_required` が `true` のとき、**パスワードを変更するまで他のAPIは403**を返す（下記）
 
 ### `DELETE /api/session` — ログアウト
 → 204
@@ -74,13 +75,29 @@
 
 ```json
 // 200（ログイン済み）
-{ "user": { "id": 1, "name": "山田太郎", "role": "member" } }
+{ "user": { "id": 1, "name": "山田太郎", "role": "member" }, "password_change_required": false }
 
 // 200（未ログイン）
-{ "user": null }
+{ "user": null, "password_change_required": false }
 ```
 
 未ログインでも**401ではなく200 + null**を返す。フロントの初期化で毎回叩くため、エラー扱いにしない。
+
+### 初期パスワードのままのとき
+
+管理者が発行したパスワードを本人がまだ変えていない場合、`password_change_required` が `true` になる。
+
+この状態では、**`PATCH /api/users/me/password` と `/api/session` 以外のすべてのAPIが 403** を返す。初期パスワードは全員に同じものが配られる前提の運用なので、変えていない人が残っていると、その文字列を知っている人が全員のアカウントに入れる。
+
+```json
+// 403
+{ "error": { "code": "forbidden", "message": "初期パスワードのままです。パスワードを変更してください" } }
+```
+
+- **サイネージ（`?token=`）は対象外。** `current_user` が存在しない
+- 未ログインは対象外。ログインの要否は 401 の仕事
+- 管理者がパスワードを再発行すると、その人は再び `true` に戻る
+- `password_change_required` は**自分の状態だけ**を返す。他人の分は返さない
 
 ---
 
