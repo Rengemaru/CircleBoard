@@ -30,6 +30,9 @@ Rails.application.routes.draw do
     # サイネージが必要とするデータを1リクエストで返す。単数形リソース
     resource :signage, only: [ :show ]
 
+    # 自分が判断すべきこと(Issue #292)。アプリの外へは飛ばさない
+    resources :notifications, only: [ :index ]
+
     namespace :admin do
       # 管理者トップの集計(wireframes/wireframe-admin-ver2.html ①)。
       # 1件しかないので単数形
