@@ -98,6 +98,9 @@ export function EventDetailPage() {
   }
 
   const full = event.capacity !== null && event.participants_count >= event.capacity;
+  // owner 本人か管理者だけが編集できる(docs/api-spec.md §2)。
+  // owner キーは未ログインには返らないので、比較の前に存在を見る
+  const canEdit = user !== null && (user.role === "admin" || (event.owner?.id ?? null) === user.id);
 
   return (
     <MemberPage session={session}>
@@ -126,6 +129,16 @@ export function EventDetailPage() {
         <PageHeading title={event.title} className="mt-2.5" size="XL" />
         {/* 開催の近さがこの画面で一番効く情報なので、見出しの直下に大きく置く */}
         <p className="mt-1 text-lg font-bold text-gray-700">{formatCountdown(event.starts_at)}</p>
+
+        {/* owner 本人と管理者だけに出す。**隠すのは表示の話で制限ではない**ので、
+            API 側が require_owner_or_admin で弾いている(CLAUDE.md §3-2) */}
+        {canEdit && (
+          <div className="mt-3">
+            <LinkButton to={`/events/${event.id}/edit`} variant="default" size="sm">
+              編集
+            </LinkButton>
+          </div>
+        )}
 
         {/* 「いつ・どこで・あと何枠」は関連する3つなので横に並べる。
             縦に積むと、行き先を決めるのに必要な情報が縦長に散る
