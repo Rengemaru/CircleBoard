@@ -2,13 +2,26 @@
 
 本番（ConoHa VPS）を触るときの手順です。設計の理由は `docs/spec-v2.2.md` §7 にあります。
 
-前提として、VPS には `/opt/circleboard` に次の3つが置いてあります。
+前提として、VPS には `/opt/circleboard` に次のものが置いてあります。
 
 | 置くもの | 中身 |
 |---|---|
 | `docker-compose.prod.yml` | 本番用の Compose（リポジトリのものをそのまま） |
 | `.env.production` | 実際の値。**リポジトリには入っていません**（`chmod 600`） |
 | `ops/` | このリポジトリの `ops/` をそのまま |
+| `log/` | cron の出力先。**空でよいが、無いと cron が動きません**（下記） |
+
+### 置いたあとに1回だけやること
+
+```bash
+ssh circleboard
+mkdir -p /opt/circleboard/log
+chmod +x /opt/circleboard/ops/*.sh
+```
+
+**`log/` を先に作ってください。** cron は `>> /opt/circleboard/log/backup.log` のリダイレクトを**スクリプトを起動する前に**開きます。ディレクトリが無いとリダイレクトに失敗し、**`backup.sh` は1行も動かないまま終わります。** しかも出力先が無いので、失敗したことも記録に残りません。
+
+アプリのログは `docker compose logs` で読みます（`RAILS_LOG_TO_STDOUT=true`）。`log/` は cron 専用です。
 
 ---
 
