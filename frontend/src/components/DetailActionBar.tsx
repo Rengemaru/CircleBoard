@@ -19,6 +19,17 @@ import { FloatArea } from "smarthr-ui";
 //
 // 狭い幅（〜400px）では、`FloatArea` が内部で使う `Cluster` が
 // `flex-wrap: wrap` なのでボタンが折り返す。横にはみ出さない。
+//
+// **背景はグレーの半透明にする（オーナー決定 2026-09-13）。**
+// `FloatArea` の中身は `Panel` で、既定は不透明の白。ページ上の Panel も白なので、
+// 白いバーだと本文の続きに見えて、固定されていることが伝わらなかった。
+// 半透明にすると下の本文が透けるので、「上に重なっている」ことが分かる。
+// SmartHR の採用ページの応募バーに寄せた形。
+//
+// 上書きが効くのは、`index.css` を `smarthr-ui.css` より後に読んでいるため
+// （`main.tsx` にその意図が書いてある）。`!important` は要らない。
+//
+// `backdrop-blur` が効かないブラウザでも、85% の不透明度があれば文字は読める。
 export function DetailActionBar({
   primary,
   secondary,
@@ -28,5 +39,11 @@ export function DetailActionBar({
 }) {
   if (primary === null) return null;
 
-  return <FloatArea primaryButton={primary} secondaryButton={secondary} />;
+  return (
+    <FloatArea
+      primaryButton={primary}
+      secondaryButton={secondary}
+      className="bg-gray-100/85 backdrop-blur-sm"
+    />
+  );
 }
