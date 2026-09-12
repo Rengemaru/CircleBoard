@@ -12,9 +12,12 @@ module Api
     # 他人を指せる形そのものを作らない。リクエストの id は見ない
     # (docs/spec-my-page.md §6.3。owner_id について決めたのと同じ)。
     #
-    # name / email / role / 年度は受け取らない。名前を変えられると、
-    # 参加者一覧も主催欄も名前で出ているので他人になりすませる。
-    # 変更は管理者の仕事(Issue #4)
+    # email / role / 年度は受け取らない。
+    #
+    # **name は 2026-09-12 から受け取る**（オーナー決定。docs/spec-my-page.md）。
+    # 改姓に本人が対応できないと、そのたびに管理者へ頼むことになる。
+    # なりすましの余地は残るが、部内向けでアカウントは管理者が手で発行する
+    # 運用を前提にした判断（spec-v2.2.md §4.1）
     def update
       # プロフィールのタグは企画と語彙を分ける(docs/spec-tags.md §3.4)。
       # 企画側の category を渡すと、3Dの人のプロフィールに企画用の語彙が混ざる
@@ -78,7 +81,7 @@ module Api
     end
 
     def profile_params
-      params.permit(:department, :bio, :pronouns)
+      params.permit(:name, :department, :bio, :pronouns)
     end
 
     # tags と links を引くので事前に読む(CLAUDE.md §3-3)。
