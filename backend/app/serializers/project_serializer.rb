@@ -22,9 +22,9 @@ class ProjectSerializer
       activity_schedule: @project.activity_schedule,
       meeting_schedule: @project.meeting_schedule,
       capacity: @project.capacity,
-      # MVPでは参加は即時承認(status は 0:approved 固定)なので、
-      # 絞らずに数える(仕様書 §2.6)
-      participants_count: @project.project_participations.size,
+      # MVPでは参加は即時承認(status は 0:approved 固定)。
+      # 脱退した人は外す(2026-09-12 追加。仕様書 §2.6)
+      participants_count: @project.active_project_participations.size,
       status: @project.status,
       tags: @project.tags.map { TagSerializer.new(_1).as_json }
     }
@@ -52,7 +52,7 @@ class ProjectSerializer
       id: @project.id,
       title: @project.title,
       status: @project.status,
-      participants_count: @project.project_participations.size,
+      participants_count: @project.active_project_participations.size,
       capacity: @project.capacity,
       meeting_schedule: @project.meeting_schedule,
       tags: @project.tags.map { TagSerializer.new(_1).as_json },
@@ -64,7 +64,7 @@ class ProjectSerializer
 
   # user は退会で nil になりうる(ON DELETE SET NULL)
   def participants
-    @project.project_participations.filter_map do |participation|
+    @project.active_project_participations.filter_map do |participation|
       participation.user && UserCardSerializer.new(participation.user).as_json
     end
   end
@@ -73,6 +73,6 @@ class ProjectSerializer
   def current_user_joined?
     return false if @current_user.nil?
 
-    @project.project_participations.any? { |p| p.user_id == @current_user.id }
+    @project.active_project_participations.any? { |p| p.user_id == @current_user.id }
   end
 end

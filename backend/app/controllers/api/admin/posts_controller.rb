@@ -32,7 +32,7 @@ module Api
       end
 
       def projects
-        Project.includes(:owner, :project_participations)
+        Project.includes(:owner, :active_project_participations)
       end
 
       # イベントの参加者はキャンセルを除いて数える(spec-v2.2.md §2.5)。
@@ -43,7 +43,7 @@ module Api
       end
 
       def project_row(project)
-        row(project, "project").merge(participants_count: project.project_participations.size)
+        row(project, "project").merge(participants_count: project.active_project_participations.size)
       end
 
       def row(record, kind)

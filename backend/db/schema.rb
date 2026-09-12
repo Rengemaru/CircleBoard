@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_11_112502) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_12_073713) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -61,7 +61,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_11_112502) do
     t.datetime "approved_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["project_id", "user_id"], name: "index_project_participations_on_project_id_and_user_id", unique: true
+    t.datetime "withdrawal_requested_at"
+    t.datetime "cancelled_at"
+    t.index ["project_id", "user_id"], name: "index_project_participations_active", unique: true, where: "(cancelled_at IS NULL)"
     t.index ["project_id"], name: "index_project_participations_on_project_id"
     t.index ["user_id"], name: "index_project_participations_on_user_id"
   end

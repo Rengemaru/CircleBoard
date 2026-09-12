@@ -7,9 +7,10 @@ class Project < ApplicationRecord
   belongs_to :owner, class_name: "User", optional: true
 
   # 定員判定。capacity が nil のときは無制限(spec-v2.2.md §2.3)。
-  # イベントと違いキャンセルの概念が無いので、参加レコードをそのまま数える
+  # **抜けた人は数えない。** 数えると、脱退したぶんの枠が空かない
+  # (2026-09-12 に脱退を足すまではキャンセルの概念が無かった)
   def full?
-    capacity.present? && project_participations.size >= capacity
+    capacity.present? && active_project_participations.size >= capacity
   end
 
   # presence は DB の NOT NULL 制約に対応させる(spec-v2.2.md §2.3)。
@@ -54,5 +55,12 @@ class Project < ApplicationRecord
   has_many :tags, through: :project_tags
   # プロジェクトを消しても参加レコードは残す（project_id が NULL になる）ため
   # dependent は指定しない。DB側の ON DELETE SET NULL に任せる
-  has_many :project_participations
+  has_many :project_participations, dependent: nil
+  # 抜けた人を外したもの。数える・並べるのは常にこちらを使う
+  # (Event の active_event_participations と同じ形)
+  has_many :active_project_participations,
+           -> { active },
+           class_name: "ProjectParticipation",
+           inverse_of: :project,
+           dependent: nil
 end

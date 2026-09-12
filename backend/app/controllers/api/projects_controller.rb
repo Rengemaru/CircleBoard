@@ -12,7 +12,7 @@ module Api
 
     def index
       # includes はN+1対策。1件ずつ関連を引きに行かせない(CLAUDE.md §3-3)
-      projects = Project.active.includes(:tags, :owner, project_participations: :user)
+      projects = Project.active.includes(:tags, :owner, active_project_participations: :user)
       projects = filter_by_status(projects)
       projects = filter_by_tag(projects)
       projects = filter_by_title(projects)
@@ -105,7 +105,7 @@ module Api
 
     def set_project
       @project = Project.active
-                        .includes(:tags, :owner, project_participations: :user)
+                        .includes(:tags, :owner, active_project_participations: :user)
                         .find_by(id: params[:id])
       return if @project
 

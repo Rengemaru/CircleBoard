@@ -43,7 +43,7 @@ module Api
     def projects
       Project.active
              .where(status: [ :recruiting, :in_progress ])
-             .includes(:tags, :project_participations)
+             .includes(:tags, :active_project_participations)
              .order(:status, :created_at)
              .limit(PROJECTS_LIMIT)
     end
