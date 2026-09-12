@@ -1,7 +1,9 @@
 # === 秘密情報（最優先） ===
 .env
 .env.*
+# 実値の入らない雛形だけは追跡する。.env.* が全部無視されるので個別に戻す
 !.env.example
+!.env.production.example
 backend/config/master.key
 backend/config/credentials/*.key
 *.pem
