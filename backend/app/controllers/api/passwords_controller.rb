@@ -37,7 +37,10 @@ module Api
         return render_error(:unprocessable_entity, "新しいパスワードを入力してください")
       end
 
-      if current_user.update(password: params[:password])
+      # password_changed_at を同じ update に入れる。**別の update に分けない。**
+      # 片方だけ通ると「パスワードは変わったのに未変更のまま」または
+      # その逆になり、どちらも本人には直せない状態になる(Issue #288)
+      if current_user.update(password: params[:password], password_changed_at: Time.current)
         head :no_content
       else
         render_error(:unprocessable_entity, current_user.errors.full_messages.join("、"))
