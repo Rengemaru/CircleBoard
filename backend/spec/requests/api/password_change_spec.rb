@@ -59,6 +59,27 @@ RSpec.describe "パスワード", type: :request do
       expect(user.reload.authenticate("oldpassword1")).to be_truthy
     end
 
+    # 空文字は has_secure_password の setter が何もせず、長さ検証も present? を
+    # 条件にしているので素通りしていた。**変えていないのに 204 を返していた**
+    [ "", nil ].each do |blank|
+      it "新しいパスワードが #{blank.inspect} なら 422 を返し、変えない" do
+        sign_in(user, password: "oldpassword1")
+        patch "/api/users/me/password",
+              params: { current_password: "oldpassword1", password: blank }, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(user.reload.authenticate("oldpassword1")).to be_truthy
+      end
+    end
+
+    it "新しいパスワードのキーごと無いなら 422 を返す" do
+      sign_in(user, password: "oldpassword1")
+      patch "/api/users/me/password", params: { current_password: "oldpassword1" }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(user.reload.authenticate("oldpassword1")).to be_truthy
+    end
+
     # 他人のパスワードを指せる形そのものを作らない(/users/me の1本だけ)
     it "他人のパスワードは変えられない（経路が無い）" do
       other = create(:user)
@@ -100,6 +121,26 @@ RSpec.describe "パスワード", type: :request do
     it "短いパスワードは 422 を返す" do
       sign_in(admin)
       put "/api/admin/users/#{user.id}/password", params: { password: "short" }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(user.reload.authenticate("oldpassword1")).to be_truthy
+    end
+
+    # 管理者側でも同じ穴が空いていた。再発行したつもりで、使えない値を
+    # 本人に伝えることになる
+    [ "", nil ].each do |blank|
+      it "新しいパスワードが #{blank.inspect} なら 422 を返し、変えない" do
+        sign_in(admin)
+        put "/api/admin/users/#{user.id}/password", params: { password: blank }, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(user.reload.authenticate("oldpassword1")).to be_truthy
+      end
+    end
+
+    it "新しいパスワードのキーごと無いなら 422 を返す" do
+      sign_in(admin)
+      put "/api/admin/users/#{user.id}/password", params: {}, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(user.reload.authenticate("oldpassword1")).to be_truthy
