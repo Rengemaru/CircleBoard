@@ -68,6 +68,14 @@ export function MyProfileEditPage() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordChanged, setPasswordChanged] = useState(false);
 
+  // 開くたびに前回の結果を消す。残すと、何も送っていないのに前のエラーが
+  // 出ている状態でダイアログが開く
+  function openPasswordDialog() {
+    setPasswordError(null);
+    setPasswordChanged(false);
+    setChangingPassword(true);
+  }
+
   async function submitPassword(currentPassword: string, password: string) {
     setPasswordBusy(true);
     setPasswordError(null);
@@ -364,7 +372,7 @@ export function MyProfileEditPage() {
             忘れてしまったときは部長に再発行してもらってください。
           </Text>
           <div>
-            <Button variant="default" onClick={() => setChangingPassword(true)}>
+            <Button variant="default" onClick={openPasswordDialog}>
               パスワードを変更
             </Button>
           </div>
@@ -375,7 +383,10 @@ export function MyProfileEditPage() {
         <PasswordChangeDialog
           busy={passwordBusy}
           error={passwordError}
-          onCancel={() => setChangingPassword(false)}
+          onCancel={() => {
+            setChangingPassword(false);
+            setPasswordError(null);
+          }}
           onSubmit={submitPassword}
         />
       )}
