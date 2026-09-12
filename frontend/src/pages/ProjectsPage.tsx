@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { TagChip } from "../components/TagChip";
+import { Badge } from "../components/ui/Badge";
+import { PROJECT_STATUS } from "../lib/projectStatus";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
+import { AnchorButton, Base, Cluster, Stack, Text, TextLink } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -253,10 +255,10 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
     <li className="p-4">
       <Stack gap="XXS">
         <Cluster align="center" gap="XS">
-          {/* オブジェクトのライフサイクル上の状態は1つだけ StatusLabel にする */}
-          <StatusLabel type={project.status === "recruiting" ? "blue" : "green"}>
-            {project.status === "recruiting" ? "募集中" : "進行中"}
-          </StatusLabel>
+          {/* オブジェクトのライフサイクル上の状態は1つだけラベルにする */}
+          <Badge tone={PROJECT_STATUS[project.status].tone}>
+            {PROJECT_STATUS[project.status].label}
+          </Badge>
           <Text size="S" color="TEXT_GREY" leading="TIGHT">
             {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
             {formatMembers(project)}
