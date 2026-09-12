@@ -2,13 +2,21 @@
 //
 // credentials: "include" が必須。認証はサーバー側セッション + HttpOnly Cookie で行い、
 // トークンを JS から触れる場所に置かないため(CLAUDE.md §4)。
-// VITE_API_BASE_URL が空のときは、いま開いている画面と同じホストを見る。
-// LAN の別端末（スマホなど）から 192.168.x.x で開いたときに
-// localhost を指すと、その端末自身を叩いて必ず失敗する。
-// 本番は VITE_API_BASE_URL を明示して、ここには落ちてこない。
+// **本番は空文字にして相対パスで出す。** フロントとAPIは同じオリジンで、
+// /api/* は Caddy が backend へ渡す(spec-v2.2.md §7.3)。backend の 3000 番は
+// ホストに公開していないので、絶対URLを組み立てると必ず届かない。
+//
+// 開発だけ「いま開いている画面と同じホストの :3000」に落ちる。フロントが
+// :5173、APIが :3000 と別オリジンなため。localhost を決め打ちにしないのは、
+// LAN の別端末（スマホなど）から 192.168.x.x で開いたときに、その端末自身を
+// 叩いて必ず失敗するため。
+//
+// import.meta.env.DEV は Vite が埋める値で、vite build では false になる。
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_API_PORT || "3000"}`;
+  (import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_API_PORT || "3000"}`
+    : "");
 
 export class ApiError extends Error {
   // コンストラクタの引数プロパティ記法は erasableSyntaxOnly が禁じているため使わない
