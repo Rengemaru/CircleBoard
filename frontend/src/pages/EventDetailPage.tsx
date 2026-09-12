@@ -31,7 +31,7 @@ const FALLBACK_TITLE = "イベント";
 export function EventDetailPage() {
   const { id } = useParams();
   const session = useCurrentUser();
-  const { user, failed } = session;
+  const { user, loading: sessionLoading, failed } = session;
   const flash = useFlash();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +204,7 @@ export function EventDetailPage() {
       {error !== null && <Note tone="danger">{error}</Note>}
 
       <ParticipationButton
+        sessionLoading={sessionLoading}
         sessionFailed={failed}
         loggedIn={user !== null}
         joined={event.current_user_joined === true}
@@ -217,6 +218,7 @@ export function EventDetailPage() {
 }
 
 function ParticipationButton({
+  sessionLoading,
   sessionFailed,
   loggedIn,
   joined,
@@ -225,6 +227,7 @@ function ParticipationButton({
   onJoin,
   onCancel,
 }: {
+  sessionLoading: boolean;
   sessionFailed: boolean;
   loggedIn: boolean;
   joined: boolean;
@@ -237,6 +240,14 @@ function ParticipationButton({
 
   // ログイン状態を確かめられていないときに「ログインして参加」を出すと、
   // 参加済みの人にまで未ログインだと言うことになる。ここは判断を保留する(Issue #72)
+  // **まだ確かめていないうちは何も出さない。** 先に「ログインして参加」を出すと、
+  // ログイン済みの人にまで未ログインだと言うことになる。セッションの取得より
+  // イベントの取得が先に終わると実際に一瞬出ていた。
+  // SiteHeader と ProjectDetailPage は同じ理由で loading を見ている(Issue #184)
+  if (sessionLoading) {
+    return null;
+  }
+
   if (sessionFailed) {
     return <SessionUnavailable />;
   }
