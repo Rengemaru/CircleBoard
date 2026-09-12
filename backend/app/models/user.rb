@@ -95,6 +95,20 @@ class User < ApplicationRecord
     update!(suspended_at: nil)
   end
 
+  # 管理者が発行したパスワードのままか(Issue #288)。
+  #
+  # 初期パスワードは全員に同じものが配られる前提の運用なので(CLAUDE.md §10)、
+  # 変えていない人が残っていると、その文字列を知っている人が全員のアカウントに
+  # 入れる。本人が設定するまで使わせない判断に使う。
+  #
+  # **パスワードの中身では判定できない。** password_digest しか持っていないので、
+  # 「初期値と同じか」を突き合わせる方法が無い。設定し直した事実を記録する
+  # 値の更新は password と同じ update で行う(before_save のコールバックにしない)。
+  # 本人が変えたときは時刻、管理者が再発行したときは nil と、
+  # 同じ「password_digest が変わった」でも入れる値が逆になるため、
+  # モデル側からは誰が変えたのかを判定できない
+  def password_unchanged? = password_changed_at.nil?
+
   def graduated?(today = Date.current)
     graduation_year <= self.class.academic_year(today)
   end

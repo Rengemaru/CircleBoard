@@ -31,7 +31,10 @@ module Api
           return render_error(:unprocessable_entity, "新しいパスワードを入力してください")
         end
 
-        if @user.update(password: params[:password])
+        # password_changed_at を nil に戻す。再発行した直後は、また管理者の
+        # 知っているパスワードに戻っている。ここを素通しにすると、
+        # 本人に設定させる仕組み(Issue #288)が再発行のたびに抜ける
+        if @user.update(password: params[:password], password_changed_at: nil)
           head :no_content
         else
           render_error(:unprocessable_entity, @user.errors.full_messages.join("、"))
