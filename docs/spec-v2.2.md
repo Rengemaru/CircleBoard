@@ -336,9 +336,35 @@ CREATE UNIQUE INDEX index_event_participations_active
 | user_id | bigint | FK users, NULL可, ON DELETE SET NULL |
 | status | integer | NOT NULL, default: 0（0:approved / 1:pending / 2:rejected）🟡 MVPは0固定 |
 | approved_at | datetime | NOT NULL（MVPでは created_at と同値） |
+| withdrawal_requested_at | datetime | NULL可（null = 脱退を申請していない）**2026-09-12 追加** |
+| cancelled_at | datetime | NULL可（null = 参加中）**2026-09-12 追加** |
 | created_at / updated_at | datetime | NOT NULL |
 
-**インデックス:** UNIQUE (project_id, user_id)
+```sql
+-- 抜けた人は対象外なので、あとから戻れる（events と同じ形）
+CREATE UNIQUE INDEX index_project_participations_active
+  ON project_participations (project_id, user_id) WHERE cancelled_at IS NULL;
+```
+
+**脱退は申請制にする（オーナー決定 2026-09-12）。**
+プロジェクトは継続的に成果物を作る活動で、抜けられると owner が引き継ぎを考える
+必要があります。黙って消えると気づけません。イベントの参加キャンセルとは性質が違うので、
+同じ「1クリックで抜ける」にはしません。
+
+| 状態 | withdrawal_requested_at | cancelled_at |
+|---|---|---|
+| 参加中 | null | null |
+| 脱退を申請中 | 時刻 | null |
+| 脱退済み | 時刻 | 時刻 |
+
+- 申請の取り下げ（本人）と却下（owner）は `withdrawal_requested_at` を null に戻す
+- 承認（owner）は `cancelled_at` に時刻を入れる。**行は消さない**
+
+**`status` は使いません。** あちらは「参加を承認するか」の軸で、🟡 MVPは0固定です。
+脱退は別の軸なので、1つの列に2つの意味を持たせません。
+
+**時刻2本で表すのは、`suspended_at` や `events.cancelled_at` と同じ考え方です。**
+真偽値と時刻の2本を持つと「フラグは立っているが時刻が無い」状態が作れます。
 
 **events と CASCADE の扱いを変えている理由**（面接で聞かれる箇所）:
 プロジェクトは論理削除（trashed）後も参加者一覧を閲覧でき、復旧時にメンバーがそのまま戻る必要があるため、参加レコードを残す。イベントは単発で復旧の概念が薄く、参加履歴を残す価値が低いため CASCADE。
@@ -517,7 +543,19 @@ VPS公開により「未ログインで見える」が実質「全世界に見�
 | 他人の権限の変更（admin ⇄ member） | ❌ | ❌ | ✅（自分以外） | ❌ |
 | 他人の学年の変更 | ❌ | ❌ | ✅ | ❌ |
 | 現役 ⇄ 卒業生の切り替え | ❌ | ❌ | ✅ | ❌ |
-| 他人の氏名・メール・パスワードの変更 | ❌ | ❌ | ❌（`rails console`） | ❌ |
+| 他人の氏名の変更 | ❌ | ❌ | ✅ | ❌ |
+| 他人のパスワードの再発行 | ❌ | ❌ | ✅ | ❌ |
+| 他人のメールアドレスの変更 | ❌ | ❌ | ❌（`rails console`） | ❌ |
+
+**企画と参加についての操作**（2026-09-12 追加）
+
+| 操作 | 未ログイン | メンバー | 管理者 | サイネージ |
+|---|---|---|---|---|
+| 企画の編集 | ❌ | owner のみ | ✅ | ❌ |
+| 企画の削除（論理） | ❌ | owner のみ | ✅ | ❌ |
+| プロジェクトの脱退を申請 | ❌ | 自分の参加のみ | 自分の参加のみ | ❌ |
+| 脱退の申請を取り下げ | ❌ | 自分の申請のみ | 自分の申請のみ | ❌ |
+| 脱退の承認・却下 | ❌ | その企画の owner のみ | ✅ | ❌ |
 
 **自分自身の権限は変えられない。** 降格した瞬間にこの画面から締め出され、自分で戻せなくなる。
 **この条件があるので「管理者が0人になる」は起こらない。** 操作している本人が必ず管理者のまま
