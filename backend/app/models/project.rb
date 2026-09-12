@@ -20,7 +20,9 @@ class Project < ApplicationRecord
   # maximum だけの検証は nil も空文字も通すので、必須かどうかとは独立して置ける。
   # 経緯と、DBのカラムに桁数を入れない理由は Event 側に書いてある
   MAX_TITLE_LENGTH = 100
-  MAX_DESCRIPTION_LENGTH = 2000
+  # Markdown で書けるようにしたぶん増やす(Issue #303、オーナー決定 2026-09-13)。
+  # 記法そのものが字数を食う。表を1つ入れると 200〜300字使う
+  MAX_DESCRIPTION_LENGTH = 3000
   # 「毎週土曜」「毎週水曜 19:00〜」程度の自由記述。予定表を貼る欄ではない
   MAX_SCHEDULE_LENGTH = 100
 

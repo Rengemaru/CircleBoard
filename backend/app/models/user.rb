@@ -33,6 +33,10 @@ class User < ApplicationRecord
   # 氏名とメールの上限(2026-09-12 の監査で追加)。企画側と同じ理由で、
   # 書かないかぎり上限は存在しなかった。255 はメールアドレスの実務上の上限
   MAX_NAME_LENGTH = 50
+  # 自己紹介。Markdown で書けるようにしたぶん増やす
+  # (Issue #303。spec-v2.2.md §2 の500字を変更。オーナー決定 2026-09-13)。
+  # 直値ではなく定数にしたのは、spec が数字を焼き込まないようにするため
+  MAX_BIO_LENGTH = 1000
   MAX_EMAIL_LENGTH = 255
 
   # メールの形式(2026-09-12 の監査で追加)。存在と一意性しか見ておらず、
@@ -55,7 +59,7 @@ class User < ApplicationRecord
   # allow_nil / allow_blank は付けない。maximum だけの検証では
   # nil も空文字も長さの条件を満たすので、付けても何も変わらない
   validates :department, length: { maximum: 50 }
-  validates :bio, length: { maximum: 500 }
+  validates :bio, length: { maximum: MAX_BIO_LENGTH }
   # 名前の横に並べる欄なので短くする。長い文が入ると、参加者の一覧で
   # 名前が読み取れなくなる(spec-v2.2.md §2.1)
   validates :pronouns, length: { maximum: 20 }

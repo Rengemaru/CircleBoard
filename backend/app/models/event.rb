@@ -127,7 +127,9 @@ class Event < ApplicationRecord
   # DBのカラムには桁数を入れない。マイグレーションを伴わせず、
   # spec-v2.2.md §2(確定済み)に触れないため(オーナー決定 2026-09-12)
   MAX_TITLE_LENGTH = 100
-  MAX_DESCRIPTION_LENGTH = 2000
+  # Markdown で書けるようにしたぶん増やす(Issue #303、オーナー決定 2026-09-13)。
+  # 記法そのものが字数を食う。表を1つ入れると 200〜300字使う
+  MAX_DESCRIPTION_LENGTH = 3000
   MAX_LOCATION_LENGTH = 100
   MAX_EXTERNAL_URL_LENGTH = 2000
 

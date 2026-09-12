@@ -35,6 +35,42 @@ RSpec.describe "イベントの参加表明・キャンセル", type: :request d
 
     # 定員チェックはフロントのボタン非表示だけでなくAPI側でも必ず行う。
     # ボタンを隠すのは表示の話であり、認可でも制限でもない(instructions.md T2-6)
+    # owner は参加者ではない。参加させると、プロジェクト側と揃わなくなる(Issue #307)
+    it "主催者は参加表明できない" do
+      sign_in(event.owner)
+
+      expect {
+        post "/api/events/#{event.id}/participation"
+      }.not_to change(EventParticipation, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig("error", "message")).to eq("主催者は参加表明できません")
+    end
+
+    # 画面には「終了」と出ているのに参加できていた(Issue #307)
+    it "終了したイベントには参加できない" do
+      event.update!(status: :completed)
+      sign_in(member)
+
+      expect {
+        post "/api/events/#{event.id}/participation"
+      }.not_to change(EventParticipation, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig("error", "message")).to eq("終了したイベントには参加できません")
+    end
+
+    # **開催日時では弾かない。** 「開催日が過ぎたのに募集中のまま」は
+    # 実際に起きる状態として許容している(spec/factories/events.rb の注記)
+    it "開催日時を過ぎていても、募集中なら参加できる" do
+      event.update_columns(starts_at: 3.days.ago)
+      sign_in(member)
+
+      post "/api/events/#{event.id}/participation"
+
+      expect(response).to have_http_status(:created)
+    end
+
     context "定員" do
       it "定員ちょうどまでは参加できる" do
         create(:event_participation, event: event, user: other)

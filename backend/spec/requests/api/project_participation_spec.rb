@@ -56,6 +56,19 @@ RSpec.describe "プロジェクトの参加申請と参加者一覧", type: :req
       expect(participation.approved_at).to be_present
     end
 
+    # **脱退が owner を弾いているので、参加も弾く**(Issue #307)。
+    # 片方だけ通ると「参加はできるが抜けられない」状態を作れてしまう
+    it "主催者は参加表明できない" do
+      sign_in(project.owner)
+
+      expect {
+        post "/api/projects/#{project.id}/participation"
+      }.not_to change(ProjectParticipation, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig("error", "message")).to eq("主催者は参加表明できません")
+    end
+
     it "二重に申請すると 422 を返す" do
       create(:project_participation, project: project, user: member)
       sign_in(member)

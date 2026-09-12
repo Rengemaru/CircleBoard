@@ -12,6 +12,9 @@ import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { PostDescription } from "../components/PostDescription";
+import { DetailActionBar } from "../components/DetailActionBar";
+import { ACTION_BAR_BUTTON, ACTION_BAR_CTA } from "../components/actionBarButton";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useFlash } from "../lib/flash";
@@ -30,8 +33,11 @@ const FALLBACK_TITLE = "イベント";
 
 export function EventDetailPage() {
   const { id } = useParams();
+  // ログイン後にこのイベントへ戻すため(Issue #37)。
+  // participationAction はフックを使わない純関数にしてあるので、ここで取る
+  const location = useLocation();
   const session = useCurrentUser();
-  const { user, failed } = session;
+  const { user, loading: sessionLoading, failed } = session;
   const flash = useFlash();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +107,29 @@ export function EventDetailPage() {
   // owner 本人か管理者だけが編集できる(docs/api-spec.md §2)。
   // owner キーは未ログインには返らないので、比較の前に存在を見る
   const canEdit = user !== null && (user.role === "admin" || (event.owner?.id ?? null) === user.id);
+  // 主催者は参加表明できない(Issue #307)。サーバーが422で弾くので、
+  // ここで出さないのは表示の話(CLAUDE.md §3-2)
+  const isOwner = user !== null && (event.owner?.id ?? null) === user.id;
+
+  // **主操作が無いときは編集を primary に昇格させる。** 主催者にとっては
+  // 編集がこの画面の主操作で、参加の導線は出さない(Issue #307)
+  const action = participationAction({
+    event,
+    loginPath: loginPathFrom(location.pathname + location.search),
+    sessionLoading,
+    sessionFailed: failed,
+    loggedIn: user !== null,
+    isOwner,
+    full,
+    busy,
+    onJoin: join,
+    onCancel: cancel,
+  });
+  const edit = canEdit ? (
+    <LinkButton to={`/events/${event.id}/edit`} variant="default" className={ACTION_BAR_BUTTON}>
+      編集
+    </LinkButton>
+  ) : null;
 
   return (
     <MemberPage session={session}>
@@ -130,16 +159,6 @@ export function EventDetailPage() {
         {/* 開催の近さがこの画面で一番効く情報なので、見出しの直下に大きく置く */}
         <p className="mt-1 text-lg font-bold text-gray-700">{formatCountdown(event.starts_at)}</p>
 
-        {/* owner 本人と管理者だけに出す。**隠すのは表示の話で制限ではない**ので、
-            API 側が require_owner_or_admin で弾いている(CLAUDE.md §3-2) */}
-        {canEdit && (
-          <div className="mt-3">
-            <LinkButton to={`/events/${event.id}/edit`} variant="default" size="sm">
-              編集
-            </LinkButton>
-          </div>
-        )}
-
         {/* 「いつ・どこで・あと何枠」は関連する3つなので横に並べる。
             縦に積むと、行き先を決めるのに必要な情報が縦長に散る
             (SmartHR「関連性のある項目は横に並べて関連性を伝える」) */}
@@ -167,9 +186,7 @@ export function EventDetailPage() {
         )}
       </Panel>
 
-      <Panel title="概要">
-        <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{event.description}</p>
-      </Panel>
+      <PostDescription source={event.description} />
 
       <Panel
         title={`参加者 ${event.participants_count}${
@@ -203,70 +220,112 @@ export function EventDetailPage() {
 
       {error !== null && <Note tone="danger">{error}</Note>}
 
-      <ParticipationButton
-        sessionFailed={failed}
-        loggedIn={user !== null}
-        joined={event.current_user_joined === true}
-        full={full}
-        busy={busy}
-        onJoin={join}
-        onCancel={cancel}
+      {/* 通信に失敗したときだけは本文に出す。バーに入れるものではない */}
+      {failed && <SessionUnavailable />}
+
+      {/* fixed なので、ここに書いても出る場所は変わらない。
+          操作が本文のどこに属するかを読む人に示すために末尾に置く */}
+      <DetailActionBar
+        primary={action ?? edit}
+        secondary={action === null ? undefined : (edit ?? undefined)}
       />
     </MemberPage>
   );
 }
 
-function ParticipationButton({
+// バーの主操作。**状態ごとに1つだけ返す。** 表にすると次のとおり。
+//
+//   確認中          … 何も出さない（ログイン済みの人に未ログインと言わない）
+//   通信に失敗      … 何も出さない（本文に SessionUnavailable を出している）
+//   未ログイン      … ログインして参加（押すと戻ってくる。Issue #37）
+//   主催者          … 編集だけ。参加表明はできない（Issue #307）
+//   終了            … 「終了しました」の無効ボタン
+//   参加済み        … 参加をキャンセル
+//   満員            … 「満員です」の無効ボタン
+//   それ以外        … 参加する
+//
+// **無効ボタンにしたのは、消すと「なぜ押せないのか」が分からなくなるため**
+// (オーナー決定 2026-09-13)。色は smarthr-ui の標準どおりグレー。
+//
+// **コンポーネントではなく関数にしてある。** JSX として渡すと、中で null を
+// 返しても「要素そのもの」は存在するので、呼び出し側から「主操作が無い」ことを
+// 判定できない。FloatArea は primaryButton が必須なので、そこを見分ける必要がある。
+// フックを使わない形にするため、ログインの戻り先は引数で受ける
+function participationAction({
+  event,
+  loginPath,
+  sessionLoading,
   sessionFailed,
   loggedIn,
-  joined,
+  isOwner,
   full,
   busy,
   onJoin,
   onCancel,
 }: {
+  event: EventDetail;
+  loginPath: string;
+  sessionLoading: boolean;
   sessionFailed: boolean;
   loggedIn: boolean;
-  joined: boolean;
+  isOwner: boolean;
   full: boolean;
   busy: boolean;
   onJoin: () => void;
   onCancel: () => void;
-}) {
-  const location = useLocation();
+}): React.ReactNode {
+  if (sessionLoading || sessionFailed) return null;
 
-  // ログイン状態を確かめられていないときに「ログインして参加」を出すと、
-  // 参加済みの人にまで未ログインだと言うことになる。ここは判断を保留する(Issue #72)
-  if (sessionFailed) {
-    return <SessionUnavailable />;
-  }
-
-  // 未ログイン時のラベルは「ログインして参加」→ /login へ(ワイヤーフレーム ③)。
-  // ログイン後はこのイベントに戻す(Issue #37)
   if (!loggedIn) {
     return (
-      <LinkButton to={loginPathFrom(location.pathname + location.search)} variant="primary">
+      <LinkButton to={loginPath} variant="primary" className={ACTION_BAR_CTA}>
         ログインして参加
       </LinkButton>
     );
   }
 
-  if (joined) {
+  // 主催者には参加の導線を出さない。編集は secondary に出ている
+  if (isOwner) return null;
+
+  if (event.status === "completed") {
     return (
-      <Button variant="ghost" onClick={onCancel} busy={busy} busyLabel="キャンセル中…">
+      <Button variant="primary" disabled className={ACTION_BAR_BUTTON}>
+        終了しました
+      </Button>
+    );
+  }
+
+  // 参加済みなら満員でもキャンセルできる。判定の順番が効いている
+  if (event.current_user_joined === true) {
+    return (
+      <Button
+        variant="ghost"
+        onClick={onCancel}
+        busy={busy}
+        busyLabel="キャンセル中…"
+        className={ACTION_BAR_BUTTON}
+      >
         参加をキャンセル
       </Button>
     );
   }
 
-  // 満員時はボタンを消す。ただしAPI側でも必ず定員を検証し422を返す。
-  // ボタンの非表示は表示の話であって制限ではない(ワイヤーフレーム ③)
   if (full) {
-    return <Note tone="warning">満員です。空きが出ると参加できるようになります。</Note>;
+    return (
+      <Button variant="primary" disabled className={ACTION_BAR_BUTTON}>
+        満員です
+      </Button>
+    );
   }
 
   return (
-    <Button variant="primary" onClick={onJoin} busy={busy} busyLabel="参加中…">
+    <Button
+      variant="primary"
+      onClick={onJoin}
+      busy={busy}
+      busyLabel="参加中…"
+      className={ACTION_BAR_CTA}
+    >
       参加する
     </Button>
   );
