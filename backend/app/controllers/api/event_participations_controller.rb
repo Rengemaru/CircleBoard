@@ -5,6 +5,20 @@ module Api
 
     # POST /api/events/:event_id/participation
     def create
+      # owner は参加表明できない(Issue #307)。プロジェクトと揃える
+      if @event.owner_id == current_user.id
+        return render_error(:unprocessable_entity, "主催者は参加表明できません")
+      end
+
+      # **終了したイベントには参加させない。** 画面には「終了」と出ているのに
+      # 参加表明できていた(Issue #307)。
+      #
+      # **開催日時では判定しない。** 「開催日が過ぎたのに募集中のまま」は
+      # 実際に起きる状態として許容している(spec/factories/events.rb の注記、
+      # 一覧の upcoming もサイネージもその前提)。弾くのは
+      # 「終了」と明示されたものだけにする
+      return render_error(:unprocessable_entity, "終了したイベントには参加できません") if @event.completed?
+
       return render_error(:unprocessable_entity, "すでに参加しています") if already_joined?
       # 満員判定は必ずサーバー側で行う(docs/api-spec.md §2)。
       # フロントのボタン非表示は表示の話であって制限ではない
