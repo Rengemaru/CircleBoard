@@ -7,6 +7,7 @@ import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
 import { UserCard } from "../components/UserCard";
 import { Badge } from "../components/ui/Badge";
+import { PROJECT_STATUS } from "../lib/projectStatus";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Note } from "../components/ui/Note";
@@ -163,8 +164,8 @@ export function ProjectDetailPage() {
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={project.status === "recruiting" ? "recruiting" : "inprogress"}>
-            {project.status === "recruiting" ? "募集中" : "進行中"}
+          <Badge tone={PROJECT_STATUS[project.status].tone}>
+            {PROJECT_STATUS[project.status].label}
           </Badge>
           {project.tags.map((tag) => (
             <TagChip key={tag.id} name={tag.name} />
