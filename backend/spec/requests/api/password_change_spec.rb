@@ -26,21 +26,26 @@ RSpec.describe "パスワード", type: :request do
     end
 
     # **ログイン中であることは「本人である」ことの証明にならない。**
-    # これが無いと、席を外した隙に画面を触られただけで乗っ取りが固定化する
-    it "現在のパスワードが違うと 401 を返し、変えない" do
+    # これが無いと、席を外した隙に画面を触られただけで乗っ取りが固定化する。
+    #
+    # 401 にしない。このリポジトリでは 401 が「ログインし直せ」の意味で、
+    # 画面が再ログインの案内を出す(Issue #72)。セッションは切れていないので、
+    # 401 を返すと「有効期限が切れました」と誤って出る
+    it "現在のパスワードが違うと 422 を返し、変えない" do
       sign_in(user, password: "oldpassword1")
       patch "/api/users/me/password",
             params: { current_password: "wrongpassword", password: "newpassword1" }, as: :json
 
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body["error"]["message"]).to include("現在のパスワード")
       expect(user.reload.authenticate("oldpassword1")).to be_truthy
     end
 
-    it "現在のパスワードを送らないと 401 を返す" do
+    it "現在のパスワードを送らないと 422 を返す" do
       sign_in(user, password: "oldpassword1")
       patch "/api/users/me/password", params: { password: "newpassword1" }, as: :json
 
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:unprocessable_entity)
     end
 
     # 8文字以上の検証は既存の User バリデーションがそのまま効く

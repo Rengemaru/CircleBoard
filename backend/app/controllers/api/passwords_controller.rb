@@ -10,9 +10,14 @@ module Api
     def update
       # **現在のパスワードを必ず検証する。** これが無いと、席を外した隙に
       # 画面を触られただけでパスワードを書き換えられ、乗っ取りが固定化する。
-      # ログイン中であることは「本人である」ことの証明にならない
+      # ログイン中であることは「本人である」ことの証明にならない。
+      #
+      # 401 ではなく 422 を返す。このリポジトリでは 401 に「ログインし直せ」という
+      # 意味を持たせていて、画面が受け取ると再ログインの案内を出す(Issue #72)。
+      # セッションは切れていないので、そこに混ぜると「有効期限が切れました」と
+      # 誤って出る（実際に出た）
       unless current_user.authenticate(params[:current_password].to_s)
-        return render_error(:unauthorized, "現在のパスワードが違います")
+        return render_error(:unprocessable_entity, "現在のパスワードが違います")
       end
 
       if current_user.update(password: params[:password])
