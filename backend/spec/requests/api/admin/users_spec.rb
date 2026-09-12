@@ -50,6 +50,43 @@ RSpec.describe "POST /api/admin/users", type: :request do
     expect(created).to be_member
   end
 
+  describe "権限" do
+    before { sign_in(admin) }
+
+    def issue(role)
+      body = params.deep_dup
+      body[:user][:role] = role
+      post "/api/admin/users", params: body, as: :json
+    end
+
+    # users.role には確保しているが画面に出さない(ワイヤーフレーム③)。
+    # 編集では弾いていたのに発行は素通しで、curl から作れていた(2026-09-12 の監査)
+    it "demo では発行しない" do
+      expect { issue("demo") }.not_to change(User, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # 未知の値を enum に直接渡すと ArgumentError で 500 になっていた
+    it "未知の権限は 500 ではなく 422 を返す" do
+      expect { issue("superadmin") }.not_to change(User, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "member と admin は発行できる" do
+      issue("member")
+      expect(response).to have_http_status(:created)
+
+      body = params.deep_dup
+      body[:user][:email] = "another@example.ac.jp"
+      body[:user][:role] = "admin"
+      post "/api/admin/users", params: body, as: :json
+
+      expect(User.find(response.parsed_body["user"]["id"])).to be_admin
+    end
+  end
+
   describe "学年" do
     before { sign_in(admin) }
 
