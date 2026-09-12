@@ -33,8 +33,8 @@ module Api
           return render_error(:unprocessable_entity, "学年を指定してください")
         end
 
-        user = User.new(user_params)
-        error = apply_grade_years(user)
+        user = User.new(user_params.except(:role))
+        error = apply_role(user) || apply_grade_years(user)
         return render_error(:unprocessable_entity, error) if error
 
         if user.save
@@ -97,9 +97,13 @@ module Api
       # 既定なので(ワイヤーフレーム③)、APIからも入れられないようにしておく
       ASSIGNABLE_ROLES = %w[admin member].freeze
 
-      # 権限を組み立てる。問題があればその文言を返す(nil なら通す)
+      # 権限を組み立てる。問題があればその文言を返す(nil なら通す)。
+      #
+      # 発行と編集の両方から呼ぶ。発行が素通しだったため、画面に出していない
+      # demo を curl から作れ、未知の値では User.new の時点で ArgumentError が
+      # 出て 500 になっていた(2026-09-12 の監査)
       def apply_role(user)
-        role = update_params[:role]
+        role = params.dig(:user, :role)
         return nil if role.nil?
         return "権限は管理者かメンバーのどちらかです" unless ASSIGNABLE_ROLES.include?(role)
         return nil if role == user.role
@@ -172,7 +176,10 @@ module Api
       end
 
       # 年度は受け取らない。grade_years から逆算する(apply_grade_years)。
-      # 両方受け取れるようにすると、どちらが勝つのかが読めなくなる
+      # 両方受け取れるようにすると、どちらが勝つのかが読めなくなる。
+      #
+      # role は permit するが、User.new には渡さない(apply_role が検証してから
+      # 入れる)。未知の値を enum に直接渡すと ArgumentError で 500 になる
       def user_params
         params.require(:user).permit(:name, :email, :password, :role)
       end
