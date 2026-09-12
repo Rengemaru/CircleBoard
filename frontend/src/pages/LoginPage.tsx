@@ -34,8 +34,11 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      await login(email, password);
-      navigate(redirectTo);
+      // 外側の session(useCurrentUser)と別物なので名前を分ける
+      const loggedIn = await login(email, password);
+      // 初期パスワードのままなら、元の行き先ではなく変更画面へ送る。
+      // そちらへ行っても他のAPIが403で何も動かない(Issue #288)
+      navigate(loggedIn.passwordChangeRequired ? "/password-change" : redirectTo);
     } catch (e: unknown) {
       // サーバーは「メールが存在しない」と「パスワードが違う」を区別しない。
       // 画面でも区別せず、サーバーが返した文言をそのまま出す
