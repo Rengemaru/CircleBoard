@@ -8,8 +8,11 @@ import { Button } from "../components/ui/Button";
 import { ErrorNote } from "../components/ui/ErrorNote";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { Note } from "../components/ui/Note";
 import { fetchTags } from "../api/tags";
 import { TagPicker } from "../components/TagPicker";
+import { PasswordChangeDialog } from "../components/PasswordChangeDialog";
+import { changeMyPassword } from "../api/users";
 import { MAX_TAGS_PER_RESOURCE } from "../lib/tags";
 import { fetchMyProfile, updateMyProfile } from "../api/users";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -58,6 +61,34 @@ export function MyProfileEditPage() {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // パスワードはプロフィールと別で保存する。要求するものも、間違えたときに
+  // 返るものも違う。エラーもダイアログの中だけで完結させる
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<unknown>(null);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
+
+  // 開くたびに前回の結果を消す。残すと、何も送っていないのに前のエラーが
+  // 出ている状態でダイアログが開く
+  function openPasswordDialog() {
+    setPasswordError(null);
+    setPasswordChanged(false);
+    setChangingPassword(true);
+  }
+
+  async function submitPassword(currentPassword: string, password: string) {
+    setPasswordBusy(true);
+    setPasswordError(null);
+    try {
+      await changeMyPassword(currentPassword, password);
+      setChangingPassword(false);
+      setPasswordChanged(true);
+    } catch (e: unknown) {
+      setPasswordError(e);
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (loading || user === null) return;
@@ -324,6 +355,41 @@ export function MyProfileEditPage() {
           </Button>
         </div>
       </form>
+
+      {/* form の外に置く。中に入れると form が入れ子になり、
+          「パスワードを変更」がプロフィールの保存も走らせてしまう。
+          mt-8 は「保存する」と離すため。詰めると保存がこのパネルの
+          操作に見える */}
+      <Panel title="パスワード" className="mt-8">
+        {passwordChanged && (
+          <Note tone="success">
+            パスワードを変更しました。次のログインから新しいパスワードを使ってください。
+          </Note>
+        )}
+        <Stack gap={0.75}>
+          <Text size="S" color="TEXT_GREY" as="p">
+            いまのパスワードを入れてから、新しいものに変えられます。
+            忘れてしまったときは部長に再発行してもらってください。
+          </Text>
+          <div>
+            <Button variant="default" onClick={openPasswordDialog}>
+              パスワードを変更
+            </Button>
+          </div>
+        </Stack>
+      </Panel>
+
+      {changingPassword && (
+        <PasswordChangeDialog
+          busy={passwordBusy}
+          error={passwordError}
+          onCancel={() => {
+            setChangingPassword(false);
+            setPasswordError(null);
+          }}
+          onSubmit={submitPassword}
+        />
+      )}
     </MemberPage>
   );
 }

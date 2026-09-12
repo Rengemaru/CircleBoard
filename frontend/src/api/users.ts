@@ -28,6 +28,15 @@ export type ProfileInput = {
   links?: { label: string; url: string }[];
 };
 
+// パスワードはプロフィールと別の入口。現在のパスワードを必ず送る。
+// ログイン中であることは「本人である」ことの証明にならない
+export async function changeMyPassword(currentPassword: string, password: string): Promise<void> {
+  await apiFetch<void>("/api/users/me/password", {
+    method: "PATCH",
+    body: JSON.stringify({ current_password: currentPassword, password }),
+  });
+}
+
 export async function updateMyProfile(input: ProfileInput): Promise<Profile> {
   return apiFetch<Profile>("/api/users/me", {
     method: "PATCH",

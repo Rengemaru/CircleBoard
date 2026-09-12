@@ -100,8 +100,12 @@ export function LoginPage() {
           </form>
         </Panel>
 
-        {/* パスワード再発行UIは MVP 対象外。rails console で対応する(CLAUDE.md §10) */}
-        <Note>アカウントは部長が発行します。パスワードを忘れた場合も部長に連絡してください。</Note>
+        {/* メール送信を作らない方針(CLAUDE.md §10)なので、リセットリンクは送れない。
+            管理者が再発行して口頭かDMで伝える運用(docs/spec-admin-operations.md §3.1) */}
+        <Note>
+          アカウントは部長が発行します。パスワードを忘れた場合は部長に連絡してください。
+          再発行されたパスワードは、ログイン後にマイページから自分で変更できます。
+        </Note>
       </div>
     </MemberPage>
   );
