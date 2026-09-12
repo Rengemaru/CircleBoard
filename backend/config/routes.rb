@@ -10,8 +10,12 @@ Rails.application.routes.draw do
       resource :participation, only: [ :create, :destroy ], controller: "event_participations"
     end
     resources :projects, only: [ :index, :show, :create, :update, :destroy ] do
-      # 脱退APIは作らない(MVP対象外。rails console で対応。docs/api-spec.md §3)
       resource :participation, only: [ :create ], controller: "project_participations"
+      # 脱退は申請制(docs/api-spec.md「プロジェクトの脱退」)。
+      # 申請と取り下げは「自分の参加」しか指せないので単数形で :id を取らない。
+      # 承認と却下は owner が他人の申請を捌くので、申請のIDを取る
+      resource :withdrawal, only: [ :create, :destroy ], controller: "project_withdrawals"
+      resources :withdrawals, only: [ :update, :destroy ], controller: "project_withdrawal_reviews"
     end
     resources :tags, only: [ :index ]
 

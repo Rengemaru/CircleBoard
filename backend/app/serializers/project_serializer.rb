@@ -39,8 +39,11 @@ class ProjectSerializer
     base.merge(
       owner: @project.owner && UserCardSerializer.new(@project.owner).as_json,
       participants: participants,
-      current_user_joined: current_user_joined?
-    )
+      current_user_joined: current_user_joined?,
+      # 自分が脱退を申請しているか。画面が「申請する」と「取り下げる」を
+      # 出し分けるのに要る
+      current_user_withdrawal_requested: current_user_withdrawal_requested?
+    ).merge(withdrawal_requests_json)
   end
 
   private
@@ -61,6 +64,40 @@ class ProjectSerializer
   end
 
   def signed_in? = @current_user.present?
+
+  # 捌けるのは owner 本人と管理者だけなので、それ以外には**キーごと返さない**。
+  # 「誰が抜けたがっているか」は他の参加者に見せる情報ではない(CLAUDE.md §3-2)
+  def withdrawal_requests_json
+    return {} unless owner_or_admin?
+
+    { withdrawal_requests: withdrawal_requests }
+  end
+
+  def owner_or_admin?
+    return false if @current_user.nil?
+
+    @current_user.admin? || @project.owner_id == @current_user.id
+  end
+
+  # 読み込み済みの配列から絞るので追加SQLが飛ばない
+  def withdrawal_requests
+    @project.active_project_participations.filter_map do |participation|
+      next unless participation.withdrawal_requested?
+
+      {
+        id: participation.id,
+        user: participation.user && UserCardSerializer.new(participation.user).as_json
+      }
+    end
+  end
+
+  def current_user_withdrawal_requested?
+    return false if @current_user.nil?
+
+    @project.active_project_participations.any? do |participation|
+      participation.user_id == @current_user.id && participation.withdrawal_requested?
+    end
+  end
 
   # user は退会で nil になりうる(ON DELETE SET NULL)
   def participants
