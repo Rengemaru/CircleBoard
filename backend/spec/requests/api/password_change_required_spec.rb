@@ -9,7 +9,7 @@ RSpec.describe "初期パスワードのままのとき", type: :request do
   # :initial_password が「管理者が発行したパスワードのまま」。
   # factory の既定は設定済みなので、ここでは明示的に付ける
   let(:user) { create(:user, :initial_password, password: "initialpass1") }
-  let(:admin) { create(:user, :admin, :initial_password, password: "initialpass1") }
+  let(:admin) { create(:user, :initial_password, role: :admin, password: "initialpass1") }
 
   describe "他のAPIを弾く" do
     before { sign_in(user, password: "initialpass1") }

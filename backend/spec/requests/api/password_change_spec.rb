@@ -198,7 +198,7 @@ RSpec.describe "パスワード", type: :request do
     # **ここが抜けると、再発行のたびに仕組みが素通しになる。**
     # 再発行した直後は、また管理者の知っているパスワードに戻っている
     it "管理者が再発行すると未変更に戻る" do
-      admin = create(:user, :admin, password: "adminpassword1")
+      admin = create(:user, role: :admin, password: "adminpassword1")
       user.update!(password: "ownpassword1", password_changed_at: Time.current)
 
       sign_in(admin, password: "adminpassword1")
@@ -210,7 +210,7 @@ RSpec.describe "パスワード", type: :request do
     end
 
     it "管理者の再発行が失敗したときは記録を変えない" do
-      admin = create(:user, :admin, password: "adminpassword1")
+      admin = create(:user, role: :admin, password: "adminpassword1")
       changed_at = 1.day.ago
       user.update!(password: "ownpassword1", password_changed_at: changed_at)
 
