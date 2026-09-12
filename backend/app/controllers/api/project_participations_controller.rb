@@ -30,13 +30,15 @@ module Api
       render_error(:not_found, "プロジェクトが見つかりません")
     end
 
+    # 抜けた人は「参加していない」。もう一度参加できる
+    # (部分ユニークインデックスも同じ条件で貼ってある)
     def already_joined?
-      @project.project_participations.exists?(user: current_user)
+      @project.active_project_participations.exists?(user: current_user)
     end
 
     def project_json
       project = Project.active
-                       .includes(:tags, :owner, project_participations: :user)
+                       .includes(:tags, :owner, active_project_participations: :user)
                        .find(@project.id)
       ProjectSerializer.new(project, current_user: current_user).as_json
     end
