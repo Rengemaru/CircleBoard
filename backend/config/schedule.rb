@@ -1,8 +1,15 @@
 # whenever gem の設定。crontab を生成するためのファイルで、
 # アプリの実行時には読み込まれない。
 #
-# 本番への反映は Phase 5(D-8 初回デプロイ)で行う:
-#   bundle exec whenever --update-crontab
+# **本番はこのファイルでは動かない。** 実行イメージは ruby:3.3-slim で cron が
+# 入っておらず、whenever --update-crontab を打つ相手がいない。whenever は
+# crontab を生成するだけの gem なので、生成先が要る。
+# 本番で実際に動いているのは ops/crontab.example → VPS のホスト側 crontab で、
+# そこから ops/spotlight.sh が docker compose exec する。
+# **時刻を変えるときは両方直すこと。**
+#
+# ここを消していないのは、開発機で whenever --update-crontab を使えるように
+# しておくため(手元で日次処理の動きを確かめたいときに要る)。
 #
 # 出力先を明示しているのは、cron の実行結果が見えないと
 # 「動いていないこと」に気づけないため。

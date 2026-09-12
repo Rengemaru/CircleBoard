@@ -8,5 +8,9 @@
 #
 # 出力を捨てないこと。捨てると「動いていないこと」に気づけない。
 
-# 日次バックアップ(spec-v2.2.md §7.6)。人が触っていない時間に寄せる
+# 注目スコアの日次更新(spec-v2.2.md §3.4)。
+# 7時にしているのは、部員が登校する前に当日分の並び順を確定させるため
+0 7 * * * /opt/circleboard/ops/spotlight.sh >> /opt/circleboard/log/spotlight.log 2>&1
+
+# 日次バックアップ(§7.6)。人が触っていない時間に寄せる
 0 4 * * * /opt/circleboard/ops/backup.sh >> /opt/circleboard/log/backup.log 2>&1
