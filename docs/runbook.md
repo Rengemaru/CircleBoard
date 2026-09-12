@@ -168,6 +168,57 @@ curl -i http://<VPSのIP>/api/events      # 未ログインでも200。owner が
 
 確認用に作ったイベントは、`/admin/posts` から削除できます。
 
+### 1-9. サイネージのトークンを発行する
+
+部室のディスプレイに貼る URL を作ります。**端末ごとに1枚**発行してください。漏れたときに、その端末の分だけ止められます。
+
+**先に `PUBLIC_BASE_URL` が入っていることを確かめます。**
+
+```bash
+dc exec -T backend bin/rails runner 'puts ENV.fetch("PUBLIC_BASE_URL")'
+```
+
+`KeyError` が出たら `.env.production` を直して `dc up -d`（**`restart` では反映されません**）。未設定のままだとサイネージも `/admin/signage` も 500 になります。
+
+発行は管理画面からできます。`/admin/signage` を開いて名前（例: `部室メインディスプレイ`）を入れるだけです。URL はその場に出るのでコピーしてください。
+
+画面を使わない場合はこちらです。**渡すのは名前だけで、トークンはサーバーが作ります。**
+
+```bash
+dc exec -T backend bin/rails runner '
+st = SignageToken.create!(name: "部室メインディスプレイ")
+puts "token=#{st.token}"
+puts "url=#{st.signage_url}"'
+```
+
+出た URL をディスプレイ端末のブラウザで開きます。
+
+```
+http://<VPSのIP>/signage?token=<32桁>
+```
+
+確認するのは3つです。
+
+```bash
+curl -s -o /dev/null -w 'valid=%{http_code}
+'   "http://<VPSのIP>/api/signage?token=<TOKEN>"   # 200
+curl -s -o /dev/null -w 'invalid=%{http_code}
+' "http://<VPSのIP>/api/signage?token=deadbeef"  # 404
+```
+
+3つ目は目で見ます。**サイネージに出ている企画の QR を読んで、`<VPSのIP>` を指していること。** ここが `localhost` になっていたら `PUBLIC_BASE_URL` が違っています（QR の URL はサーバー側で組み立てています）。
+
+### トークンを止める
+
+`/admin/signage` の失効ボタン、または次のコマンドです。**行は消しません**（いつ止めたかを残すため）。
+
+```bash
+dc exec -T backend bin/rails runner 'SignageToken.order(:id).each { |t| puts [t.id, t.name, t.revoked_at].join("	") }'
+dc exec -T backend bin/rails runner 'SignageToken.find(<ID>).update!(revoked_at: Time.current)'
+```
+
+止めた端末には「このディスプレイのURLは無効です」と出ます。**有効期限はありません。** 止めるまで有効です。
+
 ---
 
 ## 2. 更新する（2回目以降）
@@ -313,7 +364,7 @@ dc logs --tail=50 backend          # 直近のログ
 | `backend` が起動直後に落ちる | `.env.production` の値が欠けている。`SECRET_KEY_BASE` か `DATABASE_URL` |
 | API が全部 403 | `ALLOWED_HOSTS` が今アクセスしている宛先と違う（ドメインを取った直後に起きる） |
 | **ログインだけ通らない** | `FORCE_SSL` と実際のアクセス方法が食い違っている。http で見ているのに `FORCE_SSL` が `true` だと、Cookie に `secure` が付いて送り返されない |
-| **サイネージだけ 500** | `PUBLIC_BASE_URL` が未設定。`ENV.fetch` に既定値が無いので、その画面だけ落ちる |
+| **サイネージと `/admin/signage` が 500** | `PUBLIC_BASE_URL` が未設定。`SignageToken#signage_url` の `ENV.fetch` に既定値が無く、トークンの一覧・発行も同じ所を踏む |
 | 画面は出るが API が 502 | `backend` が落ちている。`dc logs backend` |
 | 何をしても 413 | 送っている本文が 1MB を超えている（Caddy の `request_body max_size`） |
 | 突然全部が不調 | ディスクを疑う。`df -h` → 埋まっていれば `docker system prune -a` と古いバックアップの整理 |
