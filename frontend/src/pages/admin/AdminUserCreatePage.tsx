@@ -40,14 +40,14 @@ type Issued = { name: string; email: string; password: string };
 
 function IssueForm() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<NewUserInput>({
+  // 学年は form に持たない。入力中の空欄を 0 として扱わないよう文字列で持ち、
+  // 送るときに数値へ直す。form 側にも持つと、空にしたときだけ2つがずれる
+  const [form, setForm] = useState<Omit<NewUserInput, "grade_years">>({
     name: "",
     email: "",
     password: "",
-    grade_years: 1,
     role: "member",
   });
-  // 入力中は文字列で持つ。数値にすると、消している途中の空欄を 0 として扱うことになる
   const [years, setYears] = useState("1");
   const [issued, setIssued] = useState<Issued | null>(null);
   // エラーは文字列に潰さず、そのまま持つ。401 かどうかを
@@ -60,7 +60,7 @@ function IssueForm() {
     setBusy(true);
     setError(null);
     try {
-      await createUser(form);
+      await createUser({ ...form, grade_years: Number(years) });
       // 発行した初期パスワードはこの画面で一度だけ表示して終わり。
       // メール送信機能が無いので、口頭やDMで本人に伝える運用(ワイヤーフレーム③)
       setIssued({ name: form.name, email: form.email, password: form.password });
@@ -123,11 +123,7 @@ function IssueForm() {
                 value={years}
                 // 1文字しか入らないので、0 と 10 以上は打ち込めない。
                 // サーバーでも同じ範囲で弾く(curl で直接叩けるため)
-                onChange={(e) => {
-                  const next = e.target.value.replace(/[^1-9]/g, "").slice(-1);
-                  setYears(next);
-                  if (next !== "") setForm({ ...form, grade_years: Number(next) });
-                }}
+                onChange={(e) => setYears(e.target.value.replace(/[^1-9]/g, "").slice(-1))}
                 inputMode="numeric"
                 maxLength={1}
                 aria-label="在学何年目か"
