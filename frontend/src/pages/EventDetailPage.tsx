@@ -12,6 +12,7 @@ import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
 import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
+import { PostDescription } from "../components/PostDescription";
 import { apiFetch } from "../api/client";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useFlash } from "../lib/flash";
@@ -167,9 +168,7 @@ export function EventDetailPage() {
         )}
       </Panel>
 
-      <Panel title="概要">
-        <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{event.description}</p>
-      </Panel>
+      <PostDescription source={event.description} />
 
       <Panel
         title={`参加者 ${event.participants_count}${
