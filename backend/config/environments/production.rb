@@ -37,12 +37,15 @@ Rails.application.configure do
   # config.action_cable.url = "wss://example.com/cable"
   # config.action_cable.allowed_request_origins = [ "http://example.com", /http:\/\/example.*/ ]
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # Can be used together with config.force_ssl for Strict-Transport-Security and secure cookies.
-  # config.assume_ssl = true
-
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  # HTTPSの強制。既定は true で、FORCE_SSL=false のときだけ切れる。
+  # スイッチの実体と、なぜ1つにまとめているかは config/application.rb にある。
+  #
+  # assume_ssl を同じ値で動かすのは、TLS を終端するのが Caddy で、
+  # backend に届くのは http だから。これが無いと force_ssl が
+  # 「まだ http だ」と判断して https へ 301 し、Caddy がまた同じ http を
+  # 投げ、リダイレクトが往復し続ける。
+  config.assume_ssl = config.x.force_ssl
+  config.force_ssl = config.x.force_ssl
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
@@ -87,11 +90,16 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Host ヘッダを詐称したアクセスを弾く(DNSリバインディング対策)。
+  # 値は環境変数で渡す(CLAUDE.md §3-5)。ドメインを取る前は IP、取った後は
+  # ドメイン名を入れる。複数書くときはカンマ区切り。
+  #
+  # 空のときは検査しない。Rails の本番既定がそうなっているので、
+  # **これを設定し忘れても今までどおり動く。** 逆に言うと、入れ忘れると
+  # 対策が効かないままになるので .env.production.example に既定値を置く。
+  config.hosts += ENV.fetch("ALLOWED_HOSTS", "").split(",").map(&:strip)
+
+  # 死活監視は Host ヘッダを付けずに叩かれることがある(cron から curl するなど)。
+  # ここを除外しないと、アプリが正常でも監視だけが落ちる
+  config.host_authorization = { exclude: ->(request) { request.path == "/healthz" } }
 end
