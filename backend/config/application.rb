@@ -54,6 +54,19 @@ module App
     config.i18n.default_locale = :ja
     config.i18n.available_locales = [ :ja, :en ]
 
+    # HTTPSを強制するか(spec-v2.2.md §7.5 A-1/A-2)。**本番は既定で true。**
+    # 切るときだけ FORCE_SSL=false を明示する。
+    #
+    # ここに1つだけ置いているのは、**HTTPSの強制と Cookie の secure を
+    # 別々に書かせないため。** 片方だけ true になると、Cookie は https でしか
+    # 送られないのにサーバーは http で待つ(またはその逆)という状態になり、
+    # ログインだけが通らない。症状が認証のコードに見えるので原因を探しづらい。
+    #
+    # 切る必要があるのは、ドメインを取るまでの間 IP 直打ち(http)で動かす期間。
+    # 証明書が無いホストで強制すると https へ飛ばされた先でブラウザが警告を出し、
+    # 画面まで辿り着けない。ドメインを設定したら .env.production から外す。
+    config.x.force_ssl = Rails.env.production? && ENV.fetch("FORCE_SSL", "true") == "true"
+
     # APIモードは session / cookie ミドルウェアを読み込まないので手で戻す。
     # 認証はサーバー側セッション + HttpOnly Cookie で行う(docs/api-spec.md §0)。
     # トークンをJSから触れる場所に置かないため、この方式を選んでいる。
@@ -61,7 +74,8 @@ module App
     config.session_store :cookie_store,
                          key: "_circleboard_session",
                          httponly: true,      # JSから読めない = XSSで盗まれない
-                         same_site: :lax
+                         same_site: :lax,
+                         secure: config.x.force_ssl
     config.middleware.use config.session_store, config.session_options
 
     # コンテナのログを docker compose logs で読めるようにする。
