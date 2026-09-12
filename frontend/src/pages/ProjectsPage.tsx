@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TagChip } from "../components/TagChip";
+import { toPlainText } from "../lib/markdown";
 import { Badge } from "../components/ui/Badge";
 import { PROJECT_STATUS } from "../lib/projectStatus";
 import { Link, useSearchParams } from "react-router-dom";
@@ -285,8 +286,10 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
           </ul>
         )}
 
+        {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
+            ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
         <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
-          {project.description}
+          {toPlainText(project.description)}
         </Text>
       </Stack>
     </li>
