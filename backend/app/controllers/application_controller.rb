@@ -2,6 +2,13 @@ class ApplicationController < ActionController::API
   # APIモードの ActionController::API は Cookies を含まないので明示的に入れる
   include ActionController::Cookies
 
+  # 初期パスワードのままの人に、他の操作をさせない(Issue #288)。
+  #
+  # **全体に掛けて、通してよい所だけ skip する。** 逆にすると、
+  # 新しいコントローラを足した人が付け忘れた瞬間に穴が開く。
+  # 塞ぎ忘れより、通し忘れの方が気づける(画面が動かないのですぐ分かる)
+  before_action :require_password_change_done
+
   private
 
   # 認証状態の判定はここ1箇所だけ。各コントローラで再定義しないこと。
@@ -34,6 +41,23 @@ class ApplicationController < ActionController::API
   # フロントでメニューを隠すだけにしない」と定めている
   def require_admin
     render_error(:forbidden, "管理者権限が必要です") unless current_user&.admin?
+  end
+
+  # 初期パスワードのままなら 403(Issue #288)。
+  #
+  # 初期パスワードは全員に同じものが配られる前提の運用なので(CLAUDE.md §10)、
+  # 変えていない人が残っていると、その文字列を知っている人が全員のアカウントに
+  # 入れる。本人が設定するまで使わせない。
+  #
+  # **未ログインは素通しする。** ここで弾くと、ログイン画面もイベント一覧も
+  # 見られなくなる。ログインの要否は require_login の仕事で、こちらは
+  # 「ログインしている人が使えるかどうか」だけを見る。
+  # サイネージ(?token=)も current_user が nil なのでここを通る
+  def require_password_change_done
+    return unless signed_in?
+    return unless current_user.password_unchanged?
+
+    render_error(:forbidden, "初期パスワードのままです。パスワードを変更してください")
   end
 
   # 企画を編集・削除してよいのは owner 本人と管理者だけ(docs/api-spec.md §2/§3)。

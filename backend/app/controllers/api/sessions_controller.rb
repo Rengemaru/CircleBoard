@@ -1,10 +1,15 @@
 module Api
   class SessionsController < ApplicationController
+    # 初期パスワードのままでも通す(Issue #288)。ここを塞ぐと、
+    # 変更画面を出すために状態を問い合わせることも、やり直すために
+    # ログアウトすることもできなくなる
+    skip_before_action :require_password_change_done
+
     # GET /api/session
     # 未ログインでも 401 ではなく 200 + null を返す。フロントの初期化で毎回
     # 叩くため、エラー扱いにしない(docs/api-spec.md §1)。
     def show
-      render json: { user: current_user && UserSerializer.new(current_user).as_json }
+      render json: session_payload
     end
 
     # POST /api/session
@@ -30,7 +35,7 @@ module Api
       reset_session
       session[:user_id] = user.id
 
-      render json: { user: UserSerializer.new(user).as_json }
+      render json: session_payload
     end
 
     # DELETE /api/session
@@ -40,6 +45,19 @@ module Api
     end
 
     private
+
+    # password_change_required は**自分の状態だけ**を返す。
+    #
+    # UserSerializer には入れない。あれは企画の owner など他人を出す所でも
+    # 使われるので、入れると「この人は初期パスワードのままだ」が
+    # 誰にでも見える。初期パスワードは全員に同じものが配られる前提なので
+    # (CLAUDE.md §10)、それは狙う相手の一覧を配るのと同じになる(Issue #288)
+    def session_payload
+      {
+        user: current_user && UserSerializer.new(current_user).as_json,
+        password_change_required: signed_in? && current_user.password_unchanged?
+      }
+    end
 
     # User のバリデーションが uniqueness: { case_sensitive: false } なので、
     # 探すときも大文字小文字を無視する

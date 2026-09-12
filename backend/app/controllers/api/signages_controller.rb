@@ -2,6 +2,13 @@ module Api
   class SignagesController < ApplicationController
     before_action :require_signage_token
 
+    # サイネージはトークン認証で、current_user は存在しない(api-spec.md §0)。
+    # 通常は signed_in? が false なので素通りするが、**管理者が自分の
+    # ブラウザで開くと current_user が居る。** 初期パスワードのままの
+    # 管理者が確認しようとした瞬間に部室のディスプレイと同じ画面が
+    # 止まるので、明示的に外す(Issue #288)
+    skip_before_action :require_password_change_done
+
     # GET /api/signage?token=xxx
     #
     # サイネージ画面が必要とするデータを1リクエストで返す(docs/api-spec.md §5)。

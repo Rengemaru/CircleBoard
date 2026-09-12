@@ -6,6 +6,10 @@ module Api
   class PasswordsController < ApplicationController
     before_action :require_login
 
+    # **ここを塞ぐと詰む。** 初期パスワードのままの人が変更するための
+    # 唯一の経路なので、対象から外す(Issue #288)
+    skip_before_action :require_password_change_done
+
     # JSON の自動ラップを切る。**このコントローラ名だと params[:password] に
     # ボディ全体が入る。** ActionController::ParamsWrapper は JSON を
     # コントローラ名(passwords → password)のキーで包むので、
