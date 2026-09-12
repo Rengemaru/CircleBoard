@@ -9,6 +9,13 @@ module Api
     # (docs/api-spec.md §3、docs/spec-v2.2.md §2.6)。
     # 承認フローは 🟡 DBだけの状態で、UIとロジックは作らない。
     def create
+      # **owner は参加表明できない。** 脱退の方は owner を弾いているので
+      # (project_withdrawals_controller.rb)、参加だけ通ると
+      # 「参加はできるが抜けられない」状態を自分で作れてしまう(Issue #307)
+      if @project.owner_id == current_user.id
+        return render_error(:unprocessable_entity, "主催者は参加表明できません")
+      end
+
       return render_error(:unprocessable_entity, "すでに参加しています") if already_joined?
       return render_error(:unprocessable_entity, "定員に達しています") if @project.full?
 
