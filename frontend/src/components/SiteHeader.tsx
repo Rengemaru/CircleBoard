@@ -27,7 +27,17 @@ const ADMIN_ITEMS = [
   { to: "/admin/tags", label: "タグ" },
 ];
 
-export function SiteHeader({ session }: { session: SessionState }) {
+// hideNav はパスワード変更の強制画面で使う(Issue #288)。あの状態では
+// 他のAPIが全て403なので、ナビを出すと押した先が全部エラーになる。
+// 上段(名前とログアウト)は残す。**初期パスワードを思い出せない人の
+// 出口がログアウトしか無い**ため
+export function SiteHeader({
+  session,
+  hideNav = false,
+}: {
+  session: SessionState;
+  hideNav?: boolean;
+}) {
   const { user, loading, failed } = session;
   // ログインしたら、いま見ていた画面に戻す(Issue #37)
   const location = useLocation();
@@ -71,17 +81,19 @@ export function SiteHeader({ session }: { session: SessionState }) {
       {/* 主要機能を切り替える段。自前の下線と太字で選択状態を作っていたが、
           smarthr-ui の AppNavi に寄せる。管理のドロップダウンを足すときに
           選択状態の表現が2通りになるのを避けるため(Issue #142) */}
-      <AppNavi>
-        <NavItem to="/">ホーム</NavItem>
-        <NavItem to="/projects">プロジェクト</NavItem>
-        <NavItem to="/events">イベント</NavItem>
-        {/* 管理者にだけ出す。SmartHR の「権限による表示制御」は
+      {hideNav || (
+        <AppNavi>
+          <NavItem to="/">ホーム</NavItem>
+          <NavItem to="/projects">プロジェクト</NavItem>
+          <NavItem to="/events">イベント</NavItem>
+          {/* 管理者にだけ出す。SmartHR の「権限による表示制御」は
             権限が無い機能の操作UIを非表示にする（パターンA: 非表示・理由なし）。
             これは表示の話であって制限ではない。管理APIはサーバー側で
             role を検証している(docs/api-spec.md §6)ので、URLを直接開いても
             操作はできない(CLAUDE.md §3-2) */}
-        {user?.role === "admin" && <AdminMenu />}
-      </AppNavi>
+          {user?.role === "admin" && <AdminMenu />}
+        </AppNavi>
+      )}
     </header>
   );
 }

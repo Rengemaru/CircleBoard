@@ -20,15 +20,18 @@ import type { SessionState } from "../hooks/useCurrentUser";
 export function MemberPage({
   session,
   size = "DEFAULT",
+  hideNav = false,
   children,
 }: {
   session: SessionState;
   size?: ComponentProps<typeof Container>["size"];
+  // パスワード変更の強制画面だけが使う(Issue #288)。詳細は SiteHeader
+  hideNav?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <>
-      <SiteHeader session={session} />
+      <SiteHeader session={session} hideNav={hideNav} />
       {/* 幅と余白は Container に決めてもらう。既定のパディングが
           SmartHR の基準（デスクトップ 2=32px、モバイルは上下 1.5・左右 1）と
           同じなので、画面側で書かなくて済む(Issue #143) */}
