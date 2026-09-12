@@ -87,6 +87,10 @@ jobs:
           # 1つでも失敗したらそこで止める。半分だけ進んだ状態を作らない
           script_stop: true
           script: |
+            # **script_stop だけに頼らない。** 初回のデプロイで db:migrate が
+            # 失敗したのに後続が動き、最後の curl まで進んでしまった。
+            # 途中で失敗したら、そこで止める
+            set -e
             cd /opt/circleboard
             # scp は実行ビットを落とす。cron が Permission denied になる
             chmod +x ops/*.sh
@@ -100,5 +104,13 @@ jobs:
             #  同時に走って事故る)
             dc exec -T backend bin/rails db:migrate
             dc ps
+            # **起動を待つ。** up -d の直後は Puma がまだ待ち受けておらず、
+            # すぐ叩くと 502 になる(初回のデプロイで実際に出た)。
+            # 30秒待っても返らなければ、それは本当に起動できていない
+            for i in $(seq 1 15); do
+              curl -fsS http://localhost/healthz && break
+              echo "起動待ち ${i}/15"
+              sleep 2
+            done
             # ここが失敗したらデプロイは赤。出たつもりで壊れている状態を作らない
             curl -fsS http://localhost/healthz
