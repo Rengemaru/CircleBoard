@@ -290,6 +290,18 @@ enum の整数（0:recruiting 1:in_progress 2:completed）がそのままこの�
 承認は `cancelled_at` に時刻を入れるだけで、**行は消しません**。参加していた事実は残ります。
 抜けたあと同じプロジェクトに参加し直せます（部分ユニークインデックス）。
 
+成功はいずれも **204**（本文なし）。
+
+**`GET /api/projects/:id` が返す情報**（2026-09-12 追加）
+
+| キー | 誰に返るか | 内容 |
+|---|---|---|
+| `current_user_withdrawal_requested` | ログイン中の全員 | 自分が脱退を申請しているか |
+| `withdrawal_requests` | **owner と管理者だけ** | `[{ id, user }]`。捌くための一覧 |
+
+`withdrawal_requests` は owner と管理者以外には**キーごと返しません**。
+誰が抜けたがっているかは、他の参加者に見せる情報ではありません（`CLAUDE.md` §3-2）。
+
 ---
 
 ### `GET /api/projects/:id` — 詳細
