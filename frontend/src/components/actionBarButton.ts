@@ -20,8 +20,13 @@
 // バーに並ぶボタンの寸法。色は変えない。
 // 「参加をキャンセル」「満員です」など、主操作の位置に出るが
 // ターコイズにはしたくないものに使う
-// 角丸を 4px に揃える。smarthr-ui の既定は 6px で、採用ページは 4px
-const SHAPE = "h-10 w-full rounded text-xl font-bold lg:h-[50px] lg:w-[280px]";
+// 角丸を 4px に揃える。smarthr-ui の既定は 6px で、採用ページは 4px。
+//
+// **大きさだけは採用ページより小さくしている**（240x44px / 18px。
+// 向こうは 280x50px / 20px。オーナー判断 2026-09-13）。
+// 採用ページは「応募する」1つのためのページだが、こちらは
+// 「編集」が隣に並ぶことがあり、使う回数も多い。
+const SHAPE = "h-10 w-full rounded text-lg font-bold lg:h-11 lg:w-[240px]";
 
 export const ACTION_BAR_BUTTON = SHAPE;
 
