@@ -1,0 +1,104 @@
+name: CI
+
+# **本番に出る前にテストを走らせる唯一の場所。**
+#
+# rspec と rubocop は claude-review.yml の中でも走るが、あれは
+# パイプラインのラベルが付いた Issue から生まれた PR にしか反応しない。
+# 手で書いた PR は今まで1本もテストを通らずに develop へ入っていた。
+# deploy.yml は main への push で無条件に本番へ出すので、その手前に
+# 落とせる場所が要る。
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# 同じ PR に続けて push したとき、古い方は止める。
+# main と develop への push は履歴として残したいので打ち切らない
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # backend と frontend は互いに依存しないので並べて走らせる。
+  # **変更のあった側だけ走らせる形にはしない。** 落ちるべきものが
+  # 「スキップ」で緑になるのが一番困る。全部で3分ほどなので割に合う
+  backend:
+    runs-on: ubuntu-latest
+
+    # docker compose と同じ postgres:16-alpine を使い、手元と CI で
+    # バージョン差による挙動の違いが出ないようにする
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: circleboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d circleboard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # 接続情報は database.yml ではなく環境変数から読む(CLAUDE.md §3-5)
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/circleboard_test
+      RAILS_ENV: test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # v1 はタグではなくブランチなので、動く先が黙って変わらないよう版を固定する
+      - uses: ruby/setup-ruby@v1.321.0
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      # bin/rails は実行ビットが付いていない(git 上 100644)ため runner で叩けない。
+      # bundle exec 経由なら実行ビットに依存しない
+      - name: テスト用DBを用意する
+        working-directory: backend
+        run: bundle exec rails db:prepare
+
+      - name: rspec
+        working-directory: backend
+        run: bundle exec rspec
+
+      # **rspec が落ちても走らせる。** 1回の実行で「テストも規約も」
+      # まとめて分かる方が、直してから次の失敗に気づくより速い。
+      # always() ではなく !cancelled() にして、手で止めたときは走らせない
+      - name: rubocop
+        if: ${{ !cancelled() }}
+        working-directory: backend
+        run: bundle exec rubocop
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 依存を入れる
+        working-directory: frontend
+        run: npm ci
+
+      # npm run lint は eslint と prettier --check の両方を回す
+      - name: lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: typecheck
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm run typecheck
