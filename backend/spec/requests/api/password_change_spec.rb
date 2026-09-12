@@ -169,8 +169,10 @@ RSpec.describe "パスワード", type: :request do
   # 使う側(403 で弾く / 画面で誘導する)はまだ入っていない
   describe "password_changed_at" do
     it "発行したばかりのユーザーは未変更として扱う" do
-      expect(user.password_changed_at).to be_nil
-      expect(user.password_unchanged?).to be true
+      issued = create(:user, :initial_password)
+
+      expect(issued.password_changed_at).to be_nil
+      expect(issued.password_unchanged?).to be true
     end
 
     it "本人が変えると時刻が入る" do
@@ -184,18 +186,19 @@ RSpec.describe "パスワード", type: :request do
     end
 
     it "本人の変更が失敗したときは時刻が入らない" do
-      sign_in(user, password: "oldpassword1")
+      issued = create(:user, :initial_password, password: "oldpassword1")
+      sign_in(issued, password: "oldpassword1")
       patch "/api/users/me/password",
             params: { current_password: "oldpassword1", password: "short" }, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(user.reload.password_changed_at).to be_nil
+      expect(issued.reload.password_changed_at).to be_nil
     end
 
     # **ここが抜けると、再発行のたびに仕組みが素通しになる。**
     # 再発行した直後は、また管理者の知っているパスワードに戻っている
     it "管理者が再発行すると未変更に戻る" do
-      admin = create(:user, :admin, password: "adminpassword1")
+      admin = create(:user, role: :admin, password: "adminpassword1")
       user.update!(password: "ownpassword1", password_changed_at: Time.current)
 
       sign_in(admin, password: "adminpassword1")
@@ -207,7 +210,7 @@ RSpec.describe "パスワード", type: :request do
     end
 
     it "管理者の再発行が失敗したときは記録を変えない" do
-      admin = create(:user, :admin, password: "adminpassword1")
+      admin = create(:user, role: :admin, password: "adminpassword1")
       changed_at = 1.day.ago
       user.update!(password: "ownpassword1", password_changed_at: changed_at)
 
