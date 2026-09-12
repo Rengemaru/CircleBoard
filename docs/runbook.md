@@ -146,12 +146,78 @@ ls -l /opt/circleboard/backups/
 
 ### 1-8. 動いているか確かめる
 
+まず `curl` で2つ。**ブラウザで見る前にここを通してください。** 画面が出ないときに、どの層で止まっているかの切り分けになります。
+
 ```bash
-curl -i http://<VPSのIP>/healthz         # {"status":"ok"}
+curl -i http://<VPSのIP>/healthz         # {"status":"ok"} が返る
 curl -i http://<VPSのIP>/api/events      # 未ログインでも200。owner が返らないこと
 ```
 
-ブラウザで `http://<VPSのIP>` を開き、ログインできるところまで見ます。
+**`/api/events` に `owner` が入っていたら止めてください。** 未ログインに企画者名を出さないのは仕様（`docs/spec-v2.2.md` §4）で、ここが漏れていると公開してはいけません。
+
+そのあとブラウザで、実際に1周します。**ここまで通って初めて「公開URLで動く」と言えます。**
+
+| # | 見るところ | 通ったと言える状態 |
+|---|---|---|
+| 1 | `http://<VPSのIP>/events` | 未ログインで一覧が出る。企画者名が出ていない |
+| 2 | `/login` | §1-6 で作った管理者で入れる |
+| 3 | `/create` | イベントを1件作れる。作成後に詳細へ飛ぶ |
+| 4 | `/events/:id` | 自分で作ったイベントに**参加表明**できる。取り消しもできる |
+| 5 | `/projects` | ログイン中は出る。**ログアウトすると 401 で弾かれる**（プロジェクトはログイン必須） |
+| 6 | `/me` | プロフィールが出て、`/me/edit` から名前を変えられる |
+
+確認用に作ったイベントは、`/admin/posts` から削除できます。
+
+### 1-9. サイネージのトークンを発行する
+
+部室のディスプレイに貼る URL を作ります。**端末ごとに1枚**発行してください。漏れたときに、その端末の分だけ止められます。
+
+**先に `PUBLIC_BASE_URL` が入っていることを確かめます。**
+
+```bash
+dc exec -T backend bin/rails runner 'puts ENV.fetch("PUBLIC_BASE_URL")'
+```
+
+`KeyError` が出たら `.env.production` を直して `dc up -d`（**`restart` では反映されません**）。未設定のままだとサイネージも `/admin/signage` も 500 になります。
+
+発行は管理画面からできます。`/admin/signage` を開いて名前（例: `部室メインディスプレイ`）を入れるだけです。URL はその場に出るのでコピーしてください。
+
+画面を使わない場合はこちらです。**渡すのは名前だけで、トークンはサーバーが作ります。**
+
+```bash
+dc exec -T backend bin/rails runner '
+st = SignageToken.create!(name: "部室メインディスプレイ")
+puts "token=#{st.token}"
+puts "url=#{st.signage_url}"'
+```
+
+出た URL をディスプレイ端末のブラウザで開きます。
+
+```
+http://<VPSのIP>/signage?token=<32桁>
+```
+
+確認するのは3つです。
+
+```bash
+curl -s -o /dev/null -w 'valid=%{http_code}
+'   "http://<VPSのIP>/api/signage?token=<TOKEN>"   # 200
+curl -s -o /dev/null -w 'invalid=%{http_code}
+' "http://<VPSのIP>/api/signage?token=deadbeef"  # 404
+```
+
+3つ目は目で見ます。**サイネージに出ている企画の QR を読んで、`<VPSのIP>` を指していること。** ここが `localhost` になっていたら `PUBLIC_BASE_URL` が違っています（QR の URL はサーバー側で組み立てています）。
+
+### トークンを止める
+
+`/admin/signage` の失効ボタン、または次のコマンドです。**行は消しません**（いつ止めたかを残すため）。
+
+```bash
+dc exec -T backend bin/rails runner 'SignageToken.order(:id).each { |t| puts [t.id, t.name, t.revoked_at].join("	") }'
+dc exec -T backend bin/rails runner 'SignageToken.find(<ID>).update!(revoked_at: Time.current)'
+```
+
+止めた端末には「このディスプレイのURLは無効です」と出ます。**有効期限はありません。** 止めるまで有効です。
 
 ---
 
@@ -266,3 +332,60 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
 docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -U circleboard -d postgres -c "DROP DATABASE restore_check;"
 ```
+
+---
+
+## 5. 落ちたとき
+
+### まずこの3つ
+
+```bash
+cd /opt/circleboard
+dc ps                              # どれが落ちているか
+curl -i http://localhost/healthz   # 200 か。落ちていればどの層かの目星がつく
+dc logs --tail=50 backend          # 直近のログ
+```
+
+`dc ps` の `STATUS` で切り分けます。
+
+| 見えるもの | 次に見る場所 |
+|---|---|
+| `db` が `unhealthy` | `dc logs db`。ディスクが埋まっていないか（`df -h`） |
+| `backend` が `Restarting` を繰り返す | `dc logs backend`。起動時に落ちている（下の表） |
+| 全部 `Up` なのに画面が出ない | `dc logs frontend`。Caddy まで届いていない |
+| コンテナが1つも無い | VPS を再起動した直後なら `dc up -d`。`restart: always` があるので通常は自動で戻る |
+
+### 症状から当たりをつける
+
+**ログの1行目を読んでから直してください。** 下は当たりやすい順です。
+
+| 症状 | だいたいの原因 |
+|---|---|
+| `backend` が起動直後に落ちる | `.env.production` の値が欠けている。`SECRET_KEY_BASE` か `DATABASE_URL` |
+| API が全部 403 | `ALLOWED_HOSTS` が今アクセスしている宛先と違う（ドメインを取った直後に起きる） |
+| **ログインだけ通らない** | `FORCE_SSL` と実際のアクセス方法が食い違っている。http で見ているのに `FORCE_SSL` が `true` だと、Cookie に `secure` が付いて送り返されない |
+| **サイネージと `/admin/signage` が 500** | `PUBLIC_BASE_URL` が未設定。`SignageToken#signage_url` の `ENV.fetch` に既定値が無く、トークンの一覧・発行も同じ所を踏む |
+| 画面は出るが API が 502 | `backend` が落ちている。`dc logs backend` |
+| 何をしても 413 | 送っている本文が 1MB を超えている（Caddy の `request_body max_size`） |
+| 突然全部が不調 | ディスクを疑う。`df -h` → 埋まっていれば `docker system prune -a` と古いバックアップの整理 |
+
+### 戻し方
+
+```bash
+dc restart backend     # だいたいこれで戻る
+dc up -d               # 設定を変えたあとはこちら（コンテナを作り直す）
+```
+
+**`.env.production` を書き換えたときは `restart` では反映されません。** 環境変数はコンテナを作るときに渡されるので、`up -d` が要ります。
+
+それでも直らないときは、イメージのタグを前のものに戻します（§2 の切り戻し）。
+
+### ログを後から追う
+
+```bash
+dc logs -f backend                 # 流しっぱなしで見る
+dc logs --since 1h backend         # 直近1時間だけ
+dc logs backend | grep -i error
+```
+
+アプリのログはファイルに残りません（`RAILS_LOG_TO_STDOUT=true`）。**コンテナを作り直すと消えます。** 原因を調べている途中で `up -d` を打つ前に、必要な行は手元に控えてください。
