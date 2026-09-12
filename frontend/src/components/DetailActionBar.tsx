@@ -16,6 +16,9 @@ import { FloatArea } from "smarthr-ui";
 //
 // **`primaryButton` は必須**なので、主操作が無い状態（owner など）では
 // 編集を primary にする。呼び出し側でそこまで決めて渡す。
+//
+// 狭い幅（〜400px）では、`FloatArea` が内部で使う `Cluster` が
+// `flex-wrap: wrap` なのでボタンが折り返す。横にはみ出さない。
 export function DetailActionBar({
   primary,
   secondary,

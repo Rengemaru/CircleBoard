@@ -125,7 +125,7 @@ export function EventDetailPage() {
     onCancel: cancel,
   });
   const edit = canEdit ? (
-    <LinkButton to={`/events/${event.id}/edit`} variant="default">
+    <LinkButton to={`/events/${event.id}/edit`} variant="default" size="sm">
       編集
     </LinkButton>
   ) : null;
