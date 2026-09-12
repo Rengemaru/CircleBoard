@@ -22,6 +22,7 @@ import {
   deleteUser,
   fetchAdminUsers,
   graduateUser,
+  resetUserPassword,
   suspendUser,
   ungraduateUser,
   unsuspendUser,
@@ -31,6 +32,7 @@ import {
 } from "../../api/admin";
 import { AdminOnly } from "./AdminOnly";
 import { AdminUserEditDialog } from "./AdminUserEditDialog";
+import { AdminPasswordResetDialog } from "./AdminPasswordResetDialog";
 
 // ユーザー管理(wireframes/wireframe-admin-ver2.html ②)。
 //
@@ -84,6 +86,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [deleting, setDeleting] = useState<AdminUserRow | null>(null);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
+  const [resetting, setResetting] = useState<AdminUserRow | null>(null);
   // 卒業年度の上書きは元に戻せないので、停止や削除と同じく確認を挟む
   const [graduating, setGraduating] = useState<AdminUserRow | null>(null);
   // 停止も相手のセッションを即座に切るので、削除と同じく確認を挟む
@@ -122,6 +125,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
       setSuspending(null);
       setEditing(null);
       setGraduating(null);
+      setResetting(null);
       load();
     } catch (e: unknown) {
       setError(e);
@@ -202,6 +206,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                 isSelf={user.id === currentUserId}
                 onDelete={() => setDeleting(user)}
                 onEdit={() => setEditing(user)}
+                onResetPassword={() => setResetting(user)}
                 onToggleGraduation={() => setGraduating(user)}
                 onSuspend={() => setSuspending(user)}
                 onUnsuspend={() =>
@@ -235,6 +240,7 @@ function UserList({ currentUserId }: { currentUserId: number }) {
                     isSelf={user.id === currentUserId}
                     onDelete={() => setDeleting(user)}
                     onEdit={() => setEditing(user)}
+                    onResetPassword={() => setResetting(user)}
                     onToggleGraduation={() => setGraduating(user)}
                     onSuspend={() => setSuspending(user)}
                     onUnsuspend={() =>
@@ -257,9 +263,8 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           読まれない(SmartHR feedback.mdx「直前に操作した要素の近く」)。
           ここに残すのは、操作の前提として知っておく話だけ(Issue #61) */}
       <Note>
-        パスワードの再発行は、この画面からはできません。
-        <code className="mx-1 rounded bg-gray-100 px-1">rails console</code>
-        で対応します(CLAUDE.md §10)。
+        パスワードを再発行すると、その値をそのまま本人に伝える必要があります。メールは送られません。
+        本人はログイン後、マイページから自分で変更できます。
       </Note>
 
       {/* ⚠️ は取り消せない操作にだけ付ける。停止や企画の削除は元に戻せるので付けない。
@@ -294,6 +299,21 @@ function UserList({ currentUserId }: { currentUserId: number }) {
           onCancel={() => setEditing(null)}
           onSave={(input: UpdateUserInput) =>
             run(() => updateUser(editing.id, input), `${editing.name} を更新しました`)
+          }
+        />
+      )}
+
+      {resetting !== null && (
+        <AdminPasswordResetDialog
+          user={resetting}
+          busy={busy}
+          error={error}
+          onCancel={() => setResetting(null)}
+          onSubmit={(password: string) =>
+            run(
+              () => resetUserPassword(resetting.id, password),
+              `${resetting.name} のパスワードを再発行しました`,
+            )
           }
         />
       )}
@@ -371,6 +391,7 @@ function UserCard({
   isSelf,
   onDelete,
   onEdit,
+  onResetPassword,
   onToggleGraduation,
   onSuspend,
   onUnsuspend,
@@ -380,6 +401,7 @@ function UserCard({
   isSelf: boolean;
   onDelete: () => void;
   onEdit: () => void;
+  onResetPassword: () => void;
   onToggleGraduation: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
@@ -415,6 +437,9 @@ function UserCard({
           <Button variant="default" size="xs" onClick={onEdit} disabled={busy}>
             編集
           </Button>
+          <Button variant="default" size="xs" onClick={onResetPassword} disabled={busy}>
+            パスワード再発行
+          </Button>
         </Cluster>
 
         {!isSelf && (
@@ -443,6 +468,7 @@ function UserRow({
   isSelf,
   onDelete,
   onEdit,
+  onResetPassword,
   onToggleGraduation,
   onSuspend,
   onUnsuspend,
@@ -452,6 +478,7 @@ function UserRow({
   isSelf: boolean;
   onDelete: () => void;
   onEdit: () => void;
+  onResetPassword: () => void;
   onToggleGraduation: () => void;
   onSuspend: () => void;
   onUnsuspend: () => void;
@@ -502,6 +529,10 @@ function UserRow({
               ダイアログ側で選べないようにしてある */}
           <Button variant="default" size="xs" onClick={onEdit} disabled={busy}>
             編集
+          </Button>
+          {/* 自分自身にも使える。締め出される操作ではない */}
+          <Button variant="default" size="xs" onClick={onResetPassword} disabled={busy}>
+            パスワード
           </Button>
           {!isSelf &&
             (user.suspended ? (
