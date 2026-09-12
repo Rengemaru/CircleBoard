@@ -9,6 +9,8 @@ import { Badge } from "../components/ui/Badge";
 import { Chip } from "../components/ui/Chip";
 import { Note } from "../components/ui/Note";
 import { SectionHeading } from "../components/ui/SectionHeading";
+import { NotificationSection } from "../components/NotificationSection";
+import { fetchNotifications, type NotificationItem } from "../api/notifications";
 import { fetchEvents } from "../api/events";
 import { fetchProjects } from "../api/projects";
 import type { CurrentUser } from "../api/session";
@@ -41,6 +43,9 @@ export function TopPage() {
   // 見えなくなっていた(Issue #45)
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  // 取れなかったときは空のまま。エラーは出さない。用が無い人には意味が無く、
+  // ホームを開くたびに「通知が取れませんでした」が出ると邪魔になる(Issue #292)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   useEffect(() => {
     fetchEvents({ sort: "spotlight" })
       .then(setEvents)
@@ -56,6 +61,15 @@ export function TopPage() {
       .catch((e: unknown) => setProjectsError(toMessage(e)));
   }, [loading, user]);
 
+  useEffect(() => {
+    // 通知もログイン必須。未ログインには返すものが無い
+    if (loading || user === null) return;
+
+    fetchNotifications()
+      .then(setNotifications)
+      .catch(() => setNotifications([]));
+  }, [loading, user]);
+
   return (
     <MemberPage session={session}>
       {/* サイトの入口なのに見出しが h2 から始まっていた。ヘッダーのロゴは
@@ -64,6 +78,9 @@ export function TopPage() {
           自前の h1 だと、他の画面から戻ったときにタブ名が前のまま残る */}
       <PageHeading title="今週の企画" visuallyHidden className="" />
       <div className="space-y-7">
+        {/* 一番上に置く。自分が止めている用件なので、企画を眺める前に目に入る。
+            何も無いときは何も出ないので、普段のホームは変わらない */}
+        <NotificationSection items={notifications} />
         <SpotlightSection events={events} error={eventsError} />
         <ProjectSection
           user={user}

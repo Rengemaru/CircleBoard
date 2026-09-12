@@ -512,6 +512,35 @@ React と Rails を触っています。",
 
 ---
 
+## 5.5 アプリ内通知
+
+### `GET /api/notifications` — 自分が判断すべきこと
+
+```json
+// 200
+{
+  "items": [
+    {
+      "type": "project_withdrawal",
+      "id": 12,
+      "project": { "id": 3, "title": "Webアプリ開発" },
+      "user": { "id": 7, "name": "山田太郎", "department": null, "pronouns": null },
+      "requested_at": "2026-09-13T10:00:00+09:00"
+    }
+  ]
+}
+```
+
+- **ログイン必須。** 未ログインは 401
+- owner には**自分が owner の企画の分だけ**、管理者には**全件**返す
+- 古い申請が先に並ぶ（放置の長さが分かるように）
+- **アプリの外へは飛ばさない。** メール / LINE / Discord は作らない（`CLAUDE.md` §10）
+- 既読は持たない。**承認か却下をして初めて消える**
+- `user` は退会で `null` になりうる（`ON DELETE SET NULL`）
+- `type` は将来ここに種類が増えたときの分岐点。いまは脱退申請だけ
+
+---
+
 ## 6. 管理者 🛡admin のみ
 
 **すべてのエンドポイントで `role: admin` を検証する。** フロントでメニューを隠すだけにしない。
