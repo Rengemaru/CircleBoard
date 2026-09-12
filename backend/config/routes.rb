@@ -19,6 +19,9 @@ Rails.application.routes.draw do
     # /users/me を resources より先に置く。後ろだと :id に "me" が入る
     get "users/me", to: "users#me"
     patch "users/me", to: "users#update"
+    # パスワードはプロフィールと別の入口にする。現在のパスワードを要求する点も、
+    # 失敗したときに返すものも違う(docs/spec-admin-operations.md §3.1)
+    patch "users/me/password", to: "passwords#update"
     resources :users, only: [ :show ]
     # サイネージが必要とするデータを1リクエストで返す。単数形リソース
     resource :signage, only: [ :show ]
@@ -37,6 +40,9 @@ Rails.application.routes.draw do
         # 卒業したかどうかは graduation_year からの計算結果で、列ではない。
         # 一覧のバッジを押したときに年度を動かす入口をここに置く
         resource :graduation, only: [ :update, :destroy ], controller: "graduations"
+        # 再発行。忘れた人が対象なので現在の値は求めない。
+        # 1人につき1つなので単数形(suspension と同じ形)
+        resource :password, only: [ :update ], controller: "passwords"
       end
       resources :signage_tokens, only: [ :index, :create, :destroy ]
       # タグは「直す場所」。作成は持たない。タグは企画かプロフィールに

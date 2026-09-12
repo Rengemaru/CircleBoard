@@ -153,6 +153,15 @@ export async function ungraduateUser(id: number): Promise<void> {
   await apiFetch<unknown>(`/api/admin/users/${id}/graduation`, { method: "DELETE" });
 }
 
+// パスワードの再発行。現在の値は求めない(忘れた人が対象で、本人も知らない)。
+// 設定した値は口頭かDMで本人に伝える運用(docs/spec-admin-operations.md §3.1)
+export async function resetUserPassword(id: number, password: string): Promise<void> {
+  await apiFetch<unknown>(`/api/admin/users/${id}/password`, {
+    method: "PUT",
+    body: JSON.stringify({ password }),
+  });
+}
+
 export async function fetchDashboard(): Promise<Dashboard> {
   return apiFetch<Dashboard>("/api/admin/dashboard");
 }
