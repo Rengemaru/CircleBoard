@@ -26,7 +26,11 @@ mkdir -p "${BACKUP_DIR}"
 # umask は「これから作るもの」にしか効かない。前のやり方で作られた
 # ディレクトリが既にある場合のために、ここでも閉じておく
 chmod 700 "${BACKUP_DIR}"
-STAMP=$(date +%Y%m%d)
+# **時刻まで入れる。** 日付だけだと、同じ日に2回目が走ったときに
+# 1回目を上書きする。CD がデプロイのたびに叩く(deploy.yml)ので、
+# 1日2回デプロイすると「変更前の状態」が「壊れた後の状態」で消える。
+# 戻したいのは1回目の方なので、これは取り返しがつかない
+STAMP=$(date +%Y%m%d_%H%M%S)
 DEST="${BACKUP_DIR}/db_${STAMP}.sql.gz"
 TMP="${BACKUP_DIR}/.db_${STAMP}.sql.gz.part"
 # 失敗して抜けたときに書きかけを残さない。翌日以降まで居座ると
@@ -59,4 +63,4 @@ find "${BACKUP_DIR}" -name 'db_*.sql.gz' -mtime "+${GENERATIONS}" -delete
 
 # **これだけでは足りない。** VPS が飛べばバックアップも一緒に消える(§7.6)。
 # 週1回、手元へ退避する:
-#   scp circleboard:/opt/circleboard/backups/db_$(date +%Y%m%d).sql.gz .
+#   scp 'circleboard:/opt/circleboard/backups/db_'$(date +%Y%m%d)'_*.sql.gz' .

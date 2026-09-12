@@ -317,7 +317,9 @@ HSTS を `max-age=63072000`（2年）で返しているので、**一度ブラ�
 
 ### 何を、いつ取っているか
 
-`ops/backup.sh` が毎日 4:00 に `pg_dump` を取り、`/opt/circleboard/backups/db_YYYYMMDD.sql.gz` に置きます。**14日より古いものは自動で消えます。**
+`ops/backup.sh` が毎日 4:00 に `pg_dump` を取り、`/opt/circleboard/backups/db_YYYYMMDD_HHMMSS.sql.gz` に置きます。**14日より古いものは自動で消えます。**
+
+CD も**デプロイのたびに1回**取ります（`deploy.yml`）。ファイル名に時刻が入っているのは、**同じ日に2回走ったときに1回目を上書きしないため**です。戻したいのはたいてい1回目（変更前）の方です。
 
 cron の登録は §1-7 で済ませています。何が入っているかは `crontab -l` で見られます。
 
@@ -348,7 +350,7 @@ ls -l /opt/circleboard/backups/        # 今日の日付のファイルがある
 
 ```bash
 # 手元（開発機）で打つ
-scp circleboard:/opt/circleboard/backups/db_$(date +%Y%m%d).sql.gz .
+scp 'circleboard:/opt/circleboard/backups/db_'$(date +%Y%m%d)'_*.sql.gz' .
 ```
 
 ### 復元する
@@ -363,7 +365,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -U circleboard -d postgres -c "CREATE DATABASE restore_check;"
 
 # 2. 流し込む。ON_ERROR_STOP=1 を付けると途中で失敗したときに止まる
-gzip -dc backups/db_20260912.sql.gz | \
+gzip -dc backups/db_20260913_043000.sql.gz | \
   docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec -T db psql -v ON_ERROR_STOP=1 -U circleboard -d restore_check
 
