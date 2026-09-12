@@ -1,0 +1,83 @@
+# 本番用の Compose。開発用の docker-compose.yml とは別物で、VPS にはこちらだけを置く。
+#
+# 使い方（VPS 上、/opt/circleboard で）:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# **build: を書かない。** VPS は 2GB しかなく、ここで docker build を走らせると
+# メモリ不足で落ちる(docs/spec-v2.2.md §7.4)。イメージは別の場所でビルドして
+# レジストリに置き、VPS は pull するだけにする。
+#
+# 全サービスに restart: always を付ける。VPS を再起動したときに手で立て直さずに
+# 済むようにするため(§7.2)。
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # ここが消えるとデータが消える。バックアップの対象でもある(§7.6)
+      - db_data:/var/lib/postgresql/data
+    # **ポートを公開しない。** 公開すると 5432 がインターネットから見える。
+    # backend は Compose のネットワークで db に届くので、外に出す必要がない。
+    # 手元から覗くときは docker compose exec db psql で足りる
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    image: ${BACKEND_IMAGE}
+    restart: always
+    environment:
+      RAILS_ENV: production
+      # ログはファイルに書かず docker compose logs で読む
+      RAILS_LOG_TO_STDOUT: "true"
+      DATABASE_URL: ${DATABASE_URL}
+      # セッションの署名鍵。credentials ではなくここで渡す理由は
+      # .env.production.example に書いた
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      FORCE_SSL: ${FORCE_SSL:-true}
+      # CORS_ALLOW_PRIVATE_NETWORK は渡さない。既定の false のままにする。
+      # 本番で true にすると、同じLANに居るだけで別オリジンからAPIを叩ける
+    depends_on:
+      db:
+        # db が「起動した」だけでは接続できない。接続を受け付ける状態まで待つ
+        condition: service_healthy
+    # ここもポートを公開しない。外に出る口は frontend(Caddy)だけにする。
+    # 3000 を開けると Caddy を迂回して http で直接叩けてしまう
+
+  # このサービスは React の配信と、サイト全体の入口(Caddy)を兼ねる(§7.4)。
+  # 本番に Node.js は置かない。ビルド済みの静的ファイルを Caddy が直接配る
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    restart: always
+    environment:
+      # ドメイン名を入れると Caddy が証明書を自動取得・自動更新する(§7.3)。
+      # ドメインが無い間は :80 のまま。値の詳細は .env.production.example
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      BACKEND_ORIGIN: backend:3000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # **証明書と ACME アカウントの保存先。** ここを永続化しないと、
+      # コンテナを作り直すたびに証明書を取り直すことになり、
+      # Let's Encrypt の発行レート制限(同一ドメイン 週5回)に当たって
+      # 証明書が取れなくなる
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
