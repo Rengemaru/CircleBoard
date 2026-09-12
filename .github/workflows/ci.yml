@@ -102,3 +102,8 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: frontend
         run: npm run typecheck
+
+      - name: vitest
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm test
