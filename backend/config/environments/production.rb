@@ -97,7 +97,9 @@ Rails.application.configure do
   # 空のときは検査しない。Rails の本番既定がそうなっているので、
   # **これを設定し忘れても今までどおり動く。** 逆に言うと、入れ忘れると
   # 対策が効かないままになるので .env.production.example に既定値を置く。
-  config.hosts += ENV.fetch("ALLOWED_HOSTS", "").split(",").map(&:strip)
+  # reject(&:blank?) は末尾のカンマ対策。"a.example.jp," と書かれると
+  # 空文字が1つ混ざり、Host ヘッダが空のリクエストが通るようになる
+  config.hosts += ENV.fetch("ALLOWED_HOSTS", "").split(",").map(&:strip).reject(&:blank?)
 
   # 死活監視は Host ヘッダを付けずに叩かれることがある(cron から curl するなど)。
   # ここを除外しないと、アプリが正常でも監視だけが落ちる
