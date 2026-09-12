@@ -15,6 +15,7 @@ import { PageHeading } from "../components/ui/PageHeading";
 import { Panel } from "../components/ui/Panel";
 import { PostDescription } from "../components/PostDescription";
 import { DetailActionBar } from "../components/DetailActionBar";
+import { ACTION_BAR_BUTTON, ACTION_BAR_CTA } from "../components/actionBarButton";
 import { apiFetch } from "../api/client";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -168,7 +169,7 @@ export function ProjectDetailPage() {
       run(() => cancelWithdrawalRequest(Number(id)), "脱退の申請を取り下げました。"),
   });
   const edit = canEdit ? (
-    <LinkButton to={`/projects/${project.id}/edit`} variant="default" size="sm">
+    <LinkButton to={`/projects/${project.id}/edit`} variant="default" className={ACTION_BAR_BUTTON}>
       編集
     </LinkButton>
   ) : null;
@@ -300,8 +301,8 @@ export function ProjectDetailPage() {
         </Panel>
       )}
 
-      {/* **脱退申請パネルより後ろに置く。** sticky の効く範囲は親の終わりまでなので、
-          手前に置くと owner/管理者のときだけバーが画面中腹で止まる。
+      {/* fixed なので、ここに書いても出る場所は変わらない。
+          操作が本文のどこに属するかを読む人に示すために末尾に置く。
           Modal は portal で別の場所に描かれるので、順序に関係しない */}
       <DetailActionBar
         primary={action ?? edit}
@@ -419,13 +420,23 @@ function participationAction({
   if (project.current_user_joined === true) {
     if (project.current_user_withdrawal_requested === true) {
       return (
-        <Button variant="default" onClick={onCancelRequest} disabled={busy}>
+        <Button
+          variant="default"
+          onClick={onCancelRequest}
+          disabled={busy}
+          className={ACTION_BAR_BUTTON}
+        >
           申請を取り下げる
         </Button>
       );
     }
     return (
-      <Button variant="ghost" onClick={onRequestWithdrawal} disabled={busy}>
+      <Button
+        variant="ghost"
+        onClick={onRequestWithdrawal}
+        disabled={busy}
+        className={ACTION_BAR_BUTTON}
+      >
         脱退を申請する
       </Button>
     );
@@ -433,7 +444,7 @@ function participationAction({
 
   if (full) {
     return (
-      <Button variant="primary" disabled>
+      <Button variant="primary" disabled className={ACTION_BAR_BUTTON}>
         満員です
       </Button>
     );
@@ -442,7 +453,7 @@ function participationAction({
   // 「申請」と書いていたが、承認フローは無く押した時点で参加が確定する。
   // 実態に合わせて「参加する」にする(Issue #42)
   return (
-    <Button variant="primary" onClick={onJoin} disabled={busy}>
+    <Button variant="primary" onClick={onJoin} disabled={busy} className={ACTION_BAR_CTA}>
       参加する
     </Button>
   );
