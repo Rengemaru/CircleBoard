@@ -17,6 +17,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # **ログに上限を付ける。** Docker の既定は json-file の無制限で、
+    # restart: always と組み合わさると危ない。起動時例外でクラッシュループ
+    # すると秒単位で再起動し、そのたびにバックトレースを書き込む。
+    # 1日で数GB 使い、ディスクが埋まると他も道連れになる
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       # ここが消えるとデータが消える。バックアップの対象でもある(§7.6)
       - db_data:/var/lib/postgresql/data
@@ -47,6 +56,15 @@ services:
       FORCE_SSL: ${FORCE_SSL:-true}
       # CORS_ALLOW_PRIVATE_NETWORK は渡さない。既定の false のままにする。
       # 本番で true にすると、同じLANに居るだけで別オリジンからAPIを叩ける
+    # **ログに上限を付ける。** Docker の既定は json-file の無制限で、
+    # restart: always と組み合わさると危ない。起動時例外でクラッシュループ
+    # すると秒単位で再起動し、そのたびにバックトレースを書き込む。
+    # 1日で数GB 使い、ディスクが埋まると他も道連れになる
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       db:
         # db が「起動した」だけでは接続できない。接続を受け付ける状態まで待つ
@@ -64,6 +82,15 @@ services:
       # ドメインが無い間は :80 のまま。値の詳細は .env.production.example
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
       BACKEND_ORIGIN: backend:3000
+    # **ログに上限を付ける。** Docker の既定は json-file の無制限で、
+    # restart: always と組み合わさると危ない。起動時例外でクラッシュループ
+    # すると秒単位で再起動し、そのたびにバックトレースを書き込む。
+    # 1日で数GB 使い、ディスクが埋まると他も道連れになる
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "80:80"
       - "443:443"
