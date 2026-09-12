@@ -252,6 +252,7 @@ docker compose exec backend bundle exec rubocop -a
 docker compose exec frontend npm run dev
 docker compose exec frontend npm run lint
 docker compose exec frontend npm run typecheck
+docker compose exec frontend npm test
 
 # ログ
 docker compose logs -f backend
@@ -361,6 +362,7 @@ cd backend && bundle exec rspec
 cd backend && bundle exec rubocop
 cd frontend && npm run lint
 cd frontend && npm run typecheck
+cd frontend && npm test
 ```
 
 手元では §8 のとおり `docker compose exec` 経由で実行します。
