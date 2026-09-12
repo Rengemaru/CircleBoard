@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { TagChip } from "../components/TagChip";
+import { PostCardLink } from "../components/PostCardLink";
 import { toPlainText } from "../lib/markdown";
 import { Badge } from "../components/ui/Badge";
 import { PROJECT_STATUS } from "../lib/projectStatus";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Cluster, Stack, Text, TextLink } from "smarthr-ui";
+import { AnchorButton, Base, Cluster, Stack, Text } from "smarthr-ui";
 import { LoginRequired } from "../components/LoginRequired";
 import { SessionUnavailable } from "../components/SessionUnavailable";
 import { MemberPage } from "../components/MemberPage";
@@ -253,45 +254,45 @@ function EmptyRow({ children }: { children: string }) {
 
 function ProjectRow({ project }: { project: ProjectSummary }) {
   return (
-    <li className="p-4">
-      <Stack gap="XXS">
-        <Cluster align="center" gap="XS">
-          {/* オブジェクトのライフサイクル上の状態は1つだけラベルにする */}
-          <Badge tone={PROJECT_STATUS[project.status].tone}>
-            {PROJECT_STATUS[project.status].label}
-          </Badge>
-          <Text size="S" color="TEXT_GREY" leading="TIGHT">
-            {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
-            {formatMembers(project)}
-          </Text>
-        </Cluster>
+    <li>
+      {/* カードの枠全体を詳細へのリンクにする(Issue #323)。当たり判定を
+          タイトルの文字だけに絞ると押しにくいため、枠ごと1つの <a> にする */}
+      <PostCardLink kind="project" id={project.id} className="p-4">
+        <Stack gap="XXS">
+          <Cluster align="center" gap="XS">
+            {/* オブジェクトのライフサイクル上の状態は1つだけラベルにする */}
+            <Badge tone={PROJECT_STATUS[project.status].tone}>
+              {PROJECT_STATUS[project.status].label}
+            </Badge>
+            <Text size="S" color="TEXT_GREY" leading="TIGHT">
+              {project.meeting_schedule ?? project.activity_schedule ?? "日程未定"} ・{" "}
+              {formatMembers(project)}
+            </Text>
+          </Cluster>
 
-        {/* 一覧から詳細へ行く導線はこの企画名だけ。自前の Link に
-            font-bold だけを当てていたときは、本文と同じ色で下線も無く、
-            ホバーするまでリンクだと分からなかった(Issue #186)。
-            TextLink にしてトップページと同じ見た目に揃える */}
-        <Text size="M" leading="NORMAL">
-          <TextLink elementAs={Link} to={`/projects/${project.id}`} className="font-bold">
+          {/* 枠ごとリンクにしたので、タイトルはリンクを張らずただの見出しに戻す
+              (Issue #186 でリンクと分かるようにしたが、枠が導線になったので不要) */}
+          <Text size="M" weight="bold" leading="NORMAL">
             {project.title}
-          </TextLink>
-        </Text>
+          </Text>
 
-        {project.tags.length > 0 && (
-          <ul className="flex flex-wrap gap-1">
-            {project.tags.map((tag) => (
-              <li key={tag.id}>
-                <TagChip name={tag.name} />
-              </li>
-            ))}
-          </ul>
-        )}
+          {project.tags.length > 0 && (
+            <ul className="flex flex-wrap gap-1">
+              {project.tags.map((tag) => (
+                <li key={tag.id}>
+                  <TagChip name={tag.name} />
+                </li>
+              ))}
+            </ul>
+          )}
 
-        {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
-            ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
-        <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
-          {toPlainText(project.description)}
-        </Text>
-      </Stack>
+          {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
+              ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
+          <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
+            {toPlainText(project.description)}
+          </Text>
+        </Stack>
+      </PostCardLink>
     </li>
   );
 }
