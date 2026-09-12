@@ -22,8 +22,20 @@ module Api
       end
 
       # POST /api/admin/users
+      #
+      # 学年は編集と同じく「在学何年目か」(1〜9)で受け取り、入学年度と卒業年度は
+      # サーバーが逆算する。年度を人手で入れるのは現実的でない
+      # (オーナー決定 2026-09-11。update と同じ扱いに揃えた)
       def create
+        # 発行では必須。年度は grade_years からしか決まらないので、無いまま保存すると
+        # NOT NULL に当たって 500 になる。編集では任意（権限だけ直すことがある）
+        if params.dig(:user, :grade_years).nil?
+          return render_error(:unprocessable_entity, "学年を指定してください")
+        end
+
         user = User.new(user_params)
+        error = apply_grade_years(user)
+        return render_error(:unprocessable_entity, error) if error
 
         if user.save
           render json: { user: UserSerializer.new(user).as_json }, status: :created
@@ -99,9 +111,12 @@ module Api
       end
 
       # 学年は「在学何年目か」(1〜9)で受け取る。入学年度は User が逆算する。
-      # 部員ぶんの年度を人手で入れるのは現実的でない(オーナー決定 2026-09-11)
+      # 部員ぶんの年度を人手で入れるのは現実的でない(オーナー決定 2026-09-11)。
+      #
+      # 発行と編集の両方から呼ぶ。年度の決め方が2通りあると、発行した人だけ
+      # 学年がずれる、という食い違いが生まれる
       def apply_grade_years(user)
-        raw = update_params[:grade_years]
+        raw = params.dig(:user, :grade_years)
         return nil if raw.nil?
 
         years = Integer(raw, exception: false)
@@ -110,8 +125,13 @@ module Api
         end
 
         # 卒業生に学年は無い(User#grade は nil を返す)。ここで通すと、
-        # 卒業年度が導出値で上書きされて現役に戻ってしまう。先にバッジで戻す
-        return "卒業生の学年は変えられません。先に現役に戻してください" if user.graduated?
+        # 卒業年度が導出値で上書きされて現役に戻ってしまう。先にバッジで戻す。
+        #
+        # persisted? を見るのは、発行のときはまだ卒業年度が入っておらず
+        # graduated? が nil を比較して落ちるため。新規は必ず現役になる
+        if user.persisted? && user.graduated?
+          return "卒業生の学年は変えられません。先に現役に戻してください"
+        end
 
         user.enrollment_year = User.enrollment_year_for(years)
         user.graduation_year = User.graduation_year_for(years)
@@ -145,10 +165,10 @@ module Api
         }
       end
 
+      # 年度は受け取らない。grade_years から逆算する(apply_grade_years)。
+      # 両方受け取れるようにすると、どちらが勝つのかが読めなくなる
       def user_params
-        params.require(:user).permit(
-          :name, :email, :password, :enrollment_year, :graduation_year, :role
-        )
+        params.require(:user).permit(:name, :email, :password, :role)
       end
     end
   end
