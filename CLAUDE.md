@@ -361,9 +361,18 @@ cd frontend && npm run typecheck
 
 手元では §8 のとおり `docker compose exec` 経由で実行します。
 
-### 11-6. パイプライン自身は Claude に変更させない
+### 11-6. レビューと上限の仕組みは Claude に変更させない
 
-`.github/`、`.claude/`、`CLAUDE.md` への変更は、セキュリティレビューが
-**critical** として止めます。レビューや上限を自分で外せる状態にしないためです。
+次への変更は、セキュリティレビューが **critical** として止めます。
+レビューや上限を自分で外せる状態にしないためです。
+
+- `.github/workflows/claude-*.yml`（計画・実装・レビュー）
+- `.github/workflows/pipeline-*.yml`（行数ゲート・kill・unlock）
+- `.claude/`
+- `CLAUDE.md`
 
 これらを変えるときは、人間が自分でブランチを切って PR を出します。
+
+**`.github/workflows/deploy.yml` は対象外。** デプロイの手順であって、
+レビューや上限には関わらない。Claude が直して PR を出してよい。
+ただし本番に出る経路なので、**マージの判断は人間が行う。**
