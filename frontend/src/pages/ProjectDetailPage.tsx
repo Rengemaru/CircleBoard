@@ -16,12 +16,19 @@ import { apiFetch } from "../api/client";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useFlash } from "../lib/flash";
+import {
+  approveWithdrawal,
+  cancelWithdrawalRequest,
+  rejectWithdrawal,
+  requestWithdrawal,
+} from "../api/projects";
 import type { ProjectSummary } from "../types/project";
 
 // プロジェクト詳細(wireframes/wireframe-member.html ⑤)。要ログイン。
 //
-// 脱退APIは作らない(MVP対象外。rails console で対応。docs/api-spec.md §3)ので、
-// 参加後に取り消すボタンも置かない。
+// 脱退は申請制(docs/api-spec.md「プロジェクトの脱退」)。押した時点では抜けず、
+// owner が承認して初めて抜ける。プロジェクトは継続的に成果物を作る活動で、
+// 黙って抜けられると owner が引き継ぎを考えられないため。
 // プロジェクト名が分かるまでの画面名。どの分岐でも PageHeading を通さないと
 // document.title が書き換わらず、SPA では前の画面のタブ名が残る
 // (PR #135、Issue #185)
@@ -34,9 +41,12 @@ export function ProjectDetailPage() {
   const flash = useFlash();
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // 参加は自分では取り消せないので、押す前に確認する(Issue #42)
   const [confirming, setConfirming] = useState(false);
+  // 脱退も押した時点では戻せないので、同じく確認を挟む
+  const [withdrawing, setWithdrawing] = useState(false);
 
   // 再読み込みに成功したらエラーを消す。消さないと、通信が直ったあとも
   // 赤い帯が残り続け、失敗したのか成功したのかが判別できない(Issue #44)
@@ -53,6 +63,24 @@ export function ProjectDetailPage() {
     if (loading || user === null) return;
     load();
   }, [loading, user, load]);
+
+  // 成功しても load() するだけだと、押せたのか無視されたのかが分からない。
+  // 何が起きたかを message で受け取って出す(AdminUsersPage と同じ)
+  async function run(action: () => Promise<void>, message: string) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await action();
+      setWithdrawing(false);
+      setNotice(message);
+      load();
+    } catch (e: unknown) {
+      setError(toMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function join() {
     setBusy(true);
@@ -211,8 +239,18 @@ export function ProjectDetailPage() {
 
       {error !== null && <Note tone="danger">{error}</Note>}
 
+      {notice !== null && <Note tone="success">{notice}</Note>}
+
       {project.current_user_joined === true ? (
-        <Note>このプロジェクトに参加しています。脱退は部長に連絡してください。</Note>
+        <WithdrawalSection
+          project={project}
+          busy={busy}
+          isOwner={project.owner?.id === user.id}
+          onRequest={() => setWithdrawing(true)}
+          onCancel={() =>
+            run(() => cancelWithdrawalRequest(Number(id)), "脱退の申請を取り下げました。")
+          }
+        />
       ) : full ? (
         <Note tone="warning">定員に達しています。</Note>
       ) : (
@@ -221,6 +259,66 @@ export function ProjectDetailPage() {
         <Button variant="primary" onClick={() => setConfirming(true)} disabled={busy}>
           参加する
         </Button>
+      )}
+
+      {/* owner と管理者にだけ返る。キーが無ければ捌く権限が無い */}
+      {project.withdrawal_requests !== undefined && project.withdrawal_requests.length > 0 && (
+        <Panel title={`脱退の申請 ${project.withdrawal_requests.length}件`}>
+          <ul className="divide-y divide-gray-200">
+            {project.withdrawal_requests.map((request) => (
+              <li key={request.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                <span className="grow">{request.user?.name ?? "退会した人"}</span>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => approveWithdrawal(Number(id), request.id),
+                      `${request.user?.name ?? "この人"}の脱退を承認しました。`,
+                    )
+                  }
+                >
+                  承認する
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => rejectWithdrawal(Number(id), request.id),
+                      `${request.user?.name ?? "この人"}の脱退を却下しました。`,
+                    )
+                  }
+                >
+                  却下する
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Text size="S" color="TEXT_GREY" as="p" className="mt-2">
+            承認すると、その人はこのプロジェクトのメンバーから外れます。却下すると参加が続きます。
+            どちらも本人に通知は届きません。
+          </Text>
+        </Panel>
+      )}
+
+      {withdrawing && (
+        <Modal
+          title="このプロジェクトの脱退を申請しますか？"
+          confirmLabel="申請する"
+          busy={busy}
+          onCancel={() => setWithdrawing(false)}
+          onConfirm={() => run(() => requestWithdrawal(Number(id)), "脱退を申請しました。")}
+        >
+          <p>
+            <strong>{project.title}</strong>の脱退を申請します。
+            <br />
+            <strong>この時点ではまだ抜けていません。</strong>
+            主催者が承認すると、メンバーから外れます。
+          </p>
+        </Modal>
       )}
 
       {confirming && (
@@ -234,8 +332,8 @@ export function ProjectDetailPage() {
           <p>
             <strong>{project.title}</strong>に参加します。
             <br />
-            <strong>参加すると、自分では取り消せません。</strong>
-            やめるときは部長に連絡してください。
+            <strong>抜けるときは脱退の申請が要ります。</strong>
+            主催者が承認するまでは抜けられません。
           </p>
         </Modal>
       )}
@@ -248,6 +346,52 @@ export function ProjectDetailPage() {
 function formatRemaining(project: ProjectSummary): string {
   if (project.capacity === null) return "制限なし";
   return `${Math.max(0, project.capacity - project.participants_count)}名`;
+}
+
+// 参加中の人に出す欄。申請しているかどうかで出すものが変わる。
+//
+// **主催者には出さない。** 抜けると持ち主のいない企画が残るので、API も 422 で
+// 弾く(docs/api-spec.md)。押せるボタンを出して怒られるより、出さない
+function WithdrawalSection({
+  project,
+  busy,
+  isOwner,
+  onRequest,
+  onCancel,
+}: {
+  project: ProjectSummary;
+  busy: boolean;
+  isOwner: boolean;
+  onRequest: () => void;
+  onCancel: () => void;
+}) {
+  if (isOwner) {
+    return <Note>あなたが主催しています。主催者はこのプロジェクトを抜けられません。</Note>;
+  }
+
+  if (project.current_user_withdrawal_requested === true) {
+    return (
+      <Note tone="warning">
+        脱退を申請しています。<strong>主催者が承認するまでは参加したままです。</strong>
+        <div className="mt-2">
+          <Button variant="default" size="sm" onClick={onCancel} disabled={busy}>
+            申請を取り下げる
+          </Button>
+        </div>
+      </Note>
+    );
+  }
+
+  return (
+    <Note>
+      このプロジェクトに参加しています。
+      <div className="mt-2">
+        <Button variant="default" size="sm" onClick={onRequest} disabled={busy}>
+          脱退を申請する
+        </Button>
+      </div>
+    </Note>
+  );
 }
 
 function toMessage(error: unknown): string {
