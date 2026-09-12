@@ -87,7 +87,7 @@ const REQUIRED = <StatusLabel type="red">必須</StatusLabel>;
 // 上限で切ると末尾が黙って消えるため、残り字数を見せるだけにする
 // (マイページの自己紹介と同じ扱い)
 const TITLE_MAX = 100;
-const DESCRIPTION_MAX = 2000;
+const DESCRIPTION_MAX = 3000;
 const LOCATION_MAX = 100;
 const SCHEDULE_MAX = 100;
 const EXTERNAL_URL_MAX = 2000;

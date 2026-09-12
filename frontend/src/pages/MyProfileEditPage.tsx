@@ -30,7 +30,7 @@ const TITLE = "プロフィールを編集";
 
 // 上限はサーバー側のモデルが正(docs/spec-my-page.md §6.1)。
 // ここに書くのは「書きながら分かる」ためで、検証を肩代わりするものではない
-const BIO_MAX = 500;
+const BIO_MAX = 1000;
 const DEPARTMENT_MAX = 50;
 const PRONOUNS_MAX = 20;
 const LABEL_MAX = 20;
