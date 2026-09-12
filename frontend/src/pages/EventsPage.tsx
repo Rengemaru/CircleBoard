@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { TagChip } from "../components/TagChip";
+import { PostCardLink } from "../components/PostCardLink";
 import { toPlainText } from "../lib/markdown";
 import { Link, useSearchParams } from "react-router-dom";
-import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text, TextLink } from "smarthr-ui";
+import { AnchorButton, Base, Chip, Cluster, Stack, StatusLabel, Text } from "smarthr-ui";
 import { MemberPage } from "../components/MemberPage";
 import { PageHeading } from "../components/ui/PageHeading";
 import { FilterRow } from "../components/ui/FilterRow";
@@ -176,57 +177,57 @@ function EmptyRow({ children }: { children: string }) {
 
 function EventRow({ event }: { event: EventSummary }) {
   return (
-    <li className="p-4">
-      <Stack gap="XXS">
-        <Cluster align="center" gap="XS">
-          {/* 開催の近さが一覧で一番効く情報なので先頭に置く(ワイヤーフレーム②)。
-              日数はインスタンスごとに変わる値なので StatusLabel にはしない
-              （StatusLabel ガイド「インスタンスごとに異なる値を埋め込まない」） */}
-          <Text size="S" weight="bold" leading="TIGHT">
-            {formatCountdown(event.starts_at)}
-          </Text>
-          <Text size="S" color="TEXT_GREY" leading="TIGHT">
-            {formatDate(new Date(event.starts_at))} ・ {event.location}
-          </Text>
-          {event.pinned && <Chip size="S">📌 ピン留め</Chip>}
-        </Cluster>
+    <li>
+      {/* カードの枠全体を詳細へのリンクにする(Issue #323)。当たり判定を
+          タイトルの文字だけに絞ると押しにくいため、枠ごと1つの <a> にする */}
+      <PostCardLink kind="event" id={event.id} className="p-4">
+        <Stack gap="XXS">
+          <Cluster align="center" gap="XS">
+            {/* 開催の近さが一覧で一番効く情報なので先頭に置く(ワイヤーフレーム②)。
+                日数はインスタンスごとに変わる値なので StatusLabel にはしない
+                （StatusLabel ガイド「インスタンスごとに異なる値を埋め込まない」） */}
+            <Text size="S" weight="bold" leading="TIGHT">
+              {formatCountdown(event.starts_at)}
+            </Text>
+            <Text size="S" color="TEXT_GREY" leading="TIGHT">
+              {formatDate(new Date(event.starts_at))} ・ {event.location}
+            </Text>
+            {event.pinned && <Chip size="S">📌 ピン留め</Chip>}
+          </Cluster>
 
-        {/* 一覧から詳細へ行く導線はこの企画名だけ。自前の Link に
-            font-bold だけを当てていたときは、本文と同じ色で下線も無く、
-            ホバーするまでリンクだと分からなかった(Issue #186)。
-            TextLink にしてトップページと同じ見た目に揃える */}
-        <Text size="M" leading="NORMAL">
-          <TextLink elementAs={Link} to={`/events/${event.id}`} className="font-bold">
+          {/* 枠ごとリンクにしたので、タイトルはリンクを張らずただの見出しに戻す
+              (Issue #186 でリンクと分かるようにしたが、枠が導線になったので不要) */}
+          <Text size="M" weight="bold" leading="NORMAL">
             {event.title}
-          </TextLink>
-        </Text>
-
-        {event.tags.length > 0 && (
-          <ul className="flex flex-wrap gap-1">
-            {event.tags.map((tag) => (
-              <li key={tag.id}>
-                <TagChip name={tag.name} />
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
-            ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
-        <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
-          {toPlainText(event.description)}
-        </Text>
-
-        <Cluster align="center" gap="XS">
-          {/* オブジェクトのライフサイクル上の状態は1つだけ StatusLabel にする */}
-          <StatusLabel type={event.status === "recruiting" ? "blue" : "grey"}>
-            {event.status === "recruiting" ? "募集中" : "終了"}
-          </StatusLabel>
-          <Text size="S" color="TEXT_GREY" leading="TIGHT">
-            {formatParticipants(event)}
           </Text>
-        </Cluster>
-      </Stack>
+
+          {event.tags.length > 0 && (
+            <ul className="flex flex-wrap gap-1">
+              {event.tags.map((tag) => (
+                <li key={tag.id}>
+                  <TagChip name={tag.name} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* **記法を落として渡す。** Markdown のまま渡すと # や ** が見える。
+              ブロック要素を入れると -webkit-line-clamp の「2行」の意味も変わる */}
+          <Text size="S" color="TEXT_GREY" leading="TIGHT" maxLines={2}>
+            {toPlainText(event.description)}
+          </Text>
+
+          <Cluster align="center" gap="XS">
+            {/* オブジェクトのライフサイクル上の状態は1つだけ StatusLabel にする */}
+            <StatusLabel type={event.status === "recruiting" ? "blue" : "grey"}>
+              {event.status === "recruiting" ? "募集中" : "終了"}
+            </StatusLabel>
+            <Text size="S" color="TEXT_GREY" leading="TIGHT">
+              {formatParticipants(event)}
+            </Text>
+          </Cluster>
+        </Stack>
+      </PostCardLink>
     </li>
   );
 }
