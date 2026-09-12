@@ -1,0 +1,12 @@
+# VPS のホスト側 crontab。circleboard ユーザーで `crontab -e` して貼る。
+#
+#   crontab -l            # 今の設定を見る
+#   crontab -e            # 編集する
+#
+# cron の PATH は /usr/bin:/bin しかない。docker は /usr/bin/docker なので
+# そのままで届くが、届かない環境に移したらここで PATH を足す。
+#
+# 出力を捨てないこと。捨てると「動いていないこと」に気づけない。
+
+# 日次バックアップ(spec-v2.2.md §7.6)。人が触っていない時間に寄せる
+0 4 * * * /opt/circleboard/ops/backup.sh >> /opt/circleboard/log/backup.log 2>&1
