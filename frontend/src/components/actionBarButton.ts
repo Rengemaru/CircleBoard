@@ -22,11 +22,14 @@
 // ターコイズにはしたくないものに使う
 // 角丸を 4px に揃える。smarthr-ui の既定は 6px で、採用ページは 4px。
 //
-// **大きさだけは採用ページより小さくしている**（240x44px / 18px。
+// **大きさだけは採用ページより小さくしている**（192x36px / 14px。
 // 向こうは 280x50px / 20px。オーナー判断 2026-09-13）。
 // 採用ページは「応募する」1つのためのページだが、こちらは
 // 「編集」が隣に並ぶことがあり、使う回数も多い。
-const SHAPE = "h-10 w-full rounded text-lg font-bold lg:h-11 lg:w-[240px]";
+//
+// **狭い画面だけ高さを落とさない**（lg 未満は 40px のまま）。
+// 指で押すので、ここを縮めると押しにくくなる。
+const SHAPE = "h-10 w-full rounded text-sm font-bold lg:h-9 lg:w-48";
 
 export const ACTION_BAR_BUTTON = SHAPE;
 
