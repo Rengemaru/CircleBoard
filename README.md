@@ -5,11 +5,14 @@
 部室のディスプレイに「次に何があるか」を常時映し、部員は同じデータを
 スマホやPCから見て参加を表明できる。
 
+**公開URL: https://cb.fukupro.club** （ConoHa VPS / Docker Compose / Caddy）
+
 - 仕様の正: [`docs/spec-v2.2.md`](docs/spec-v2.2.md)
 - API仕様: [`docs/api-spec.md`](docs/api-spec.md)
 - ER図: [`docs/er.md`](docs/er.md)
 - 作業手順: [`docs/instructions.md`](docs/instructions.md)
 - 開発規約: [`CLAUDE.md`](CLAUDE.md)
+- 運用手順: [`docs/runbook.md`](docs/runbook.md)
 - 画面構造: [`wireframes/`](wireframes/)
 
 ## この実装で説明できること
@@ -94,7 +97,8 @@ Docker のバインドマウント越しではホスト側のファイル変更�
 | `/projects` `/projects/:id` | プロジェクト一覧・詳細 | **要ログイン** |
 | `/create` | 企画作成 | 要ログイン |
 | `/login` `/legal` | ログイン・利用規約 | ゲスト可 |
-| `/admin/users` `/admin/pins` `/admin/signage-tokens` | 管理者3画面 | **admin のみ** |
+| `/admin` `/admin/users` `/admin/posts` `/admin/pin` `/admin/signage` `/admin/tags` | 管理画面 | **admin のみ** |
+| `/password-change` | 初期パスワードのままの人を止める | 要ログイン |
 | `/signage?token=…` | 部室ディスプレイ用の全画面ビュー | トークン |
 
 イベントはゲストも見られるが、**企画者名と参加者一覧はログインしないと返ってこない**。
@@ -102,11 +106,11 @@ Docker のバインドマウント越しではホスト側のファイル変更�
 
 ## サイネージを部室のディスプレイに映す
 
-1. `/admin/signage-tokens` で端末ごとにトークンを発行する
+1. `/admin/signage` で端末ごとにトークンを発行する
 2. 表示された URL を、その端末の Chrome でキオスクモードで開く
 
 ```bash
-chrome --kiosk "https://<ドメイン>/signage?token=<発行したトークン>"
+chrome --kiosk "https://cb.fukupro.club/signage?token=<発行したトークン>"
 ```
 
 端末ごとに分けるのは、**漏れたときにその端末の分だけ止められる**ようにするため。
@@ -114,6 +118,32 @@ chrome --kiosk "https://<ドメイン>/signage?token=<発行したトークン>"
 
 60秒ごとに自動で再読み込みします。時計はそれとは独立に毎秒動きます
 （止まっている画面か動いている画面かが、遠目に分かるようにするため）。
+
+## 本番とデプロイ
+
+**公開URL: https://cb.fukupro.club**
+
+`main` にマージすると GitHub Actions が自動でデプロイします。手で打つ作業はありません。
+
+```
+feat/xxx ──PR──> develop ──PR(マージコミット)──> main ──自動──> 本番
+                （溜める）                       （出す）
+```
+
+- **PR の base は `develop`**（既定ブランチ）。`main` はデプロイ用
+- **`develop` → `main` は squash にしない。** 履歴が切り離され、次のマージで衝突する
+- ビルドは Actions 側で行う。**VPS(2GB)で `docker build` するとメモリ不足で落ちる**
+- イメージは `:latest` と `:<コミットSHA>` の2つのタグで ghcr.io に置く。**SHA タグが切り戻し先**
+- デプロイの中で `pg_dump` を1回取ってから進む
+
+| | どこを見るか |
+|---|---|
+| デプロイの中身 | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) |
+| 本番の構成 | [`docker-compose.prod.yml`](docker-compose.prod.yml) |
+| **運用手順（初回デプロイ・バックアップ・復元・障害時）** | [`docs/runbook.md`](docs/runbook.md) |
+
+HTTPS は Caddy が Let's Encrypt から自動取得・自動更新します。設定は `.env.production` の
+`SITE_ADDRESS` にドメイン名を書く1行だけです。
 
 ## テスト・Lint
 
@@ -147,8 +177,10 @@ docker compose exec backend bundle exec whenever
 docker compose exec backend bin/rails runner 'Event.recalculate_spotlight_scores'
 ```
 
-**開発環境では cron は動きません。** コンテナに cron を常駐させていないためです。
-本番への反映は Phase 5（D-8）で `bundle exec whenever --update-crontab` を実行します。
+**開発環境でも本番でも、このファイルから cron は動きません。** コンテナに cron を
+常駐させていないためです。**本番で動いているのは VPS のホスト側 crontab**で、
+`ops/crontab.example` から `ops/spotlight.sh` を叩いています。
+時刻を変えるときは両方を直してください。
 
 スコアの計算式は `docs/spec-v2.2.md` §3 にあります。
 「開催の近さ × 直近3日の勢い」で、参加者数の絶対値は使いません。
