@@ -13,6 +13,8 @@ import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { SignagePage } from "./pages/SignagePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { PasswordChangeGate } from "./pages/PasswordChangeGate";
+import { PasswordChangePage } from "./pages/PasswordChangePage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminPinsPage } from "./pages/admin/AdminPinsPage";
 import { AdminPostsPage } from "./pages/admin/AdminPostsPage";
@@ -26,36 +28,46 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<MemberLayout />}>
-          <Route path="/" element={<TopPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/:id" element={<EventDetailPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          <Route path="/create" element={<CreatePage />} />
-          {/* 編集は作成とフォームを共有する。種類は URL が決め、編集では変えられない */}
-          <Route path="/events/:id/edit" element={<EventEditPage />} />
-          <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
-          <Route path="/me" element={<MyPage />} />
-          <Route path="/me/edit" element={<MyProfileEditPage />} />
-          <Route path="/users/:id" element={<UserProfilePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/legal" element={<LegalPage />} />
-          {/* 定義していないURL。何も出さないと真っ白な画面になる */}
-          <Route path="*" element={<NotFoundPage />} />
+        {/* 初期パスワードのままなら、ここから先へ進ませない(Issue #288)。
+            変更画面とサイネージはこの外に置く。中に入れると、変更画面へ送った
+            先でまた同じ判定に当たって往復する */}
+        <Route element={<PasswordChangeGate />}>
+          <Route element={<MemberLayout />}>
+            <Route path="/" element={<TopPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:id" element={<EventDetailPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route path="/create" element={<CreatePage />} />
+            {/* 編集は作成とフォームを共有する。種類は URL が決め、編集では変えられない */}
+            <Route path="/events/:id/edit" element={<EventEditPage />} />
+            <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
+            <Route path="/me" element={<MyPage />} />
+            <Route path="/me/edit" element={<MyProfileEditPage />} />
+            <Route path="/users/:id" element={<UserProfilePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/legal" element={<LegalPage />} />
+            {/* 定義していないURL。何も出さないと真っ白な画面になる */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          {/* 管理画面。外枠は member 側と同じで、AdminOnly が管理者かどうかだけ
+            見る。URLは wireframe-admin-ver2.html に合わせる */}
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
+          <Route path="/admin/posts" element={<AdminPostsPage />} />
+          <Route path="/admin/pin" element={<AdminPinsPage />} />
+          <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
+          <Route path="/admin/tags" element={<AdminTagsPage />} />
         </Route>
 
-        {/* 管理画面。外枠は member 側と同じで、AdminOnly が管理者かどうかだけ
-            見る。URLは wireframe-admin-ver2.html に合わせる */}
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/users/new" element={<AdminUserCreatePage />} />
-        <Route path="/admin/posts" element={<AdminPostsPage />} />
-        <Route path="/admin/pin" element={<AdminPinsPage />} />
-        <Route path="/admin/signage" element={<AdminSignageTokensPage />} />
-        <Route path="/admin/tags" element={<AdminTagsPage />} />
+        {/* 変更画面自体は gate の外。ここへ送られてきた人が通れないと詰む */}
+        <Route path="/password-change" element={<PasswordChangePage />} />
 
-        {/* サイネージはナビゲーションを一切出さない(wireframe-signage.html) */}
+        {/* サイネージはナビゲーションを一切出さない(wireframe-signage.html)。
+            gate の外に置くことで、部室のディスプレイはセッションを
+            問い合わせずに済む */}
         <Route path="/signage" element={<SignagePage />} />
       </Routes>
     </BrowserRouter>
