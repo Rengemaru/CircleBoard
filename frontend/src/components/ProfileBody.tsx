@@ -1,4 +1,5 @@
 import { DefinitionList, DefinitionListItem, Cluster, Text } from "smarthr-ui";
+import { Markdown } from "./Markdown";
 import { TagChip } from "./TagChip";
 import { ProfileLinks } from "./ProfileLinks";
 import type { Profile } from "../types/user";
@@ -38,8 +39,9 @@ export function ProfileBody({ profile, emptyMessage }: Props) {
         {orDash(profile.pronouns)}
       </DefinitionListItem>
       <DefinitionListItem term="自己紹介" maxColumns={1}>
-        {/* 改行はそのまま出すが、HTML としては解釈しない(React が既定でエスケープする) */}
-        <span className="whitespace-pre-wrap">{orDash(profile.bio)}</span>
+        {/* Markdown として描く(Issue #303)。生の HTML は
+            react-markdown が既定で無効にするので、文字のまま出る */}
+        {profile.bio === null || profile.bio === "" ? "—" : <Markdown source={profile.bio} />}
       </DefinitionListItem>
       <DefinitionListItem term="使える技術" maxColumns={1}>
         {profile.tags.length === 0 ? (
