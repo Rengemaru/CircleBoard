@@ -75,14 +75,21 @@ const QR_HEIGHT_RATIO: Record<"event" | "project", string> = {
 const QR_RESOLUTION = 512;
 
 // カード内のQR。カード高さに対する比率で大きさを決め、shrink-0 で
-// フレックスに圧縮されないようにする(サイズが不揃いに見える原因の対処)
+// フレックスに圧縮されないようにする(サイズが不揃いに見える原因の対処)。
+//
+// 外周を白で囲む(要望3)。暗いカード背景の上でコードの矩形を際立たせ、
+// 遠くからでも「そこがQR」と分かって読み取りやすくする。白枠は
+// QR の読み取りに要るクワイエットゾーン(余白)も兼ねる
 function CardQr({ value, kind }: { value: string; kind: "event" | "project" }) {
   return (
-    <div className={"flex shrink-0 items-center " + QR_HEIGHT_RATIO[kind]}>
+    <div
+      className={"flex shrink-0 items-center rounded bg-white " + QR_HEIGHT_RATIO[kind]}
+      style={{ padding: su(0.4) }}
+    >
       <QRCodeSVG
         value={value}
         size={QR_RESOLUTION}
-        bgColor="#f2f3f7"
+        bgColor="#ffffff"
         level="M"
         className="h-full w-auto"
       />
@@ -549,14 +556,14 @@ function EmptyState() {
       <p className="text-[#9aa0ae]" style={{ fontSize: su(2.8) }}>
         いま募集中の企画はありません
       </p>
-      {/* カードではないので、幅は画面比(su)で決める */}
-      <div style={{ width: su(16) }}>
+      {/* カードではないので、幅は画面比(su)で決める。外周を白で囲む(要望3) */}
+      <div className="rounded bg-white" style={{ width: su(16), padding: su(0.5) }}>
         <QRCodeSVG
           // 空なら、このサイネージを開いている URL をそのまま使う。
           // 部室の端末が LAN の IP で開いていれば、QR もその IP になる
           value={import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin}
           size={QR_RESOLUTION}
-          bgColor="#f2f3f7"
+          bgColor="#ffffff"
           level="M"
           className="h-auto w-full"
         />
