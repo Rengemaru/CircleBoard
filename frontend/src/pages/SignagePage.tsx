@@ -406,7 +406,8 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#676f88] bg-white/[0.03]"
+      // overflow-hidden で、万一中身が枠を越えても外へこぼさず切る(要望1のはみ出し対策)
+      className="flex min-h-0 items-center justify-between gap-[2%] overflow-hidden rounded border border-[#676f88] bg-white/[0.03]"
       style={{ padding: CARD_PADDING[density] }}
     >
       <div className="min-w-0">
@@ -498,13 +499,17 @@ function ProjectCard({ project }: { project: SignageProject }) {
 
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#676f88] bg-white/[0.03]"
+      // overflow-hidden で、万一中身が枠を越えても外へこぼさず切る(要望1のはみ出し対策)
+      className="flex min-h-0 items-center justify-between gap-[4%] overflow-hidden rounded border border-[#676f88] bg-white/[0.03]"
       // 0.46 は 16:9・3列のときの p-[1.5%] と同じ値
       style={{ padding: su(0.46) }}
     >
       <div className="min-w-0">
         <span
-          className="rounded px-[0.6em] py-[0.2em] font-bold"
+          // inline のままだと縦 padding(py) が行ボックスに反映されず、色付き背景だけが
+          // 上下にはみ出してカードの枠を越えて見えていた。inline-block にして
+          // padding を寸法として確保する(要望1)
+          className="inline-block rounded px-[0.6em] py-[0.2em] font-bold"
           style={{
             fontSize: MIN_FONT_SIZE,
             lineHeight: CARD_LINE_HEIGHT,
