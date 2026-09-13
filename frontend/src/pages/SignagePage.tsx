@@ -57,34 +57,44 @@ function su(n: number): string {
 // レビューで気づけない。style で定数を使い、grep できる形にする(Issue #49)
 const MIN_FONT_SIZE = su(2.0);
 
-// QRの大きさ。1920px 幅を基準にして、画面幅で拡縮する。
+// QRはカードの大きさに対する比率で置く(要望2)。
 //
-// 固定pxのままだと、4Kのディスプレイでは文字だけ2倍になってQRは小さいまま
-// 残り、2〜3mからスマホで読めない。QRは寸法が読み取り距離を直接決める。
-// 逆に小さいモニタではQRがカードを圧迫する(Issue #50)
-const SIGNAGE_BASE_WIDTH = 1920;
-// 読み取り距離はコード幅の10倍まで(10:1 則)。55型なら 165px = 105mm = 1.1m。
-// 2〜3m から読める QR は 300mm(520px 相当)で、カードには物理的に入らない。
-// この画面は「遠くで読み、近づいて撮る」動線を前提にする(Issue #222)
-const QR_SIZE_AT_BASE = { hero: 320, normal: 221, compact: 165, project: 125, empty: 300 } as const;
+// 以前は画面幅から実pxを毎回計算し、件数・種別ごとに 320/221/165/125 px と
+// 変えていた。そのため件数や解像度が変わるとカードごとに大きさがばらついて
+// 見えた。カード高さの一定割合にすると、どのカードでも「同じ位置に・同じ比率で」
+// QR が載る。右寄せ・上下中央の配置は各カードの flex(justify-between /
+// items-center)が担う。高さで測るのは、QR が正方形で、横長のカードでは
+// 高さが最も効く制約になるため。
+const QR_HEIGHT_RATIO: Record<"event" | "project", string> = {
+  event: "h-[72%]",
+  project: "h-[64%]",
+};
 
-// SIGNAGE_UNIT と同じ計算。QR は <svg> に実ピクセルを渡すので CSS 変数では届かない。
-// 画面幅のままだと、横長のディスプレイでQRだけが高さを無視して大きくなる
-function stageWidth(): number {
-  return Math.min(window.innerWidth, (window.innerHeight * 16) / 9);
-}
+// 表示サイズは上の CSS 比率で決まるので、size は SVG の内部解像度にとどめる。
+// viewBox があるので、どの CSS サイズにも滑らかに拡縮する
+const QR_RESOLUTION = 512;
 
-function useQrSize(kind: keyof typeof QR_SIZE_AT_BASE): number {
-  const [stage, setStage] = useState(stageWidth);
-
-  useEffect(() => {
-    const onResize = () => setStage(stageWidth());
-    window.addEventListener("resize", onResize);
-
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  return Math.round((QR_SIZE_AT_BASE[kind] * stage) / SIGNAGE_BASE_WIDTH);
+// カード内のQR。カード高さに対する比率で大きさを決め、shrink-0 で
+// フレックスに圧縮されないようにする(サイズが不揃いに見える原因の対処)。
+//
+// 外周を白で囲む(要望3)。暗いカード背景の上でコードの矩形を際立たせ、
+// 遠くからでも「そこがQR」と分かって読み取りやすくする。白枠は
+// QR の読み取りに要るクワイエットゾーン(余白)も兼ねる
+function CardQr({ value, kind }: { value: string; kind: "event" | "project" }) {
+  return (
+    <div
+      className={"flex shrink-0 items-center rounded bg-white " + QR_HEIGHT_RATIO[kind]}
+      style={{ padding: su(0.4) }}
+    >
+      <QRCodeSVG
+        value={value}
+        size={QR_RESOLUTION}
+        bgColor="#ffffff"
+        level="M"
+        className="h-full w-auto"
+      />
+    </div>
+  );
 }
 
 // 失敗の種類。部室に入った人が最初に打つ手が変わるので分ける
@@ -402,11 +412,10 @@ const CARD_PADDING: Record<Density, string> = {
 const CARD_LINE_HEIGHT = 1.15;
 
 function EventCard({ event, density }: { event: SignageEvent; density: Density }) {
-  const qrSize = useQrSize(density);
-
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[2%] rounded border border-[#676f88] bg-white/[0.03]"
+      // overflow-hidden で、万一中身が枠を越えても外へこぼさず切る(要望1のはみ出し対策)
+      className="flex min-h-0 items-center justify-between gap-[2%] overflow-hidden rounded border border-[#676f88] bg-white/[0.03]"
       style={{ padding: CARD_PADDING[density] }}
     >
       <div className="min-w-0">
@@ -475,7 +484,7 @@ function EventCard({ event, density }: { event: SignageEvent; density: Density }
       </div>
       {/* QRはフロントで生成する。サーバー生成だと60秒ごとに無駄な処理が走る
           (wireframe-signage.html「QRコード」)。中身は detail_url */}
-      <QRCodeSVG value={event.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
+      <CardQr value={event.detail_url} kind="event" />
     </article>
   );
 }
@@ -494,17 +503,19 @@ function ProjectSection({ projects }: { projects: SignageProject[] }) {
 }
 
 function ProjectCard({ project }: { project: SignageProject }) {
-  const qrSize = useQrSize("project");
-
   return (
     <article
-      className="flex min-h-0 items-center justify-between gap-[4%] rounded border border-[#676f88] bg-white/[0.03]"
+      // overflow-hidden で、万一中身が枠を越えても外へこぼさず切る(要望1のはみ出し対策)
+      className="flex min-h-0 items-center justify-between gap-[4%] overflow-hidden rounded border border-[#676f88] bg-white/[0.03]"
       // 0.46 は 16:9・3列のときの p-[1.5%] と同じ値
       style={{ padding: su(0.46) }}
     >
       <div className="min-w-0">
         <span
-          className="rounded px-[0.6em] py-[0.2em] font-bold"
+          // inline のままだと縦 padding(py) が行ボックスに反映されず、色付き背景だけが
+          // 上下にはみ出してカードの枠を越えて見えていた。inline-block にして
+          // padding を寸法として確保する(要望1)
+          className="inline-block rounded px-[0.6em] py-[0.2em] font-bold"
           style={{
             fontSize: MIN_FONT_SIZE,
             lineHeight: CARD_LINE_HEIGHT,
@@ -530,15 +541,13 @@ function ProjectCard({ project }: { project: SignageProject }) {
           {formatProjectMeta(project)}
         </div>
       </div>
-      <QRCodeSVG value={project.detail_url} size={qrSize} bgColor="#f2f3f7" level="M" />
+      <CardQr value={project.detail_url} kind="project" />
     </article>
   );
 }
 
 // イベント・プロジェクトとも0件のとき。真っ黒な画面を出さない
 function EmptyState() {
-  const qrSize = useQrSize("empty");
-
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-[2vh]">
       <div className="font-bold" style={{ fontSize: su(4.6) }}>
@@ -547,14 +556,18 @@ function EmptyState() {
       <p className="text-[#9aa0ae]" style={{ fontSize: su(2.8) }}>
         いま募集中の企画はありません
       </p>
-      <QRCodeSVG
-        // 空なら、このサイネージを開いている URL をそのまま使う。
-        // 部室の端末が LAN の IP で開いていれば、QR もその IP になる
-        value={import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin}
-        size={qrSize}
-        bgColor="#f2f3f7"
-        level="M"
-      />
+      {/* カードではないので、幅は画面比(su)で決める。外周を白で囲む(要望3) */}
+      <div className="rounded bg-white" style={{ width: su(16), padding: su(0.5) }}>
+        <QRCodeSVG
+          // 空なら、このサイネージを開いている URL をそのまま使う。
+          // 部室の端末が LAN の IP で開いていれば、QR もその IP になる
+          value={import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin}
+          size={QR_RESOLUTION}
+          bgColor="#ffffff"
+          level="M"
+          className="h-auto w-full"
+        />
+      </div>
       <p className="text-[#8b93a4]" style={{ fontSize: MIN_FONT_SIZE }}>
         企画の投稿はこちらから
       </p>
